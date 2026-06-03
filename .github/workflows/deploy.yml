@@ -102,14 +102,8 @@ jobs:
       - name: Generate app icons
         run: node scripts/generate-icons.mjs
 
-      - name: Generate Prisma client
-        run: npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://localhost/dummy' }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL || 'postgresql://localhost/dummy' }}
-
-      - name: Build Next.js
-        run: next build
+      - name: Build Next.js (includes prisma generate)
+        run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://localhost/dummy' }}
           DIRECT_URL: ${{ secrets.DIRECT_URL || 'postgresql://localhost/dummy' }}
