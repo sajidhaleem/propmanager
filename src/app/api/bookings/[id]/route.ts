@@ -1,0 +1,94 @@
+import { NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
+import { requireAuth, requireRole } from '@/lib/auth'
+import { bookingSchema } from '@/lib/validations'
+import { apiError, apiResponse } from '@/lib/utils'
+import { differenceInDays } from 'date-fns'
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireAuth(req)
+    const { id } = await params
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        property: true,
+        income: true,
+      },
+    })
+    if (!booking) return apiError('Booking not found', 404)
+    return apiResponse(booking)
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
+    return apiError('Internal server error', 500)
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireRole(req, ['ADMIN', 'MANAGER', 'STAFF'])
+    const { id } = await params
+    const body = await req.json()
+    const result = bookingSchema.partial().safeParse(body)
+    if (!result.success) return apiError(result.error.errors[0].message)
+
+    const data = result.data
+    let extraFields: any = {}
+
+    if (data.checkIn && data.checkOut) {
+      const checkIn = new Date(data.checkIn)
+      const checkOut = new Date(data.checkOut)
+      const nights = differenceInDays(checkOut, checkIn)
+      const rate = data.rate!
+      const cleaningFee = data.cleaningFee ?? 0
+      const platformFee = data.platformFee ?? 0
+      const totalAmount = rate * nights + cleaningFee
+      const netAmount = totalAmount - platformFee
+      extraFields = { checkIn, checkOut, nights, totalAmount, netAmount }
+    }
+
+    const booking = await prisma.booking.update({
+      where: { id },
+      data: { ...data, ...extraFields },
+      include: { property: { select: { id: true, name: true } } },
+    })
+
+    // Auto-create income record when checked out
+    if (data.status === 'CHECKED_OUT') {
+      const existing = await prisma.income.findUnique({ where: { bookingId: id } })
+      if (!existing) {
+        await prisma.income.create({
+          data: {
+            bookingId: id,
+            grossAmount: booking.totalAmount,
+            platformFee: booking.platformFee,
+            cleaningFee: booking.cleaningFee,
+            netAmount: booking.netAmount,
+            receivedAt: new Date(),
+            month: new Date().getMonth() + 1,
+            year: new Date().getFullYear(),
+          },
+        })
+      }
+    }
+
+    return apiResponse(booking)
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
+    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
+    return apiError('Internal server error', 500)
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireRole(req, ['ADMIN', 'MANAGER'])
+    const { id } = await params
+    await prisma.booking.delete({ where: { id } })
+    return apiResponse({ message: 'Booking deleted' })
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
+    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
+    return apiError('Internal server error', 500)
+  }
+}

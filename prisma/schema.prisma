@@ -1,0 +1,202 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(STAFF)
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+
+  @@index([email])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  type        String         @default("room")
+  capacity    Int            @default(2)
+  baseRate    Float
+  status      PropertyStatus @default(ACTIVE)
+  amenities   String[]
+  images      String[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  bookings    Booking[]
+
+  @@index([status])
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  guestName    String
+  guestEmail   String?
+  guestPhone   String?
+  checkIn      DateTime
+  checkOut     DateTime
+  nights       Int
+  rate         Float
+  cleaningFee  Float         @default(0)
+  platformFee  Float         @default(0)
+  totalAmount  Float
+  netAmount    Float
+  platform     Platform      @default(AIRBNB)
+  status       BookingStatus @default(CONFIRMED)
+  notes        String?
+  propertyId   String
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  income       Income?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([propertyId])
+  @@index([checkIn, checkOut])
+  @@index([status])
+  @@index([platform])
+}
+
+enum Platform {
+  AIRBNB
+  DIRECT
+  BOOKING_COM
+  VRBO
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+model Income {
+  id          String   @id @default(cuid())
+  bookingId   String   @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  grossAmount Float
+  platformFee Float    @default(0)
+  cleaningFee Float    @default(0)
+  netAmount   Float
+  receivedAt  DateTime
+  month       Int
+  year        Int
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([year, month])
+  @@index([receivedAt])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  date        DateTime
+  category    ExpenseCategory
+  description String
+  amount      Float
+  vendor      String?
+  receiptUrl  String?
+  notes       String?
+  month       Int
+  year        Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([year, month])
+  @@index([category])
+  @@index([date])
+}
+
+enum ExpenseCategory {
+  CLEANING
+  MAINTENANCE
+  UTILITIES
+  SUPPLIES
+  MARKETING
+  PLATFORM_FEES
+  INSURANCE
+  TAXES
+  SALARY
+  REPAIRS
+  OTHER
+}
+
+model Payout {
+  id            String       @id @default(cuid())
+  recipientName String
+  amount        Float
+  date          DateTime
+  type          PayoutType
+  description   String?
+  status        PayoutStatus @default(PENDING)
+  notes         String?
+  month         Int
+  year          Int
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status])
+  @@index([year, month])
+}
+
+enum PayoutType {
+  SALARY
+  BONUS
+  COMMISSION
+  REIMBURSEMENT
+  CLEANING_FEE
+  OTHER
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

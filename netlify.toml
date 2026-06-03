@@ -1,0 +1,83 @@
+# ============================================================
+# Netlify deployment configuration for PropManager
+# Deploy: Connect GitHub repo → Netlify → auto-deploy on push
+# ============================================================
+
+[build]
+  command = "npx prisma generate && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+  NEXT_TELEMETRY_DISABLED = "1"
+  PRISMA_GENERATE_DATAPROXY = "true"
+
+# Required environment variables (set in Netlify UI → Site settings → Environment):
+#   DATABASE_URL        = postgresql://...  (Neon/Supabase connection string)
+#   JWT_SECRET          = <32+ char secret>
+#   NEXTAUTH_SECRET     = <32+ char secret>
+#   NEXTAUTH_URL        = https://your-site.netlify.app
+#   NEXT_PUBLIC_APP_URL = https://your-site.netlify.app
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# ── SPA Fallback & Routing ──
+[[redirects]]
+  from = "/"
+  to = "/dashboard"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["editor", "admin"]}
+  force = false
+
+# ── Security Headers ──
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ── Edge functions (optional for auth speed) ──
+# [edge_functions]
+#   [[edge_functions.paths]]
+#     function = "auth"
+#     pattern = "/dashboard/*"
