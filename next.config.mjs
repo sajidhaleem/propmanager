@@ -8,6 +8,10 @@ const isDev = process.env.NODE_ENV === 'development'
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Skip ESLint during build — we run it separately in CI
+  eslint: { ignoreDuringBuilds: true },
+  // Skip type-check during build — we run tsc separately in CI
+  typescript: { ignoreBuildErrors: false },
   compress: true,
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
