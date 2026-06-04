@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { rateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/manifest.json', '/sw.js', '/icons']
+const PUBLIC_PATHS = [
+  '/login',
+  '/api/auth/login',
+  '/api/health',
+  '/manifest.json',
+  '/sw.js',
+  '/icons',
+  '/offline.html',
+  '/.well-known',
+]
 
 const SECURITY_HEADERS = {
   'X-DNS-Prefetch-Control': 'on',
