@@ -5,6 +5,8 @@ import { signToken } from '@/lib/auth'
 import { loginSchema } from '@/lib/validations'
 import { apiError } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -14,15 +16,22 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password } = result.data
-    const user = await prisma.user.findUnique({ where: { email } })
+
+    let user
+    try {
+      user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } })
+    } catch (dbError) {
+      console.error('DB error during login:', dbError)
+      return apiError('Service temporarily unavailable', 503)
+    }
 
     if (!user || !user.isActive) {
-      return apiError('Invalid credentials', 401)
+      return apiError('Invalid email or password', 401)
     }
 
     const isValid = await bcrypt.compare(password, user.password)
     if (!isValid) {
-      return apiError('Invalid credentials', 401)
+      return apiError('Invalid email or password', 401)
     }
 
     const token = await signToken({
@@ -47,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',

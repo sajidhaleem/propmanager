@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* ── Left panel — branding ── */}
+      {/* ── Left branding panel ── */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
@@ -37,7 +37,6 @@ export default function LoginPage() {
             </div>
             <span className="text-xl font-bold text-white tracking-tight">PropManager</span>
           </div>
-
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Your properties,<br />
             <span className="text-blue-400">perfectly managed.</span>
@@ -60,7 +59,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Right panel — form ── */}
+      {/* ── Right form panel ── */}
       <div className="flex flex-1 items-center justify-center p-6 sm:p-12 bg-background">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
@@ -125,20 +124,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 rounded-xl border bg-muted/40 p-4 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Demo credentials</p>
-            {[
-              { role: 'Admin', email: 'admin@propmanager.com', pass: 'admin123' },
-              { role: 'Manager', email: 'manager@propmanager.com', pass: 'manager123' },
-            ].map(({ role, email, pass }) => (
-              <div key={role} className="flex items-center justify-between text-xs gap-2">
-                <span className="text-muted-foreground shrink-0">{role}</span>
-                <span className="font-mono text-foreground/70 truncate">{email} / {pass}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
