@@ -1,6 +1,5 @@
 # ============================================================
 # Netlify deployment configuration for PropManager
-# Deploy: Connect GitHub repo → Netlify → auto-deploy on push
 # ============================================================
 
 [build]
@@ -11,39 +10,9 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   NEXT_TELEMETRY_DISABLED = "1"
-  # NODE_ENV is intentionally NOT set here — npm skips devDependencies when
-  # NODE_ENV=production is set at install time. Next.js sets it automatically
-  # during the build step. Remove NODE_ENV from Netlify UI env vars too.
-
-# Required environment variables (set in Netlify UI → Site settings → Environment):
-#   DATABASE_URL        = postgresql://...  (Neon/Supabase connection string)
-#   JWT_SECRET          = <32+ char secret>
-#   NEXTAUTH_SECRET     = <32+ char secret>
-#   NEXTAUTH_URL        = https://your-site.netlify.app
-#   NEXT_PUBLIC_APP_URL = https://your-site.netlify.app
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# ── SPA Fallback & Routing ──
-[[redirects]]
-  from = "/"
-  to = "/dashboard"
-  status = 302
-  force = false
-
-[[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["editor", "admin"]}
-  force = false
 
 # ── Security Headers ──
 [[headers]]
@@ -77,9 +46,3 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# ── Edge functions (optional for auth speed) ──
-# [edge_functions]
-#   [[edge_functions.paths]]
-#     function = "auth"
-#     pattern = "/dashboard/*"
