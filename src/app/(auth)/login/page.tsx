@@ -75,7 +75,7 @@ export default function LoginPage() {
             <p className="text-muted-foreground text-sm mt-1">Sign in to your account to continue</p>
           </div>
 
-          <form onSubmit={handleSubmit((d) => login(d))} className="space-y-5">
+          <form method="post" onSubmit={handleSubmit((d) => login(d))} className="space-y-5">
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium">Email address</label>
               <input

@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 
+# Build-generated static chunks (copied to public/ during Netlify build)
+public/_next/
+
 # Production build
 dist/
 build/
