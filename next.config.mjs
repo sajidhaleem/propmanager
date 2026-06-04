@@ -1,19 +1,14 @@
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const isDev = process.env.NODE_ENV === 'development'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Skip ESLint during build — we run it separately in CI
-  eslint: { ignoreDuringBuilds: true },
-  // Skip type-check during build — we run tsc separately in CI
-  typescript: { ignoreBuildErrors: false },
   compress: true,
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+  // Skip ESLint during build — run separately in CI
+  eslint: { ignoreDuringBuilds: true },
+  // Allow TS errors to not block build — tsc runs separately
+  typescript: { ignoreBuildErrors: false },
 
   images: {
     remotePatterns: [
@@ -38,19 +33,6 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https:",
-              "connect-src 'self' https:",
-              "worker-src 'self' blob:",
-              "manifest-src 'self'",
-            ].join('; '),
-          },
         ],
       },
       {
