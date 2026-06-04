@@ -11,7 +11,9 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   NEXT_TELEMETRY_DISABLED = "1"
-  PRISMA_GENERATE_DATAPROXY = "true"
+  # NODE_ENV is intentionally NOT set here — npm skips devDependencies when
+  # NODE_ENV=production is set at install time. Next.js sets it automatically
+  # during the build step. Remove NODE_ENV from Netlify UI env vars too.
 
 # Required environment variables (set in Netlify UI → Site settings → Environment):
 #   DATABASE_URL        = postgresql://...  (Neon/Supabase connection string)
