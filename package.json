@@ -48,6 +48,7 @@
     "@types/react-dom": "^18.3.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
+    "@netlify/plugin-nextjs": "^5.15.11",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
@@ -78,7 +79,6 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.15.11",
     "@next/bundle-analyzer": "^16.2.7",
     "@playwright/test": "^1.49.0",
     "@testing-library/jest-dom": "^6.6.3",
