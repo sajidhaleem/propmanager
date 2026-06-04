@@ -1,16 +1,16 @@
-import type { NextConfig } from 'next'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const isDev = process.env.NODE_ENV === 'development'
-const ANALYZE = process.env.ANALYZE === 'true'
 
-let nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
-  // ── Images ──
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -22,10 +22,8 @@ let nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 
-  // ── Prisma (server only) ──
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
 
-  // ── Security headers ──
   async headers() {
     return [
       {
@@ -51,7 +49,6 @@ let nextConfig: NextConfig = {
           },
         ],
       },
-      // Cache static assets aggressively
       {
         source: '/icons/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
@@ -60,7 +57,6 @@ let nextConfig: NextConfig = {
         source: '/_next/static/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
-      // Service worker: no cache
       {
         source: '/sw.js',
         headers: [
@@ -68,7 +64,6 @@ let nextConfig: NextConfig = {
           { key: 'Service-Worker-Allowed', value: '/' },
         ],
       },
-      // Manifest
       {
         source: '/manifest.json',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
@@ -76,18 +71,12 @@ let nextConfig: NextConfig = {
     ]
   },
 
-  // ── Redirects ──
   async redirects() {
     return [
-      {
-        source: '/',
-        destination: '/dashboard',
-        permanent: false,
-      },
+      { source: '/', destination: '/dashboard', permanent: false },
     ]
   },
 
-  // ── Bundle optimization ──
   experimental: {
     optimizePackageImports: [
       'lucide-react',
@@ -99,16 +88,9 @@ let nextConfig: NextConfig = {
     ],
   },
 
-  // ── Logging ──
   logging: {
     fetches: { fullUrl: isDev },
   },
-}
-
-// ── Bundle analyzer (run with ANALYZE=true npm run build) ──
-if (ANALYZE) {
-  const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true })
-  nextConfig = withBundleAnalyzer(nextConfig)
 }
 
 export default nextConfig
