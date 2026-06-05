@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Expense } from '@/types'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import * as XLSX from 'xlsx'
@@ -38,6 +39,7 @@ async function fetchExpenses(params: Record<string, string>) {
 
 export default function ExpensesPage() {
   const queryClient = useQueryClient()
+  const { format } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
@@ -127,7 +129,7 @@ export default function ExpensesPage() {
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground">Total Expenses</p>
             {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2 text-red-500">{formatCurrency(summary.totalAmount || 0)}</p>
+              <p className="text-2xl font-bold mt-2 text-red-500">{format(summary.totalAmount || 0)}</p>
             )}
           </CardContent>
         </Card>
@@ -136,7 +138,7 @@ export default function ExpensesPage() {
             <CardContent className="p-6">
               <p className="text-sm text-muted-foreground">{c.category.replace('_', ' ')}</p>
               {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <p className="text-2xl font-bold mt-2">{formatCurrency(c._sum.amount || 0)}</p>
+                <p className="text-2xl font-bold mt-2">{format(c._sum.amount || 0)}</p>
               )}
             </CardContent>
           </Card>
@@ -213,7 +215,7 @@ export default function ExpensesPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{e.description}</td>
                     <td className="px-4 py-3 text-muted-foreground">{e.vendor || '—'}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-red-500">{formatCurrency(e.amount)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-red-500">{format(e.amount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(e)}>

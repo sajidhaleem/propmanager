@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatCurrency, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 
 interface RecentBookingsProps {
@@ -12,6 +13,8 @@ interface RecentBookingsProps {
 }
 
 export function RecentBookings({ bookings }: RecentBookingsProps) {
+  const { format } = useCurrency()
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -40,7 +43,7 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
                 <Badge className={getStatusColor(booking.status)} variant="outline">
                   {booking.status.replace('_', ' ')}
                 </Badge>
-                <span className="text-sm font-semibold">{formatCurrency(booking.netAmount)}</span>
+                <span className="text-sm font-semibold tabular-nums">{format(booking.netAmount)}</span>
               </div>
             </div>
           ))}

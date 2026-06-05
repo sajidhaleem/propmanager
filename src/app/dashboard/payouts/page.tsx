@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
+import { formatDate, getStatusColor } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Payout } from '@/types'
 import * as XLSX from 'xlsx'
 
@@ -29,6 +30,7 @@ async function fetchPayouts(params: Record<string, string>) {
 
 export default function PayoutsPage() {
   const queryClient = useQueryClient()
+  const { format } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
@@ -126,12 +128,12 @@ export default function PayoutsPage() {
         <Card><CardContent className="p-6">
           <p className="text-sm text-muted-foreground">Total Paid</p>
           {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-            <p className="text-2xl font-bold mt-2">{formatCurrency(summary.totalAmount || 0)}</p>
+            <p className="text-2xl font-bold mt-2">{format(summary.totalAmount || 0)}</p>
           )}
         </CardContent></Card>
         <Card className="border-yellow-200 dark:border-yellow-800"><CardContent className="p-6">
           <p className="text-sm text-yellow-600 dark:text-yellow-400">Pending</p>
-          <p className="text-2xl font-bold mt-2 text-yellow-600">{formatCurrency(pendingTotal)}</p>
+          <p className="text-2xl font-bold mt-2 text-yellow-600">{format(pendingTotal)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-6">
           <p className="text-sm text-muted-foreground">Total Records</p>
@@ -193,7 +195,7 @@ export default function PayoutsPage() {
                     <td className="px-4 py-3">
                       <Badge className={getStatusColor(p.status)} variant="outline">{p.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">{formatCurrency(p.amount)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{format(p.amount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {p.status === 'PENDING' && (

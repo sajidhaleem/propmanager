@@ -19,6 +19,9 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { registerSchema, RegisterInput } from '@/lib/validations'
 import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
+import { CurrencySelector } from '@/components/ui/CurrencySelector'
+import { useCurrency } from '@/hooks/useCurrency'
+import { formatAmount, getCurrency } from '@/lib/currencies'
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: 'bg-red-100 text-red-700',
@@ -81,17 +84,22 @@ export default function SettingsPage() {
   })
 
   const isAdmin = user?.role === 'ADMIN'
+  const { currency, setCurrency, currencyInfo, format } = useCurrency()
 
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Manage users, roles, and system configuration" />
 
-      <Tabs defaultValue="users">
+      <Tabs defaultValue="currency">
         <TabsList>
+          <TabsTrigger value="currency">Currency</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="account">My Account</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
+
+        {/* ── Currency Tab ── */}
+        <CurrencyTab />
 
         <TabsContent value="users" className="space-y-4">
           <div className="flex items-center justify-between">
@@ -249,5 +257,96 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ── Currency Tab Component ────────────────────────────────────────────────────
+function CurrencyTab() {
+  const { currency, setCurrency, currencyInfo, format } = useCurrency()
+
+  const PREVIEW_AMOUNTS = [1000, 25000, 150000, 1250000]
+
+  return (
+    <TabsContent value="currency" className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="text-xl">{currencyInfo.flag}</span>
+              Display Currency
+            </CardTitle>
+            <CardDescription>
+              All amounts across the app will be displayed in this currency.
+              Your preference is saved automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <CurrencySelector value={currency} onChange={setCurrency} />
+            <div className="rounded-lg bg-muted/40 border p-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-xl shrink-0">
+                {currencyInfo.flag}
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{currencyInfo.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Code: <span className="font-mono">{currencyInfo.code}</span> · Symbol: <span className="font-mono">{currencyInfo.symbol}</span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Preview</CardTitle>
+            <CardDescription>How amounts will appear across the app</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {PREVIEW_AMOUNTS.map(amount => (
+              <div key={amount} className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-2.5">
+                <span className="text-sm text-muted-foreground">{amount.toLocaleString()} units</span>
+                <span className="text-sm font-semibold tabular-nums">{format(amount)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20 px-4 py-2.5">
+              <span className="text-sm text-muted-foreground">Negative (expense)</span>
+              <span className="text-sm font-semibold text-red-500 tabular-nums">-{format(5500)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Popular currencies quick-select */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Quick Select</CardTitle>
+          <CardDescription>Switch to a commonly used currency</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {['PKR','USD','EUR','GBP','AED','SAR','INR','AUD','CAD','JPY','CHF','TRY'].map(code => {
+              const c = getCurrency(code)
+              return (
+                <button
+                  key={code}
+                  onClick={() => setCurrency(code)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                    currency === code
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background hover:border-primary/50 hover:bg-accent'
+                  }`}
+                >
+                  <span>{c.flag}</span>
+                  <span className="font-mono">{code}</span>
+                  <span className="text-muted-foreground">{c.symbol}</span>
+                </button>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
   )
 }

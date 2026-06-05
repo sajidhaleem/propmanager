@@ -6,13 +6,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
+export function formatCurrency(amount: number, currency = 'PKR'): string {
+  try {
+    const { getCurrency, formatAmount } = require('./currencies')
+    return formatAmount(amount, currency)
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency === 'PKR' ? 'USD' : currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  }
 }
 
 export function formatDate(date: Date | string, fmt = 'MMM dd, yyyy'): string {

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { JWTPayload } from '@/lib/auth'
+import { DEFAULT_CURRENCY } from '@/lib/currencies'
 
 interface UIState {
   sidebarOpen: boolean
@@ -8,6 +9,9 @@ interface UIState {
   toggleSidebar: () => void
   user: JWTPayload | null
   setUser: (user: JWTPayload | null) => void
+  // ── Currency ──
+  currency: string
+  setCurrency: (code: string) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -18,10 +22,15 @@ export const useUIStore = create<UIState>()(
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       user: null,
       setUser: (user) => set({ user }),
+      currency: DEFAULT_CURRENCY,
+      setCurrency: (code) => set({ currency: code }),
     }),
     {
       name: 'ui-store',
-      partialize: (state) => ({ sidebarOpen: state.sidebarOpen }),
+      partialize: (state) => ({
+        sidebarOpen: state.sidebarOpen,
+        currency: state.currency,
+      }),
     }
   )
 )

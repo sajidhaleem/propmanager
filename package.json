@@ -19,6 +19,7 @@
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
+    "db:clear": "ts-node --project tsconfig.seed.json scripts/clear-data.ts",
     "generate:icons": "node scripts/generate-icons.mjs",
     "type-check": "tsc --noEmit",
     "prepare": "node scripts/generate-icons.mjs"

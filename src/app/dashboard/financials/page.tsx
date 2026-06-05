@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatDate, formatCurrency, getPlatformColor } from '@/lib/utils'
+import { formatDate, getPlatformColor } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Income } from '@/types'
 import * as XLSX from 'xlsx'
 
@@ -30,6 +31,7 @@ const currentYear = new Date().getFullYear()
 
 export default function FinancialsPage() {
   const [year, setYear] = useState(String(currentYear))
+  const { format } = useCurrency()
   const [month, setMonth] = useState('all')
   const [page, setPage] = useState(1)
 
@@ -73,7 +75,7 @@ export default function FinancialsPage() {
             <CardContent className="p-6">
               <p className="text-sm text-muted-foreground">{s.label}</p>
               {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <p className="text-2xl font-bold mt-2">{formatCurrency(s.value || 0)}</p>
+                <p className="text-2xl font-bold mt-2">{format(s.value || 0)}</p>
               )}
             </CardContent>
           </Card>
@@ -140,9 +142,9 @@ export default function FinancialsPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(i.receivedAt)}</td>
-                    <td className="px-4 py-3 text-right">{formatCurrency(i.grossAmount)}</td>
-                    <td className="px-4 py-3 text-right text-red-500">-{formatCurrency(i.platformFee + i.cleaningFee)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(i.netAmount)}</td>
+                    <td className="px-4 py-3 text-right">{format(i.grossAmount)}</td>
+                    <td className="px-4 py-3 text-right text-red-500">-{format(i.platformFee + i.cleaningFee)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-600">{format(i.netAmount)}</td>
                   </tr>
                 ))
               )}
@@ -151,9 +153,9 @@ export default function FinancialsPage() {
               <tfoot>
                 <tr className="border-t bg-muted/50 font-medium">
                   <td colSpan={4} className="px-4 py-3 text-muted-foreground">Total ({total} records)</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(summary.grossAmount || 0)}</td>
-                  <td className="px-4 py-3 text-right text-red-500">-{formatCurrency((summary.platformFee || 0) + (summary.cleaningFee || 0))}</td>
-                  <td className="px-4 py-3 text-right text-green-600">{formatCurrency(summary.netAmount || 0)}</td>
+                  <td className="px-4 py-3 text-right">{format(summary.grossAmount || 0)}</td>
+                  <td className="px-4 py-3 text-right text-red-500">-{format((summary.platformFee || 0) + (summary.cleaningFee || 0))}</td>
+                  <td className="px-4 py-3 text-right text-green-600">{format(summary.netAmount || 0)}</td>
                 </tr>
               </tfoot>
             )}

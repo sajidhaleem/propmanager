@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useCurrency } from '@/hooks/useCurrency'
 import { useQuery } from '@tanstack/react-query'
 import { Download, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatCurrency } from '@/lib/utils'
+
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell,
@@ -28,6 +29,7 @@ async function fetchReports(year: string, type: string) {
 
 export default function ReportsPage() {
   const [year, setYear] = useState(String(currentYear))
+  const { format } = useCurrency()
   const [tab, setTab] = useState('monthly')
 
   const { data: monthlyData, isLoading: monthlyLoading } = useQuery({
@@ -107,7 +109,7 @@ export default function ReportsPage() {
                   <p className="text-sm text-muted-foreground">{s.label}</p>
                   {monthlyLoading ? <Skeleton className="h-8 w-32 mt-2" /> : (
                     <p className={`text-2xl font-bold mt-2 ${s.positive ? 'text-green-600' : 'text-red-500'}`}>
-                      {formatCurrency(s.value)}
+                      {format(s.value)}
                     </p>
                   )}
                 </CardContent>
@@ -155,10 +157,10 @@ export default function ReportsPage() {
                   {monthly.map((m: any) => (
                     <tr key={m.month} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3 font-medium">{MONTHS[m.month - 1]} {m.year}</td>
-                      <td className="px-4 py-3 text-right">{formatCurrency(m.revenue)}</td>
-                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(m.expenses)}</td>
+                      <td className="px-4 py-3 text-right">{format(m.revenue)}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{format(m.expenses)}</td>
                       <td className={`px-4 py-3 text-right font-semibold ${m.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {formatCurrency(m.net)}
+                        {format(m.net)}
                       </td>
                       <td className="px-4 py-3 text-right text-muted-foreground">
                         {m.revenue > 0 ? `${Math.round((m.net / m.revenue) * 100)}%` : '—'}
@@ -180,9 +182,9 @@ export default function ReportsPage() {
                 <Card key={p.id}>
                   <CardContent className="p-6">
                     <p className="text-sm font-medium">{p.name}</p>
-                    <p className="text-2xl font-bold mt-2">{formatCurrency(p.totalRevenue)}</p>
+                    <p className="text-2xl font-bold mt-2">{format(p.totalRevenue)}</p>
                     <p className="text-xs text-muted-foreground mt-1">{p.totalBookings} bookings · {p.totalNights} nights</p>
-                    <p className="text-xs text-muted-foreground">Avg: {formatCurrency(p.avgRate)}/night</p>
+                    <p className="text-xs text-muted-foreground">Avg: {format(p.avgRate)}/night</p>
                   </CardContent>
                 </Card>
               ))
@@ -218,7 +220,7 @@ export default function ReportsPage() {
                       <div key={p.platform} className="flex items-center gap-3">
                         <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[i % PLATFORM_COLORS.length] }} />
                         <span className="flex-1 text-sm">{p.platform}</span>
-                        <span className="text-sm font-medium">{formatCurrency(p._sum.netAmount || 0)}</span>
+                        <span className="text-sm font-medium">{format(p._sum.netAmount || 0)}</span>
                         <span className="text-xs text-muted-foreground">{p._count.id} bookings</span>
                       </div>
                     ))}

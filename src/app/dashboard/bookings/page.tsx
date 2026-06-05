@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatDate, formatCurrency, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import * as XLSX from 'xlsx'
 
@@ -39,6 +40,7 @@ const EMPTY_FORM = {
 
 export default function BookingsPage() {
   const queryClient = useQueryClient()
+  const { format } = useCurrency()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -198,7 +200,7 @@ export default function BookingsPage() {
                         {b.status.replace('_', ' ')}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">{formatCurrency(b.netAmount)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{format(b.netAmount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(b)}>
