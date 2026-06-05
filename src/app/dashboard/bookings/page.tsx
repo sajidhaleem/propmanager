@@ -41,6 +41,19 @@ const EMPTY_FORM = {
 
 interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
 
+// Convert a UTC ISO string to a value suitable for datetime-local input (local time)
+function toLocalInput(utcStr: string): string {
+  if (!utcStr) return ''
+  const d = new Date(utcStr)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+// Convert a datetime-local input value (local time) back to a full UTC ISO string
+function localInputToISO(localInput: string): string {
+  if (!localInput) return ''
+  return new Date(localInput).toISOString()
+}
+
 export default function BookingsPage() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
@@ -75,7 +88,14 @@ export default function BookingsPage() {
       const res = await fetch(url, {
         method: editBooking ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, rate: Number(payload.rate), cleaningFee: Number(payload.cleaningFee), platformFee: Number(payload.platformFee) }),
+        body: JSON.stringify({
+            ...payload,
+            checkIn:  payload.checkIn  ? localInputToISO(payload.checkIn)  : undefined,
+            checkOut: payload.checkOut ? localInputToISO(payload.checkOut) : undefined,
+            rate: Number(payload.rate),
+            cleaningFee: Number(payload.cleaningFee),
+            platformFee: Number(payload.platformFee),
+          }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
@@ -176,8 +196,8 @@ export default function BookingsPage() {
     setEditBooking(b)
     setForm({
       guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
-      checkIn: b.checkIn.replace('Z','').slice(0,16),
-      checkOut: b.checkOut.replace('Z','').slice(0,16),
+      checkIn: toLocalInput(b.checkIn),
+      checkOut: toLocalInput(b.checkOut),
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
       platform: b.platform, status: b.status, propertyId: b.propertyId, notes: b.notes || '',
       platformOther: '',
