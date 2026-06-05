@@ -240,12 +240,12 @@ export default function BookingsPage() {
                     <td className="px-4 py-3">{b.nights}</td>
                     <td className="px-4 py-3">
                       <Badge className={getPlatformColor(b.platform)} variant="outline">
-                        {b.platform === 'BOOKING_COM' ? 'BDC' : b.platform}
+                        {b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform === 'VRBO' ? 'VRBO' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase()}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <Badge className={getStatusColor(b.status)} variant="outline">
-                        {b.status.replace('_', ' ')}
+                        {b.status.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">{format(b.netAmount)}</td>
@@ -285,40 +285,58 @@ export default function BookingsPage() {
           <DialogHeader>
             <DialogTitle>{editBooking ? 'Edit Booking' : 'New Booking'}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2 space-y-2">
+          <div className="space-y-4 py-2">
+
+            {/* 1. Guest Name */}
+            <div className="space-y-1.5">
               <Label>Guest Name *</Label>
               <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
             </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} />
+
+            {/* 2–3. Email & Phone side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} placeholder="guest@email.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Phone</Label>
+                <Input value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} placeholder="+92 300 0000000" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} />
+
+            {/* 4–5. Check-in & Check-out side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Check-in *</Label>
+                <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Check-out *</Label>
+                <Input type="datetime-local" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Check-in *</Label>
-              <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
+
+            {/* 6. Payment Received */}
+            <div className="space-y-1.5">
+              <Label>Payment Received ({currencyInfo.symbol}) *</Label>
+              <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
             </div>
-            <div className="space-y-2">
-              <Label>Check-out *</Label>
-              <Input type="datetime-local" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
+
+            {/* 7–8. Cleaning Fee & Platform Fee side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Cleaning Fee ({currencyInfo.symbol})</Label>
+                <Input type="number" min="0" value={form.cleaningFee} onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Platform Fee ({currencyInfo.symbol})</Label>
+                <Input type="number" min="0" value={form.platformFee} onChange={(e) => setForm({ ...form, platformFee: e.target.value })} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Nightly Rate ({currencyInfo.symbol}) *</Label>
-              <Input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Cleaning Fee ({currencyInfo.symbol})</Label>
-              <Input type="number" value={form.cleaningFee} onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Platform Fee ({currencyInfo.symbol})</Label>
-              <Input type="number" value={form.platformFee} onChange={(e) => setForm({ ...form, platformFee: e.target.value })} />
-            </div>
-            <div className="space-y-2">
+
+            {/* 9. Property */}
+            <div className="space-y-1.5">
               <Label>Property *</Label>
               <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
                 <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
@@ -327,17 +345,24 @@ export default function BookingsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+
+            {/* 10. Platform */}
+            <div className="space-y-1.5">
               <Label>Platform *</Label>
               <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => (
-                    <SelectItem key={p} value={p}>{p === 'OTHER' ? 'Other (specify below)' : p}</SelectItem>
+                  {[
+                    { value: 'AIRBNB',      label: 'Airbnb' },
+                    { value: 'DIRECT',      label: 'Direct' },
+                    { value: 'BOOKING_COM', label: 'Booking.com' },
+                    { value: 'VRBO',        label: 'VRBO' },
+                    { value: 'OTHER',       label: 'Other (specify below)' },
+                  ].map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {/* Only show when OTHER selected — stores in platformOther, NOT notes */}
               {form.platform === 'OTHER' && (
                 <Input
                   value={form.platformOther}
@@ -348,47 +373,50 @@ export default function BookingsPage() {
                 />
               )}
             </div>
-            <div className="space-y-2">
+
+            {/* 11. Status */}
+            <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['PENDING','CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED','NO_SHOW'].map((s) => (
-                    <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
+                  {[
+                    { value: 'PENDING',     label: 'Pending' },
+                    { value: 'CONFIRMED',   label: 'Confirmed' },
+                    { value: 'CHECKED_IN',  label: 'Checked in' },
+                    { value: 'CHECKED_OUT', label: 'Checked out' },
+                    { value: 'CANCELLED',   label: 'Cancelled' },
+                    { value: 'NO_SHOW',     label: 'No show' },
+                  ].map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-2">
+
+            {/* 12–13. Misc Charges & Description side by side */}
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Miscellaneous Charges</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Misc Charges ({currencyInfo.symbol})</Label>
+                  <Input type="number" min="0" value={form.miscCharges} onChange={(e) => setForm({ ...form, miscCharges: e.target.value })} placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Misc Description</Label>
+                  <Input value={form.miscDescription} onChange={(e) => setForm({ ...form, miscDescription: e.target.value })} placeholder="e.g. Late checkout fee…" />
+                </div>
+              </div>
+            </div>
+
+            {/* 14. Notes */}
+            <div className="space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />
             </div>
 
-            {/* ── Misc Charges ── */}
-            <div className="col-span-2 border-t pt-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Miscellaneous Charges</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Misc Charges ({currencyInfo.symbol})</Label>
-              <Input
-                type="number"
-                min="0"
-                value={form.miscCharges}
-                onChange={(e) => setForm({ ...form, miscCharges: e.target.value })}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Misc Description</Label>
-              <Input
-                value={form.miscDescription}
-                onChange={(e) => setForm({ ...form, miscDescription: e.target.value })}
-                placeholder="e.g. Late checkout fee, Extra towels…"
-              />
-            </div>
-
-            {/* ── Documents ── */}
-            <div className="col-span-2 border-t pt-4">
+            {/* 15. Documents */}
+            <div className="border-t pt-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Documents</p>
               {editBooking ? (
                 <div className="space-y-3">
