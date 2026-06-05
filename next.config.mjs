@@ -1,7 +1,14 @@
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const isDev = process.env.NODE_ENV === 'development'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Explicitly set to THIS directory so Next.js doesn't infer the parent
+  // directory as workspace root (caused by parent package-lock.json).
+  outputFileTracingRoot: __dirname,
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
