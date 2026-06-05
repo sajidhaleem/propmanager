@@ -16,7 +16,7 @@ import { Booking, Property } from '@/types'
 import Link from 'next/link'
 
 async function fetchCalendarBookings(startDate: string, endDate: string) {
-  const res = await fetch(`/api/bookings?startDate=${startDate}&endDate=${endDate}&limit=300`)
+  const res = await fetch(`/api/bookings?startDate=${startDate}&endDate=${endDate}&limit=300&sortBy=checkIn&sortOrder=asc`)
   if (!res.ok) throw new Error('Failed')
   return res.json()
 }
@@ -82,12 +82,14 @@ export default function CalendarPage() {
 
   const isLoading = bLoading || pLoading
 
-  // Bookings that overlap a given day for a specific property
+  // Bookings that overlap a given day for a specific property, sorted earliest check-in first
   function cellBookings(propId: string, day: Date): Booking[] {
-    return bookings.filter(b => {
-      if (b.propertyId !== propId) return false
-      return slotType(b, day) !== null
-    })
+    return bookings
+      .filter(b => {
+        if (b.propertyId !== propId) return false
+        return slotType(b, day) !== null
+      })
+      .sort((a, b) => parseISO(a.checkIn).getTime() - parseISO(b.checkIn).getTime())
   }
 
   // Total active bookings across all rooms for a day

@@ -69,7 +69,7 @@ export default function BookingsPage() {
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
   const [editingAmountValue, setEditingAmountValue] = useState('')
 
-  const params: Record<string, string> = { page: String(page), limit: '15' }
+  const params: Record<string, string> = { page: String(page), limit: '15', sortBy: 'checkIn', sortOrder: 'asc' }
   if (search) params.search = search
   if (statusFilter !== 'all') params.status = statusFilter
   if (platformFilter !== 'all') params.platform = platformFilter
