@@ -109,7 +109,9 @@ export default function PropertiesPage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                       <Home className="h-5 w-5 text-primary" />
                     </div>
-                    <Badge className={getStatusColor(p.status)} variant="outline">{p.status}</Badge>
+                    <Badge className={getStatusColor(p.status)} variant="outline">
+                      {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
+                    </Badge>
                   </div>
                   <CardTitle className="text-base mt-2">{p.name}</CardTitle>
                   {p.description && <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>}
@@ -178,7 +180,9 @@ export default function PropertiesPage() {
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['room','suite','apartment','villa','studio'].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {['room','suite','apartment','villa','studio'].map((t) => (
+                    <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -187,7 +191,7 @@ export default function PropertiesPage() {
               <Input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Base Rate ($/night) *</Label>
+              <Label>Base Rate (per night) *</Label>
               <Input type="number" value={form.baseRate} onChange={(e) => setForm({ ...form, baseRate: e.target.value })} />
             </div>
             <div className="space-y-2">
@@ -195,7 +199,11 @@ export default function PropertiesPage() {
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['ACTIVE','INACTIVE','MAINTENANCE'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {[
+                    { value: 'ACTIVE',      label: 'Active' },
+                    { value: 'INACTIVE',    label: 'Inactive' },
+                    { value: 'MAINTENANCE', label: 'Maintenance' },
+                  ].map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
