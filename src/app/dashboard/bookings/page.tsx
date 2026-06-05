@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2 } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -120,6 +120,28 @@ export default function BookingsPage() {
   function openCreate() {
     setEditBooking(null)
     setForm(EMPTY_FORM)
+    setUploadedDocs([])
+    setModalOpen(true)
+  }
+  function openCopy(b: Booking) {
+    setEditBooking(null)
+    setForm({
+      guestName: b.guestName,
+      guestEmail: b.guestEmail || '',
+      guestPhone: b.guestPhone || '',
+      checkIn: '',
+      checkOut: '',
+      rate: String(b.rate),
+      cleaningFee: String(b.cleaningFee),
+      platformFee: String(b.platformFee),
+      platform: b.platform,
+      status: 'CONFIRMED',
+      propertyId: b.propertyId,
+      notes: b.notes || '',
+      platformOther: '',
+      miscCharges: String((b as any).miscCharges || ''),
+      miscDescription: (b as any).miscDescription || '',
+    })
     setUploadedDocs([])
     setModalOpen(true)
   }
@@ -286,10 +308,13 @@ export default function BookingsPage() {
                     <td className="px-4 py-3 text-right font-semibold">{format(b.netAmount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(b)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit booking" onClick={() => openEdit(b)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Duplicate booking" onClick={() => openCopy(b)}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete booking"
                           onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -318,7 +343,7 @@ export default function BookingsPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editBooking ? 'Edit Booking' : 'New Booking'}</DialogTitle>
+            <DialogTitle>{editBooking ? 'Edit Booking' : form.guestName ? `Copy Booking — ${form.guestName}` : 'New Booking'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
 

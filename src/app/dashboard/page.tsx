@@ -1,9 +1,10 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Banknote, TrendingUp, CalendarCheck, Building2,
-  ArrowUpRight, Clock, AlertCircle, RefreshCw,
+  ArrowUpRight, Clock, AlertCircle, RefreshCw, Check, X,
 } from 'lucide-react'
 import Link from 'next/link'
 import { StatsCard } from '@/components/dashboard/StatsCard'
@@ -13,9 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
+import toast from 'react-hot-toast'
 
 async function fetchDashboardStats() {
   const res = await fetch('/api/dashboard/stats')
@@ -25,12 +28,50 @@ async function fetchDashboardStats() {
 
 export default function DashboardPage() {
   const { format, currency } = useCurrency()
+  const queryClient = useQueryClient()
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
+  const [editingPaymentValue, setEditingPaymentValue] = useState('')
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: fetchDashboardStats,
     refetchInterval: 2 * 60 * 1000,
   })
+
+  const paymentMutation = useMutation({
+    mutationFn: async ({ id, rate }: { id: string; rate: number }) => {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      setEditingPaymentId(null)
+      toast.success('Payment updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  function startEditPayment(b: Booking) {
+    setEditingPaymentId(b.id)
+    setEditingPaymentValue(String(b.rate))
+  }
+
+  function savePayment(id: string) {
+    const val = parseFloat(editingPaymentValue)
+    if (isNaN(val) || val < 0) { toast.error('Enter a valid amount'); return }
+    paymentMutation.mutate({ id, rate: val })
+  }
+
+  function cancelEdit() {
+    setEditingPaymentId(null)
+    setEditingPaymentValue('')
+  }
 
   if (error) {
     return (
@@ -116,7 +157,10 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base">Recent Bookings</CardTitle>
+          <div>
+            <CardTitle className="text-base">Recent Bookings</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Click the amount to edit payment received</p>
+          </div>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/dashboard/bookings" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
               View all <ArrowUpRight className="h-3 w-3" />
@@ -157,7 +201,45 @@ export default function DashboardPage() {
                     <Badge className={getPlatformColor(b.platform)} variant="outline">{b.platform === 'BOOKING_COM' ? 'BDC' : b.platform}</Badge>
                     <Badge className={getStatusColor(b.status)} variant="outline">{b.status.replace('_', ' ')}</Badge>
                   </div>
-                  <p className="text-sm font-semibold tabular-nums shrink-0">{format(b.netAmount)}</p>
+
+                  {/* Inline payment edit */}
+                  {editingPaymentId === b.id ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={editingPaymentValue}
+                        onChange={(e) => setEditingPaymentValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') savePayment(b.id)
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                        className="h-7 w-24 text-xs text-right"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700"
+                        onClick={() => savePayment(b.id)}
+                        disabled={paymentMutation.isPending}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                        onClick={cancelEdit}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      className="text-sm font-semibold tabular-nums shrink-0 hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
+                      title="Click to edit payment received"
+                      onClick={() => startEditPayment(b)}
+                    >
+                      {format(b.rate)}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
