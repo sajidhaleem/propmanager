@@ -35,7 +35,7 @@ async function fetchProperties() {
 const EMPTY_FORM = {
   guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '',
   rate: '', cleaningFee: '15', platformFee: '', platform: 'AIRBNB',
-  status: 'CONFIRMED', propertyId: '', notes: '',
+  status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
 }
 
 export default function BookingsPage() {
@@ -102,6 +102,7 @@ export default function BookingsPage() {
       checkIn: b.checkIn.split('T')[0], checkOut: b.checkOut.split('T')[0],
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
       platform: b.platform, status: b.status, propertyId: b.propertyId, notes: b.notes || '',
+      platformOther: '',
     })
     setModalOpen(true)
   }
@@ -281,12 +282,21 @@ export default function BookingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Platform *</Label>
-              <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
+              <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => <SelectItem key={p} value={p}>{p === 'OTHER' ? 'Other (specify below)' : p}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.platform === 'OTHER' && (
+                <Input
+                  value={form.platformOther}
+                  onChange={(e) => setForm({ ...form, platformOther: e.target.value, notes: e.target.value ? `Platform: ${e.target.value}${form.notes ? '. ' + form.notes : ''}` : form.notes })}
+                  placeholder="e.g. Airbnb Indonesia, Facebook, Walk-in…"
+                  className="mt-2"
+                  autoFocus
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

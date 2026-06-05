@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, CalendarDays, BookOpen, Building2, DollarSign,
+  LayoutDashboard, CalendarDays, BookOpen, Building2, Banknote,
   Receipt, Users, BarChart3, Settings, LogOut, Home, ChevronLeft,
   Wifi, WifiOff,
 } from 'lucide-react'
@@ -33,7 +33,7 @@ const navGroups = [
   {
     label: 'Finance',
     items: [
-      { href: '/dashboard/financials', label: 'Income', icon: DollarSign },
+      { href: '/dashboard/financials', label: 'Income', icon: Banknote },
       { href: '/dashboard/expenses', label: 'Expenses', icon: Receipt },
       { href: '/dashboard/payouts', label: 'Payouts', icon: Users },
     ],

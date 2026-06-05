@@ -6,13 +6,14 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek,
   isSameMonth, isToday, addMonths, subMonths, isSameDay, isWithinInterval,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 
 const ROOM_COLORS = [
@@ -39,6 +40,7 @@ async function fetchProperties() {
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const { format: formatMoney } = useCurrency()
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -159,21 +161,58 @@ export default function CalendarPage() {
 
       {/* Selected booking detail */}
       {selectedBooking && (
-        <Card className="border-primary">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <h3 className="font-semibold">{selectedBooking.guestName}</h3>
-                <p className="text-sm text-muted-foreground">{selectedBooking.property?.name}</p>
-                <p className="text-sm">
-                  {format(new Date(selectedBooking.checkIn), 'MMM dd, yyyy')} –{' '}
-                  {format(new Date(selectedBooking.checkOut), 'MMM dd, yyyy')}
-                  <span className="text-muted-foreground ml-2">({selectedBooking.nights} nights)</span>
+        <Card className="border-primary shadow-md">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-2">
+                <div>
+                  <h3 className="font-semibold text-base">{selectedBooking.guestName}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedBooking.property?.name}</p>
+                </div>
+
+                {/* Check-in with time */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 mt-0.5">
+                    <CalendarDays className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-medium">Check-in</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{format(new Date(selectedBooking.checkIn), 'EEE, MMM dd, yyyy')}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(selectedBooking.checkIn), 'hh:mm a')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Check-out with time */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400 mt-0.5">
+                    <CalendarDays className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-medium">Check-out</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{format(new Date(selectedBooking.checkOut), 'EEE, MMM dd, yyyy')}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(selectedBooking.checkOut), 'hh:mm a')}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground pt-1">
+                  Duration: <span className="font-medium text-foreground">{selectedBooking.nights} night{selectedBooking.nights !== 1 ? 's' : ''}</span>
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{formatCurrency(selectedBooking.netAmount)}</p>
-                <Badge className="mt-1">{selectedBooking.platform}</Badge>
+
+              <div className="text-right space-y-2">
+                <p className="text-2xl font-bold tabular-nums">{formatMoney(selectedBooking.netAmount)}</p>
+                <Badge variant="outline">{selectedBooking.platform}</Badge>
+                <div>
+                  {selectedBooking.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[180px] text-right">{selectedBooking.notes}</p>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
