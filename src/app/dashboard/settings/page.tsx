@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, UserCheck, UserX, Shield, Key } from 'lucide-react'
+import {
+  Plus, UserCheck, UserX, Shield, Key,
+  Pencil, Trash2, Eye, EyeOff, Save, Lock,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,7 +14,10 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogFooter, DialogDescription,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,59 +26,135 @@ import { registerSchema, RegisterInput } from '@/lib/validations'
 import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { CurrencySelector } from '@/components/ui/CurrencySelector'
+import { getCurrency } from '@/lib/currencies'
 import { useCurrency } from '@/hooks/useCurrency'
-import { formatAmount, getCurrency } from '@/lib/currencies'
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+type UserRow = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-700',
+  ADMIN:   'bg-red-100 text-red-700',
   MANAGER: 'bg-blue-100 text-blue-700',
-  STAFF: 'bg-green-100 text-green-700',
+  STAFF:   'bg-green-100 text-green-700',
 }
 
+const ROLE_PERMS = [
+  {
+    role: 'ADMIN',
+    badge: 'bg-red-100 text-red-700',
+    description: 'Full system access',
+    can: [
+      'All Bookings — create, edit, delete',
+      'All Properties — create, edit, delete',
+      'All Expenses — create, edit, delete',
+      'User Management — add, edit, delete',
+      'Settings & Currency',
+      'Calendar & Dashboard',
+    ],
+    cannot: [] as string[],
+  },
+  {
+    role: 'MANAGER',
+    badge: 'bg-blue-100 text-blue-700',
+    description: 'Operational access',
+    can: [
+      'All Bookings — create, edit, delete',
+      'Properties — create & edit',
+      'Expenses — create, edit, delete',
+      'Calendar & Dashboard',
+    ],
+    cannot: [
+      'User Management',
+      'System Settings',
+      'Delete Properties',
+    ],
+  },
+  {
+    role: 'STAFF',
+    badge: 'bg-green-100 text-green-700',
+    description: 'Basic operations',
+    can: [
+      'Create & edit bookings',
+      'View properties & calendar',
+      'View expenses & dashboard',
+    ],
+    cannot: [
+      'Delete bookings or properties',
+      'User Management',
+      'System Settings',
+    ],
+  },
+]
+
+// ── Data fetcher ──────────────────────────────────────────────────────────────
 async function fetchUsers() {
   const res = await fetch('/api/users')
   if (!res.ok) throw new Error('Failed')
   return res.json()
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [modalOpen, setModalOpen] = useState(false)
+  const isAdmin = user?.role === 'ADMIN'
 
-  const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: fetchUsers })
-  const users = data?.data || []
+  // User management modal state
+  const [addModalOpen, setAddModalOpen]   = useState(false)
+  const [editingUser, setEditingUser]     = useState<UserRow | null>(null)
+  const [deletingUser, setDeletingUser]   = useState<UserRow | null>(null)
+  const [editForm, setEditForm]           = useState({ name: '', email: '', role: 'STAFF', resetPwd: false, newPassword: '' })
+  const [showEditPwd, setShowEditPwd]     = useState(false)
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<RegisterInput>({
+  // My Account state
+  const [profileForm, setProfileForm] = useState({ name: '', email: '' })
+  const [profileReady, setProfileReady] = useState(false)
+  const [pwdForm, setPwdForm]         = useState({ current: '', newPwd: '', confirm: '' })
+  const [showPwd, setShowPwd]         = useState({ current: false, newPwd: false, confirm: false })
+
+  useEffect(() => {
+    if (user && !profileReady) {
+      setProfileForm({ name: user.name || '', email: user.email || '' })
+      setProfileReady(true)
+    }
+  }, [user, profileReady])
+
+  // User list query (admin only)
+  const { data, isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    enabled: !!isAdmin,
+  })
+  const users: UserRow[] = data?.data || []
+
+  // Add user form (react-hook-form)
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: { role: 'STAFF' },
   })
 
+  // ── Mutations ────────────────────────────────────────────────────────────────
   const createUserMutation = useMutation({
-    mutationFn: async (data: RegisterInput) => {
+    mutationFn: async (d: RegisterInput) => {
       const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      setModalOpen(false)
-      reset()
+      setAddModalOpen(false); reset()
       toast.success('User created')
     },
     onError: (e: Error) => toast.error(e.message),
   })
 
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       const res = await fetch(`/api/users/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive }),
       })
       if (!res.ok) throw new Error('Failed')
     },
@@ -83,9 +165,91 @@ export default function SettingsPage() {
     onError: () => toast.error('Failed to update user'),
   })
 
-  const isAdmin = user?.role === 'ADMIN'
-  const { currency, setCurrency, currencyInfo, format } = useCurrency()
+  const editUserMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setEditingUser(null)
+      toast.success('User updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setDeletingUser(null)
+      toast.success('User deleted')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (d: { name: string; email: string }) => {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+      toast.success('Profile updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (d: { currentPassword: string; newPassword: string }) => {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+    },
+    onSuccess: () => {
+      setPwdForm({ current: '', newPwd: '', confirm: '' })
+      toast.success('Password changed successfully')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  function openEditUser(u: UserRow) {
+    setEditForm({ name: u.name, email: u.email, role: u.role, resetPwd: false, newPassword: '' })
+    setShowEditPwd(false)
+    setEditingUser(u)
+  }
+
+  function handleEditSave() {
+    if (!editingUser) return
+    const payload: any = { name: editForm.name, email: editForm.email, role: editForm.role }
+    if (editForm.resetPwd) {
+      if (!editForm.newPassword || editForm.newPassword.length < 6) {
+        toast.error('New password must be at least 6 characters'); return
+      }
+      payload.password = editForm.newPassword
+    }
+    editUserMutation.mutate({ id: editingUser.id, data: payload })
+  }
+
+  function handleChangePassword() {
+    if (!pwdForm.current)          { toast.error('Enter your current password'); return }
+    if (pwdForm.newPwd.length < 6) { toast.error('New password must be at least 6 characters'); return }
+    if (pwdForm.newPwd !== pwdForm.confirm) { toast.error('Passwords do not match'); return }
+    changePasswordMutation.mutate({ currentPassword: pwdForm.current, newPassword: pwdForm.newPwd })
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Manage users, roles, and system configuration" />
@@ -98,14 +262,17 @@ export default function SettingsPage() {
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
 
-        {/* ── Currency Tab ── */}
+        {/* ── Currency ── */}
         <CurrencyTab />
 
+        {/* ── User Management ── */}
         <TabsContent value="users" className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{users.length} users total</p>
+            <p className="text-sm text-muted-foreground">{users.length} user{users.length !== 1 ? 's' : ''}</p>
             {isAdmin && (
-              <Button size="sm" onClick={() => setModalOpen(true)}><Plus className="h-4 w-4" />Add User</Button>
+              <Button size="sm" onClick={() => setAddModalOpen(true)}>
+                <Plus className="h-4 w-4" />Add User
+              </Button>
             )}
           </div>
 
@@ -128,7 +295,7 @@ export default function SettingsPage() {
                         {[...Array(5)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
                       </tr>
                     ))
-                  ) : users.map((u: any) => (
+                  ) : users.map((u) => (
                     <tr key={u.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -136,7 +303,12 @@ export default function SettingsPage() {
                             {u.name?.[0]?.toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium">{u.name}</p>
+                            <p className="font-medium">
+                              {u.name}
+                              {u.id === user?.userId && (
+                                <span className="ml-1.5 text-xs text-muted-foreground">(you)</span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">{u.email}</p>
                           </div>
                         </div>
@@ -155,11 +327,25 @@ export default function SettingsPage() {
                       {isAdmin && (
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" title="Edit user" onClick={() => openEditUser(u)}>
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
                             {u.id !== user?.userId && (
-                              <Button variant="ghost" size="sm"
-                                onClick={() => updateUserMutation.mutate({ id: u.id, data: { isActive: !u.isActive } })}>
-                                {u.isActive ? <UserX className="h-3.5 w-3.5 text-red-500" /> : <UserCheck className="h-3.5 w-3.5 text-green-500" />}
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost" size="sm"
+                                  title={u.isActive ? 'Deactivate' : 'Activate'}
+                                  onClick={() => toggleActiveMutation.mutate({ id: u.id, isActive: !u.isActive })}
+                                >
+                                  {u.isActive
+                                    ? <UserX className="h-3.5 w-3.5 text-orange-500" />
+                                    : <UserCheck className="h-3.5 w-3.5 text-green-500" />
+                                  }
+                                </Button>
+                                <Button variant="ghost" size="sm" title="Delete user" onClick={() => setDeletingUser(u)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -170,41 +356,155 @@ export default function SettingsPage() {
               </table>
             </div>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="account">
+          {/* Role Permissions reference */}
           <Card>
-            <CardHeader><CardTitle>Account Information</CardTitle><CardDescription>Your profile details</CardDescription></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold">
-                  {user?.name?.[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-lg font-semibold">{user?.name}</p>
-                  <p className="text-muted-foreground">{user?.email}</p>
-                  <Badge className={ROLE_COLORS[user?.role || ''] || ''} variant="outline">{user?.role}</Badge>
-                </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="h-4 w-4" />Role Permissions
+              </CardTitle>
+              <CardDescription>What each role can access and do in the system</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {ROLE_PERMS.map(({ role, badge, description, can, cannot }) => (
+                  <div key={role} className="rounded-lg border p-4 space-y-3">
+                    <div>
+                      <Badge className={badge} variant="outline">{role}</Badge>
+                      <p className="text-xs text-muted-foreground mt-1">{description}</p>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {can.map(p => (
+                        <li key={p} className="text-xs flex items-start gap-1.5">
+                          <span className="text-green-600 shrink-0 mt-0.5">✓</span>
+                          <span>{p}</span>
+                        </li>
+                      ))}
+                      {cannot.map(p => (
+                        <li key={p} className="text-xs flex items-start gap-1.5">
+                          <span className="text-red-500 shrink-0 mt-0.5">✗</span>
+                          <span className="text-muted-foreground">{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ── My Account ── */}
+        <TabsContent value="account" className="space-y-4">
+          {/* Profile */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>Update your display name and email address</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold shrink-0">
+                  {(profileForm.name || user?.name || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold">{user?.name}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <Badge className={ROLE_COLORS[user?.role || ''] || ''} variant="outline" >{user?.role}</Badge>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input
+                    value={profileForm.name}
+                    onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Your name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="Your email"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={() => updateProfileMutation.mutate(profileForm)}
+                disabled={updateProfileMutation.isPending || !profileForm.name || !profileForm.email}
+              >
+                <Save className="h-4 w-4" />
+                {updateProfileMutation.isPending ? 'Saving…' : 'Save Profile'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Change Password */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Lock className="h-4 w-4" />Change Password</CardTitle>
+              <CardDescription>Enter your current password, then choose a new one</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { key: 'current' as const, label: 'Current Password',      placeholder: 'Current password' },
+                { key: 'newPwd'  as const, label: 'New Password',           placeholder: 'New password (min 6 characters)' },
+                { key: 'confirm' as const, label: 'Confirm New Password',   placeholder: 'Confirm new password' },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key} className="space-y-2">
+                  <Label>{label}</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPwd[key] ? 'text' : 'password'}
+                      value={pwdForm[key]}
+                      onChange={e => setPwdForm(f => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd(s => ({ ...s, [key]: !s[key] }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPwd[key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                onClick={handleChangePassword}
+                disabled={changePasswordMutation.isPending || !pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm}
+              >
+                <Key className="h-4 w-4" />
+                {changePasswordMutation.isPending ? 'Changing…' : 'Change Password'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── System Info ── */}
         <TabsContent value="system">
           <div className="grid gap-4 sm:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" />Security</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" />Security</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>✓ JWT authentication with 7-day expiry</p>
                 <p>✓ Role-based access control (RBAC)</p>
                 <p>✓ HTTP-only cookies</p>
-                <p>✓ bcrypt password hashing</p>
+                <p>✓ bcrypt password hashing (cost 12)</p>
                 <p>✓ Input validation via Zod</p>
                 <p>✓ SQL injection prevention via Prisma ORM</p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Key className="h-4 w-4" />System Info</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Key className="h-4 w-4" />System Info</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>App: PropManager v1.0.0</p>
                 <p>Framework: Next.js 15</p>
@@ -217,10 +517,14 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      {/* ── Add User Modal ── */}
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Create User</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit((d) => createUserMutation.mutate(d))}>
+          <DialogHeader>
+            <DialogTitle>Create User</DialogTitle>
+            <DialogDescription>Add a new user account to the system</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(d => createUserMutation.mutate(d))}>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Full Name *</Label>
@@ -239,46 +543,130 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select defaultValue="STAFF" onValueChange={(v) => setValue('role', v as any)}>
+                <Select defaultValue="STAFF" onValueChange={v => setValue('role', v as any)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['ADMIN','MANAGER','STAFF'].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {['ADMIN', 'MANAGER', 'STAFF'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter className="mt-4">
-              <Button variant="outline" type="button" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" type="button" onClick={() => { setAddModalOpen(false); reset() }}>Cancel</Button>
               <Button type="submit" disabled={createUserMutation.isPending}>
-                {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+                {createUserMutation.isPending ? 'Creating…' : 'Create User'}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit User Modal ── */}
+      <Dialog open={!!editingUser} onOpenChange={open => { if (!open) setEditingUser(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>Update account details for {editingUser?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editForm.role} onValueChange={v => setEditForm(f => ({ ...f, role: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['ADMIN', 'MANAGER', 'STAFF'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 border-t pt-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="resetPwd"
+                  checked={editForm.resetPwd}
+                  onChange={e => setEditForm(f => ({ ...f, resetPwd: e.target.checked, newPassword: '' }))}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                <Label htmlFor="resetPwd" className="cursor-pointer font-normal">Reset password for this user</Label>
+              </div>
+              {editForm.resetPwd && (
+                <div className="relative">
+                  <Input
+                    type={showEditPwd ? 'text' : 'password'}
+                    placeholder="New password (min 6 characters)"
+                    value={editForm.newPassword}
+                    onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPwd(s => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showEditPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+            <Button onClick={handleEditSave} disabled={editUserMutation.isPending}>
+              {editUserMutation.isPending ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation ── */}
+      <Dialog open={!!deletingUser} onOpenChange={open => { if (!open) setDeletingUser(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Permanently delete <strong>{deletingUser?.name}</strong> ({deletingUser?.email})?
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingUser(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingUser && deleteUserMutation.mutate(deletingUser.id)}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? 'Deleting…' : 'Delete User'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
 
-// ── Currency Tab Component ────────────────────────────────────────────────────
+// ── Currency Tab (unchanged, kept as sub-component) ───────────────────────────
 function CurrencyTab() {
   const { currency, setCurrency, currencyInfo, format } = useCurrency()
-
   const PREVIEW_AMOUNTS = [1000, 25000, 150000, 1250000]
 
   return (
     <TabsContent value="currency" className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Selector */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <span className="text-xl">{currencyInfo.flag}</span>
-              Display Currency
+              <span className="text-xl">{currencyInfo.flag}</span>Display Currency
             </CardTitle>
             <CardDescription>
-              All amounts across the app will be displayed in this currency.
-              Your preference is saved automatically.
+              All amounts across the app will be displayed in this currency. Your preference is saved automatically.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -297,7 +685,6 @@ function CurrencyTab() {
           </CardContent>
         </Card>
 
-        {/* Preview */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Preview</CardTitle>
@@ -318,7 +705,6 @@ function CurrencyTab() {
         </Card>
       </div>
 
-      {/* Popular currencies quick-select */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Quick Select</CardTitle>
