@@ -30,7 +30,7 @@ async function fetchPayouts(params: Record<string, string>) {
 
 export default function PayoutsPage() {
   const queryClient = useQueryClient()
-  const { format } = useCurrency()
+  const { format, currencyInfo } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
@@ -240,7 +240,7 @@ export default function PayoutsPage() {
               <Input value={form.recipientName} onChange={(e) => setForm({ ...form, recipientName: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Amount ($) *</Label>
+              <Label>Amount ({currencyInfo.symbol}) *</Label>
               <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
             <div className="space-y-2">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Home, Users, DollarSign, Activity } from 'lucide-react'
+import { Plus, Edit, Trash2, Home, Users, Banknote, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatCurrency, getStatusColor } from '@/lib/utils'
+import { getStatusColor } from '@/lib/utils'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Property } from '@/types'
 
 async function fetchProperties() {
@@ -29,6 +30,7 @@ const EMPTY_FORM = {
 }
 
 export default function PropertiesPage() {
+  const { format } = useCurrency()
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
   const [editProperty, setEditProperty] = useState<Property | null>(null)
@@ -118,7 +120,7 @@ export default function PropertiesPage() {
                       <Users className="h-3.5 w-3.5" /> {p.capacity} guests
                     </div>
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <DollarSign className="h-3.5 w-3.5" /> {formatCurrency(p.baseRate)}/night
+                      <Banknote className="h-3.5 w-3.5" /> {format(p.baseRate)}/night
                     </div>
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Activity className="h-3.5 w-3.5" /> {p._count?.bookings || 0} bookings

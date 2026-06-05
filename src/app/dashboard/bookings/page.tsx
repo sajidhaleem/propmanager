@@ -40,7 +40,7 @@ const EMPTY_FORM = {
 
 export default function BookingsPage() {
   const queryClient = useQueryClient()
-  const { format } = useCurrency()
+  const { format, currencyInfo } = useCurrency()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -253,22 +253,22 @@ export default function BookingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Check-in *</Label>
-              <Input type="date" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
+              <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>Check-out *</Label>
-              <Input type="date" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
+              <Input type="datetime-local" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Nightly Rate ($) *</Label>
+              <Label>Nightly Rate ({currencyInfo.symbol}) *</Label>
               <Input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Cleaning Fee ($)</Label>
+              <Label>Cleaning Fee ({currencyInfo.symbol})</Label>
               <Input type="number" value={form.cleaningFee} onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Platform Fee ($)</Label>
+              <Label>Platform Fee ({currencyInfo.symbol})</Label>
               <Input type="number" value={form.platformFee} onChange={(e) => setForm({ ...form, platformFee: e.target.value })} />
             </div>
             <div className="space-y-2">
@@ -285,14 +285,17 @@ export default function BookingsPage() {
               <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => <SelectItem key={p} value={p}>{p === 'OTHER' ? 'Other (specify below)' : p}</SelectItem>)}
+                  {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => (
+                    <SelectItem key={p} value={p}>{p === 'OTHER' ? 'Other (specify below)' : p}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {/* Only show when OTHER selected — stores in platformOther, NOT notes */}
               {form.platform === 'OTHER' && (
                 <Input
                   value={form.platformOther}
-                  onChange={(e) => setForm({ ...form, platformOther: e.target.value, notes: e.target.value ? `Platform: ${e.target.value}${form.notes ? '. ' + form.notes : ''}` : form.notes })}
-                  placeholder="e.g. Airbnb Indonesia, Facebook, Walk-in…"
+                  onChange={(e) => setForm({ ...form, platformOther: e.target.value })}
+                  placeholder="e.g. Facebook, Walk-in, Referral…"
                   className="mt-2"
                   autoFocus
                 />
@@ -311,12 +314,24 @@ export default function BookingsPage() {
             </div>
             <div className="col-span-2 space-y-2">
               <Label>Notes</Label>
-              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes" />
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}>
+            <Button
+              onClick={() => {
+                const payload = { ...form }
+                // Merge platformOther into notes only once, cleanly
+                if (form.platform === 'OTHER' && form.platformOther) {
+                  payload.notes = form.notes
+                    ? `[${form.platformOther}] ${form.notes}`
+                    : form.platformOther
+                }
+                saveMutation.mutate(payload)
+              }}
+              disabled={saveMutation.isPending}
+            >
               {saveMutation.isPending ? 'Saving...' : editBooking ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>

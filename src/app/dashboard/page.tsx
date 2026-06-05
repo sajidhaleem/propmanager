@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  DollarSign, TrendingUp, CalendarCheck, Building2,
+  Banknote, TrendingUp, CalendarCheck, Building2,
   ArrowUpRight, Clock, AlertCircle, RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -74,7 +74,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Monthly Revenue"   value={format(stats?.totalRevenue || 0)} change={stats?.revenueGrowth} icon={<DollarSign className="h-5 w-5" />} color="blue"   index={0} />
+          <StatsCard title="Monthly Revenue"   value={format(stats?.totalRevenue || 0)} change={stats?.revenueGrowth} icon={<Banknote className="h-5 w-5" />} color="blue"   index={0} />
           <StatsCard title="Net Income"        value={format((stats?.totalRevenue||0)-(stats?.totalExpenses||0))} subtitle="After expenses" icon={<TrendingUp className="h-5 w-5" />} color="green"  index={1} />
           <StatsCard title="Occupancy Rate"    value={`${stats?.occupancyRate||0}%`} subtitle={`${stats?.bookedNights||0} nights booked`} icon={<CalendarCheck className="h-5 w-5" />} color="yellow" index={2} />
           <StatsCard title="Active Bookings"   value={stats?.activeBookings||0} subtitle={`${stats?.pendingBookings||0} pending`} icon={<Building2 className="h-5 w-5" />} color="purple" index={3} />
