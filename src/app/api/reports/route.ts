@@ -92,6 +92,83 @@ export async function GET(req: NextRequest) {
       return apiResponse({ platforms: platformStats, year })
     }
 
+    // ── P&L Report: Month | Airbnb Rev | Utilities | Cleaning | Repairs | Supplies | Internet | Other | Net Profit ──
+    if (type === 'pnl') {
+      const EXPENSE_CATS = ['UTILITIES', 'CLEANING', 'REPAIRS', 'SUPPLIES', 'INTERNET', 'OTHER'] as const
+      const dateStart = new Date(`${year}-01-01`)
+      const dateEnd   = new Date(`${year}-12-31`)
+
+      const [incomeRows, expenseRows] = await Promise.all([
+        // Income by month (all platforms, but we track Airbnb separately)
+        prisma.income.findMany({
+          where: { year },
+          include: { booking: { select: { platform: true } } },
+        }),
+        // Expenses by month + category
+        prisma.expense.findMany({
+          where: { year, date: { gte: dateStart, lte: dateEnd } },
+          select: { month: true, category: true, amount: true },
+        }),
+      ])
+
+      const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
+
+      const pnl = MONTHS.map((month) => {
+        const monthIncome = incomeRows.filter(r => r.month === month)
+        const airbnbRevenue = monthIncome
+          .filter(r => r.booking?.platform === 'AIRBNB')
+          .reduce((s, r) => s + r.netAmount, 0)
+        const otherRevenue = monthIncome
+          .filter(r => r.booking?.platform !== 'AIRBNB')
+          .reduce((s, r) => s + r.netAmount, 0)
+        const totalRevenue = airbnbRevenue + otherRevenue
+
+        const monthExpenses = expenseRows.filter(r => r.month === month)
+        const byCategory: Record<string, number> = {}
+        EXPENSE_CATS.forEach(cat => {
+          byCategory[cat] = monthExpenses
+            .filter(e => e.category === cat)
+            .reduce((s, e) => s + e.amount, 0)
+        })
+        // Non-standard categories go into OTHER
+        const trackedCats = EXPENSE_CATS as readonly string[]
+        const extraOther = monthExpenses
+          .filter(e => !trackedCats.includes(e.category))
+          .reduce((s, e) => s + e.amount, 0)
+        byCategory['OTHER'] = (byCategory['OTHER'] || 0) + extraOther
+
+        const totalExpenses = Object.values(byCategory).reduce((s, v) => s + v, 0)
+        const netProfit = totalRevenue - totalExpenses
+
+        return {
+          month,
+          airbnbRevenue,
+          otherRevenue,
+          totalRevenue,
+          ...byCategory,
+          totalExpenses,
+          netProfit,
+        }
+      })
+
+      const totals: Record<string, number> = {
+        month: 0,
+        airbnbRevenue: pnl.reduce((s, r) => s + r.airbnbRevenue, 0),
+        otherRevenue:  pnl.reduce((s, r) => s + r.otherRevenue, 0),
+        totalRevenue:  pnl.reduce((s, r) => s + r.totalRevenue, 0),
+        UTILITIES:     pnl.reduce((s, r: any) => s + (r.UTILITIES || 0), 0),
+        CLEANING:      pnl.reduce((s, r: any) => s + (r.CLEANING || 0), 0),
+        REPAIRS:       pnl.reduce((s, r: any) => s + (r.REPAIRS || 0), 0),
+        SUPPLIES:      pnl.reduce((s, r: any) => s + (r.SUPPLIES || 0), 0),
+        INTERNET:      pnl.reduce((s, r: any) => s + (r.INTERNET || 0), 0),
+        OTHER:         pnl.reduce((s, r: any) => s + (r.OTHER || 0), 0),
+        totalExpenses: pnl.reduce((s, r) => s + r.totalExpenses, 0),
+        netProfit:     pnl.reduce((s, r) => s + r.netProfit, 0),
+      }
+
+      return apiResponse({ pnl, totals, year })
+    }
+
     return apiError('Invalid report type')
   } catch (error: any) {
     if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)

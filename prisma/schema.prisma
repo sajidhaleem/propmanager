@@ -66,14 +66,17 @@ model Booking {
   platformFee  Float         @default(0)
   totalAmount  Float
   netAmount    Float
-  platform     Platform      @default(AIRBNB)
-  status       BookingStatus @default(CONFIRMED)
-  notes        String?
-  propertyId   String
-  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  income       Income?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  platform        Platform      @default(AIRBNB)
+  status          BookingStatus @default(CONFIRMED)
+  notes           String?
+  miscCharges     Float         @default(0)
+  miscDescription String?
+  propertyId      String
+  property        Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  income          Income?
+  documents       Document[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([propertyId])
   @@index([checkIn, checkOut])
@@ -199,4 +202,17 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  name      String
+  mimeType  String
+  size      Int
+  data      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
 }

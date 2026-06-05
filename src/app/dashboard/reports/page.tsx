@@ -50,9 +50,17 @@ export default function ReportsPage() {
     enabled: tab === 'platform',
   })
 
+  const { data: pnlData, isLoading: pnlLoading } = useQuery({
+    queryKey: ['reports', 'pnl', year],
+    queryFn: () => fetchReports(year, 'pnl'),
+    enabled: tab === 'pnl',
+  })
+
   const monthly = monthlyData?.data?.monthly || []
   const properties = propertyData?.data?.properties || []
   const platforms = platformData?.data?.platforms || []
+  const pnlRows: any[] = pnlData?.data?.pnl || []
+  const pnlTotals: any = pnlData?.data?.totals || {}
 
   const chartMonthly = monthly.map((m: any) => ({
     month: MONTHS[m.month - 1],
@@ -75,6 +83,26 @@ export default function ReportsPage() {
     XLSX.writeFile(wb, `annual-report-${year}.xlsx`)
   }
 
+  function exportPnL() {
+    const rows = [...pnlRows, { ...pnlTotals, month: 0 }].map(r => ({
+      'Month':           r.month === 0 ? 'TOTAL' : MONTHS[r.month - 1],
+      'Airbnb Revenue':  r.airbnbRevenue || 0,
+      'Other Revenue':   r.otherRevenue || 0,
+      'Utilities':       r.UTILITIES || 0,
+      'Cleaning':        r.CLEANING || 0,
+      'Repairs':         r.REPAIRS || 0,
+      'Supplies':        r.SUPPLIES || 0,
+      'Internet':        r.INTERNET || 0,
+      'Other Expenses':  r.OTHER || 0,
+      'Total Expenses':  r.totalExpenses || 0,
+      'Net Profit':      r.netProfit || 0,
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, `P&L ${year}`)
+    XLSX.writeFile(wb, `pnl-report-${year}.xlsx`)
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Reports & Analytics" description="Annual and comparative financial reports">
@@ -86,15 +114,80 @@ export default function ReportsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={exportMonthly}><Download className="h-4 w-4" />Export</Button>
+        <Button variant="outline" size="sm" onClick={tab === 'pnl' ? exportPnL : exportMonthly}>
+          <Download className="h-4 w-4" />Export
+        </Button>
       </PageHeader>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="monthly">Monthly P&L</TabsTrigger>
+          <TabsTrigger value="pnl">P&amp;L Report</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly Overview</TabsTrigger>
           <TabsTrigger value="property">By Property</TabsTrigger>
           <TabsTrigger value="platform">By Platform</TabsTrigger>
         </TabsList>
+
+        {/* ── P&L Report Tab ── */}
+        <TabsContent value="pnl" className="space-y-4">
+          {pnlLoading ? (
+            <div className="space-y-2">{[...Array(13)].map((_,i) => <Skeleton key={i} className="h-10" />)}</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    {['Month','Airbnb Revenue','Other Revenue','Utilities','Cleaning','Repairs','Supplies','Internet','Other Exp.','Total Expenses','Net Profit'].map(h => (
+                      <th key={h} className="px-3 py-3 text-right first:text-left font-semibold text-xs text-muted-foreground whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pnlRows.map((row: any) => {
+                    const isProfit = row.netProfit >= 0
+                    return (
+                      <tr key={row.month} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="px-3 py-2.5 font-medium">{MONTHS[row.month - 1]}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-green-600 dark:text-green-400">{format(row.airbnbRevenue || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 dark:text-blue-400">{format(row.otherRevenue || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.UTILITIES || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.CLEANING || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.REPAIRS || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.SUPPLIES || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.INTERNET || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.OTHER || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums font-medium text-red-600">{format(row.totalExpenses || 0)}</td>
+                        <td className={`px-3 py-2.5 text-right tabular-nums font-bold ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {format(row.netProfit || 0)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                {pnlTotals && (
+                  <tfoot>
+                    <tr className="bg-muted border-t-2 border-border font-bold">
+                      <td className="px-3 py-3 text-xs uppercase tracking-wide">Total {year}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-green-600">{format(pnlTotals.airbnbRevenue || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-blue-600">{format(pnlTotals.otherRevenue || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.UTILITIES || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.CLEANING || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.REPAIRS || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.SUPPLIES || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.INTERNET || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.OTHER || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-600">{format(pnlTotals.totalExpenses || 0)}</td>
+                      <td className={`px-3 py-3 text-right tabular-nums ${(pnlTotals.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {format(pnlTotals.netProfit || 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="monthly" className="space-y-6">
           {/* Annual summary */}

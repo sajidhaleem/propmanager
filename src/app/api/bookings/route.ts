@@ -73,8 +73,9 @@ export async function POST(req: NextRequest) {
 
     if (checkOut <= checkIn) return apiError('Check-out must be after check-in')
 
-    const nights = differenceInDays(checkOut, checkIn)
-    const totalAmount = data.rate * nights + data.cleaningFee
+    const nights = Math.max(1, differenceInDays(checkOut, checkIn))
+    const miscCharges = (data as any).miscCharges ?? 0
+    const totalAmount = data.rate * nights + data.cleaningFee + miscCharges
     const netAmount = totalAmount - data.platformFee
 
     // Conflict check
@@ -97,6 +98,8 @@ export async function POST(req: NextRequest) {
         nights,
         totalAmount,
         netAmount,
+        miscCharges,
+        miscDescription: (data as any).miscDescription ?? null,
       },
       include: { property: { select: { id: true, name: true } } },
     })

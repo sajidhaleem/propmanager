@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Filter, Download, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -36,12 +36,17 @@ const EMPTY_FORM = {
   guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '',
   rate: '', cleaningFee: '15', platformFee: '', platform: 'AIRBNB',
   status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
+  miscCharges: '', miscDescription: '',
 }
+
+interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
 
 export default function BookingsPage() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
   const [page, setPage] = useState(1)
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
+  const [uploading, setUploading] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
@@ -94,17 +99,59 @@ export default function BookingsPage() {
     onError: () => toast.error('Delete failed'),
   })
 
-  function openCreate() { setEditBooking(null); setForm(EMPTY_FORM); setModalOpen(true) }
+  function openCreate() {
+    setEditBooking(null)
+    setForm(EMPTY_FORM)
+    setUploadedDocs([])
+    setModalOpen(true)
+  }
   function openEdit(b: Booking) {
     setEditBooking(b)
     setForm({
       guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
-      checkIn: b.checkIn.split('T')[0], checkOut: b.checkOut.split('T')[0],
+      checkIn: b.checkIn.replace('Z','').slice(0,16),
+      checkOut: b.checkOut.replace('Z','').slice(0,16),
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
       platform: b.platform, status: b.status, propertyId: b.propertyId, notes: b.notes || '',
       platformOther: '',
+      miscCharges: String((b as any).miscCharges || ''),
+      miscDescription: (b as any).miscDescription || '',
     })
+    // Load existing documents for this booking
+    fetch(`/api/bookings/${b.id}/documents`)
+      .then(r => r.json())
+      .then(d => setUploadedDocs(d.data || []))
+      .catch(() => {})
     setModalOpen(true)
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, bookingId?: string) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.error('File too large. Max 5MB.'); return }
+    if (!bookingId) { toast('Save the booking first, then upload documents.', { icon: 'ℹ️' }); return }
+
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/documents`, { method: 'POST', body: fd })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      const { data } = await res.json()
+      setUploadedDocs(prev => [data, ...prev])
+      toast.success(`Uploaded: ${file.name}`)
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function deleteDoc(bookingId: string, docId: string) {
+    await fetch(`/api/bookings/${bookingId}/documents/${docId}`, { method: 'DELETE' })
+    setUploadedDocs(prev => prev.filter(d => d.id !== docId))
+    toast.success('Document removed')
   }
 
   function exportToExcel() {
@@ -315,6 +362,68 @@ export default function BookingsPage() {
             <div className="col-span-2 space-y-2">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />
+            </div>
+
+            {/* ── Misc Charges ── */}
+            <div className="col-span-2 border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Miscellaneous Charges</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Misc Charges ({currencyInfo.symbol})</Label>
+              <Input
+                type="number"
+                min="0"
+                value={form.miscCharges}
+                onChange={(e) => setForm({ ...form, miscCharges: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Misc Description</Label>
+              <Input
+                value={form.miscDescription}
+                onChange={(e) => setForm({ ...form, miscDescription: e.target.value })}
+                placeholder="e.g. Late checkout fee, Extra towels…"
+              />
+            </div>
+
+            {/* ── Documents ── */}
+            <div className="col-span-2 border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Documents</p>
+              {editBooking ? (
+                <div className="space-y-3">
+                  {/* Upload button */}
+                  <label className={`flex items-center gap-2 cursor-pointer w-fit rounded-lg border border-dashed px-4 py-2.5 text-sm transition-colors ${uploading ? 'opacity-50 pointer-events-none' : 'hover:bg-accent'}`}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
+                    <span className="text-muted-foreground">{uploading ? 'Uploading…' : 'Upload file'}</span>
+                    <span className="text-xs text-muted-foreground/60">PDF, DOC, XLS, Image (max 5MB)</span>
+                    <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt" onChange={(e) => handleFileUpload(e, editBooking.id)} disabled={uploading} />
+                  </label>
+                  {/* Uploaded files list */}
+                  {uploadedDocs.length > 0 && (
+                    <div className="space-y-2">
+                      {uploadedDocs.map(doc => (
+                        <div key={doc.id} className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.name}</p>
+                            <p className="text-xs text-muted-foreground">{(doc.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                          <a href={`/api/bookings/${editBooking.id}/documents/${doc.id}`} target="_blank" className="text-xs text-primary hover:underline shrink-0">Download</a>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive shrink-0" onClick={() => deleteDoc(editBooking.id, doc.id)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Save the booking first, then you can upload documents.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
