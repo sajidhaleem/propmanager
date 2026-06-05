@@ -302,7 +302,10 @@ export default function BookingsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{b.property?.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      <span className="whitespace-nowrap">{formatDate(b.checkIn, 'MMM dd')} – {formatDate(b.checkOut, 'MMM dd, yy')}</span>
+                      <div className="whitespace-nowrap text-xs leading-relaxed">
+                        <div><span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span> <span className="text-muted-foreground">{formatDate(b.checkIn, 'h:mm a')}</span></div>
+                        <div><span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span> <span className="text-muted-foreground">{formatDate(b.checkOut, 'h:mm a')}</span></div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">{b.nights}</td>
                     <td className="px-4 py-3">

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse } from '@/lib/utils'
-import { differenceInDays } from 'date-fns'
+import { differenceInCalendarDays } from 'date-fns'
 
 export async function GET(req: NextRequest) {
   try {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     if (checkOut <= checkIn) return apiError('Check-out must be after check-in')
 
-    const nights = Math.max(1, differenceInDays(checkOut, checkIn))
+    const nights = Math.max(1, differenceInCalendarDays(checkOut, checkIn))
     const miscCharges = (data as any).miscCharges ?? 0
     const totalAmount = data.rate * nights + data.cleaningFee + miscCharges
     const netAmount = totalAmount - data.platformFee

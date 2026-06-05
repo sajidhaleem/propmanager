@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse } from '@/lib/utils'
-import { differenceInDays } from 'date-fns'
+import { differenceInCalendarDays } from 'date-fns'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,16 +35,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const data = result.data
     let extraFields: any = {}
 
-    if (data.checkIn && data.checkOut) {
-      const checkIn = new Date(data.checkIn)
-      const checkOut = new Date(data.checkOut)
-      const nights = differenceInDays(checkOut, checkIn)
-      const rate = data.rate!
-      const cleaningFee = data.cleaningFee ?? 0
-      const platformFee = data.platformFee ?? 0
-      const totalAmount = rate * nights + cleaningFee
-      const netAmount = totalAmount - platformFee
-      extraFields = { checkIn, checkOut, nights, totalAmount, netAmount }
+    if (data.checkIn || data.checkOut || data.rate !== undefined || data.cleaningFee !== undefined || data.platformFee !== undefined) {
+      // Re-fetch current booking to fill in any fields not included in the patch
+      const current = await prisma.booking.findUnique({ where: { id } })
+      if (current) {
+        const checkIn  = data.checkIn  ? new Date(data.checkIn)  : current.checkIn
+        const checkOut = data.checkOut ? new Date(data.checkOut) : current.checkOut
+        const nights = Math.max(1, differenceInCalendarDays(checkOut, checkIn))
+        const rate        = data.rate        ?? current.rate
+        const cleaningFee = data.cleaningFee ?? current.cleaningFee
+        const platformFee = data.platformFee ?? current.platformFee
+        const miscCharges = (data as any).miscCharges ?? (current as any).miscCharges ?? 0
+        const totalAmount = rate * nights + cleaningFee + miscCharges
+        const netAmount   = totalAmount - platformFee
+        extraFields = { checkIn, checkOut, nights, totalAmount, netAmount }
+      }
     }
 
     const booking = await prisma.booking.update({
