@@ -26,10 +26,13 @@ export async function GET(req: NextRequest) {
       ]
     }
 
+    const sortBy    = searchParams.get('sortBy')    || 'date'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+
     const [expenses, total, aggregate] = await Promise.all([
       prisma.expense.findMany({
         where,
-        orderBy: { date: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
       }),

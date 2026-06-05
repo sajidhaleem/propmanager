@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check } from 'lucide-react'
+import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -68,8 +69,16 @@ export default function BookingsPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
   const [editingAmountValue, setEditingAmountValue] = useState('')
+  const [sortBy,    setSortBy]    = useState('checkIn')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
-  const params: Record<string, string> = { page: String(page), limit: '15', sortBy: 'checkIn', sortOrder: 'asc' }
+  function handleSort(field: string) {
+    if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortOrder('asc') }
+    setPage(1)
+  }
+
+  const params: Record<string, string> = { page: String(page), limit: '15', sortBy, sortOrder }
   if (search) params.search = search
   if (statusFilter !== 'all') params.status = statusFilter
   if (platformFilter !== 'all') params.platform = platformFilter
@@ -292,13 +301,13 @@ export default function BookingsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Guest</th>
+                <SortableTh label="Guest"    field="guestName"   sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Property</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Dates</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nights</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Platform</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount</th>
+                <SortableTh label="Check-in" field="checkIn"     sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Nights"   field="nights"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Platform" field="platform"    sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Status"   field="status"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Amount"   field="totalAmount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>

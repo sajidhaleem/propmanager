@@ -21,10 +21,13 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status
     if (search) where.recipientName = { contains: search, mode: 'insensitive' }
 
+    const sortBy    = searchParams.get('sortBy')    || 'date'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+
     const [payouts, total, aggregate, pendingAgg, paidAgg] = await Promise.all([
       prisma.payout.findMany({
         where,
-        orderBy: { date: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
       }),

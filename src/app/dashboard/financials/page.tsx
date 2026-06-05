@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Download, Edit, Trash2, Info } from 'lucide-react'
+import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,8 +29,8 @@ const currentYear = new Date().getFullYear()
 
 const EMPTY_EDIT = { notes: '', receivedAt: '', grossAmount: '', platformFee: '', cleaningFee: '', netAmount: '' }
 
-async function fetchIncome(year: string, month: string, propertyId: string, page: number) {
-  const params = new URLSearchParams({ page: String(page), limit: '20' })
+async function fetchIncome(year: string, month: string, propertyId: string, page: number, sortBy: string, sortOrder: string) {
+  const params = new URLSearchParams({ page: String(page), limit: '20', sortBy, sortOrder })
   if (year       !== 'all') params.append('year',       year)
   if (month      !== 'all') params.append('month',      month)
   if (propertyId !== 'all') params.append('propertyId', propertyId)
@@ -58,10 +59,18 @@ export default function FinancialsPage() {
   const [editIncome, setEditIncome] = useState<Income | null>(null)
   const [editForm,   setEditForm]   = useState(EMPTY_EDIT)
   const [editOpen,   setEditOpen]   = useState(false)
+  const [sortBy,     setSortBy]     = useState('receivedAt')
+  const [sortOrder,  setSortOrder]  = useState<'asc' | 'desc'>('desc')
+
+  function handleSort(field: string) {
+    if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortOrder('asc') }
+    setPage(1)
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['income', year, month, propertyId, page],
-    queryFn:  () => fetchIncome(year, month, propertyId, page),
+    queryKey: ['income', year, month, propertyId, page, sortBy, sortOrder],
+    queryFn:  () => fetchIncome(year, month, propertyId, page, sortBy, sortOrder),
   })
 
   const { data: pData } = useQuery({
@@ -250,18 +259,23 @@ export default function FinancialsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Guest</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Property</th>
+                <SortableTh label="Guest"       field="guestName"    sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Property"    field="propertyName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Platform</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Received</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Gross</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                  <span title="Cleaning fee collected from guest — already included in Gross">Cleaning ↑</span>
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                  <span title="Fee paid to the booking platform — deducted from Gross">Platform Fee ↓</span>
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Net</th>
+                <SortableTh label="Received"    field="receivedAt"   sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableTh label="Gross"       field="grossAmount"  sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                <SortableTh
+                  label="Cleaning ↑"
+                  field="cleaningFee"
+                  sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right"
+                  className="[&>span]:cursor-help"
+                />
+                <SortableTh
+                  label="Platform Fee ↓"
+                  field="platformFee"
+                  sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right"
+                />
+                <SortableTh label="Net"         field="netAmount"    sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
                 {isManager && (
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
                 )}

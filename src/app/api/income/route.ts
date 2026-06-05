@@ -13,10 +13,19 @@ export async function GET(req: NextRequest) {
     const month      = searchParams.get('month')      ? parseInt(searchParams.get('month')!)      : undefined
     const propertyId = searchParams.get('propertyId') || undefined
 
+    const sortBy    = searchParams.get('sortBy')    || 'receivedAt'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+
     const where: any = {}
     if (year)       where.year  = year
     if (month)      where.month = month
     if (propertyId) where.booking = { propertyId }
+
+    const RELATIONAL: Record<string, any> = {
+      guestName:    { booking: { guestName: sortOrder } },
+      propertyName: { booking: { property: { name: sortOrder } } },
+    }
+    const orderBy = RELATIONAL[sortBy] ?? { [sortBy]: sortOrder }
 
     const [income, total, aggregate] = await Promise.all([
       prisma.income.findMany({
@@ -26,7 +35,7 @@ export async function GET(req: NextRequest) {
             include: { property: { select: { id: true, name: true } } },
           },
         },
-        orderBy: { receivedAt: 'desc' },
+        orderBy,
         skip:  (page - 1) * limit,
         take:  limit,
       }),

@@ -6,6 +6,7 @@ import {
   Plus, UserCheck, UserX, Shield, Key,
   Pencil, Trash2, Eye, EyeOff, Save, Lock,
 } from 'lucide-react'
+import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -127,6 +128,23 @@ export default function SettingsPage() {
     enabled: !!isAdmin,
   })
   const users: UserRow[] = data?.data || []
+
+  // Client-side sort for users (small dataset)
+  const [userSortBy,    setUserSortBy]    = useState('name')
+  const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  function handleUserSort(field: string) {
+    if (field === userSortBy) setUserSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+    else { setUserSortBy(field); setUserSortOrder('asc') }
+  }
+
+  const sortedUsers = [...users].sort((a, b) => {
+    const dir = userSortOrder === 'asc' ? 1 : -1
+    const av  = (a as any)[userSortBy] ?? ''
+    const bv  = (b as any)[userSortBy] ?? ''
+    if (typeof av === 'boolean') return ((av ? 1 : 0) - (bv ? 1 : 0)) * dir
+    return String(av).localeCompare(String(bv)) * dir
+  })
 
   // Add user form (react-hook-form)
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<RegisterInput>({
@@ -281,10 +299,10 @@ export default function SettingsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                    <SortableTh label="User"    field="name"      sortBy={userSortBy} sortOrder={userSortOrder} onSort={handleUserSort} />
+                    <SortableTh label="Role"    field="role"      sortBy={userSortBy} sortOrder={userSortOrder} onSort={handleUserSort} />
+                    <SortableTh label="Status"  field="isActive"  sortBy={userSortBy} sortOrder={userSortOrder} onSort={handleUserSort} />
+                    <SortableTh label="Created" field="createdAt" sortBy={userSortBy} sortOrder={userSortOrder} onSort={handleUserSort} />
                     {isAdmin && <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>
@@ -295,7 +313,7 @@ export default function SettingsPage() {
                         {[...Array(5)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
                       </tr>
                     ))
-                  ) : users.map((u) => (
+                  ) : sortedUsers.map((u) => (
                     <tr key={u.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">

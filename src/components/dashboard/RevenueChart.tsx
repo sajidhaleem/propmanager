@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { format, parse } from 'date-fns'
+import { useCurrency } from '@/hooks/useCurrency'
 
 interface RevenueChartProps {
   data: Array<{ month: string; revenue: number; expenses?: number }>
@@ -19,6 +20,7 @@ function formatMonth(monthStr: string) {
 }
 
 export function RevenueChart({ data }: RevenueChartProps) {
+  const { format: formatMoney } = useCurrency()
   const chartData = data.map((d) => ({
     ...d,
     month: formatMonth(d.month),
@@ -45,9 +47,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+            <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => formatMoney(v)} />
             <Tooltip
-              formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
+              formatter={(value: number) => [formatMoney(value), '']}
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
