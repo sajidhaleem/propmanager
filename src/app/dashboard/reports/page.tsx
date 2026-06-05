@@ -88,12 +88,12 @@ export default function ReportsPage() {
       'Month':           r.month === 0 ? 'TOTAL' : MONTHS[r.month - 1],
       'Airbnb Revenue':  r.airbnbRevenue || 0,
       'Other Revenue':   r.otherRevenue || 0,
-      'Utilities':       r.UTILITIES || 0,
-      'Cleaning':        r.CLEANING || 0,
-      'Repairs':         r.REPAIRS || 0,
-      'Supplies':        r.SUPPLIES || 0,
-      'Internet':        r.INTERNET || 0,
-      'Other Expenses':  r.OTHER || 0,
+      'Utilities':       r.UTILITIES    || 0,
+      'Cleaning':        r.CLEANING     || 0,
+      'Repairs':         r.REPAIRS      || 0,
+      'Supplies':        r.SUPPLIES     || 0,
+      'Maintenance':     r.MAINTENANCE  || 0,
+      'Other Expenses':  r.OTHER        || 0,
       'Total Expenses':  r.totalExpenses || 0,
       'Net Profit':      r.netProfit || 0,
     }))
@@ -136,7 +136,7 @@ export default function ReportsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50 border-b">
-                    {['Month','Airbnb Revenue','Other Revenue','Utilities','Cleaning','Repairs','Supplies','Internet','Other Exp.','Total Expenses','Net Profit'].map(h => (
+                    {['Month','Airbnb Revenue','Other Revenue','Utilities','Cleaning','Repairs','Supplies','Maintenance','Other Exp.','Total Expenses','Net Profit'].map(h => (
                       <th key={h} className="px-3 py-3 text-right first:text-left font-semibold text-xs text-muted-foreground whitespace-nowrap">
                         {h}
                       </th>
@@ -155,7 +155,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.CLEANING || 0)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.REPAIRS || 0)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.SUPPLIES || 0)}</td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.INTERNET || 0)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.MAINTENANCE || 0)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.OTHER || 0)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums font-medium text-red-600">{format(row.totalExpenses || 0)}</td>
                         <td className={`px-3 py-2.5 text-right tabular-nums font-bold ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -175,7 +175,7 @@ export default function ReportsPage() {
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.CLEANING || 0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.REPAIRS || 0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.SUPPLIES || 0)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.INTERNET || 0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.MAINTENANCE || 0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.OTHER || 0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-600">{format(pnlTotals.totalExpenses || 0)}</td>
                       <td className={`px-3 py-3 text-right tabular-nums ${(pnlTotals.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -221,8 +221,8 @@ export default function ReportsPage() {
                   <BarChart data={chartMonthly}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip formatter={(v: number) => `$${v.toFixed(2)}`} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(v)} />
+                    <Tooltip formatter={(v: number) => format(v)} />
                     <Legend />
                     <Bar dataKey="Revenue" fill="#3b82f6" radius={[3,3,0,0]} />
                     <Bar dataKey="Expenses" fill="#ef4444" radius={[3,3,0,0]} />
@@ -271,11 +271,11 @@ export default function ReportsPage() {
             {propertyLoading ? (
               [...Array(4)].map((_, i) => <Card key={i}><CardContent className="p-6"><Skeleton className="h-24" /></CardContent></Card>)
             ) : (
-              properties.map((p: any, i: number) => (
+              properties.map((p: any) => (
                 <Card key={p.id}>
                   <CardContent className="p-6">
-                    <p className="text-sm font-medium">{p.name}</p>
-                    <p className="text-2xl font-bold mt-2">{format(p.totalRevenue)}</p>
+                    <p className="text-sm font-medium truncate">{p.name}</p>
+                    <p className="text-2xl font-bold mt-2 text-green-600">{format(p.totalRevenue)}</p>
                     <p className="text-xs text-muted-foreground mt-1">{p.totalBookings} bookings · {p.totalNights} nights</p>
                     <p className="text-xs text-muted-foreground">Avg: {format(p.avgRate)}/night</p>
                   </CardContent>
@@ -283,6 +283,37 @@ export default function ReportsPage() {
               ))
             )}
           </div>
+
+          {/* Property revenue bar chart */}
+          {!propertyLoading && properties.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Property — {year}</CardTitle>
+                <CardDescription>Compare total net revenue across all properties</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={properties.map((p: any) => ({
+                    name:     p.name.length > 14 ? p.name.slice(0, 14) + '…' : p.name,
+                    Revenue:  p.totalRevenue,
+                    Bookings: p.totalBookings,
+                    Nights:   p.totalNights,
+                  }))} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(v)} />
+                    <Tooltip formatter={(v: number, name: string) =>
+                      name === 'Revenue' ? [format(v), 'Revenue'] : [v, name]
+                    } />
+                    <Legend />
+                    <Bar dataKey="Revenue"  fill="#3b82f6" radius={[4,4,0,0]} />
+                    <Bar dataKey="Bookings" fill="#10b981" radius={[4,4,0,0]} />
+                    <Bar dataKey="Nights"   fill="#f59e0b" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="platform" className="space-y-6">

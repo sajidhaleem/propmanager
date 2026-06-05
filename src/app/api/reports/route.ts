@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
     // ── P&L Report: Month | Airbnb Rev | Utilities | Cleaning | Repairs | Supplies | Internet | Other | Net Profit ──
     if (type === 'pnl') {
-      const EXPENSE_CATS = ['UTILITIES', 'CLEANING', 'REPAIRS', 'SUPPLIES', 'INTERNET', 'OTHER'] as const
+      const EXPENSE_CATS = ['UTILITIES', 'CLEANING', 'REPAIRS', 'SUPPLIES', 'MAINTENANCE', 'OTHER'] as const
       const dateStart = new Date(`${year}-01-01`)
       const dateEnd   = new Date(`${year}-12-31`)
 
@@ -156,12 +156,12 @@ export async function GET(req: NextRequest) {
         airbnbRevenue: pnl.reduce((s, r) => s + r.airbnbRevenue, 0),
         otherRevenue:  pnl.reduce((s, r) => s + r.otherRevenue, 0),
         totalRevenue:  pnl.reduce((s, r) => s + r.totalRevenue, 0),
-        UTILITIES:     pnl.reduce((s, r: any) => s + (r.UTILITIES || 0), 0),
-        CLEANING:      pnl.reduce((s, r: any) => s + (r.CLEANING || 0), 0),
-        REPAIRS:       pnl.reduce((s, r: any) => s + (r.REPAIRS || 0), 0),
-        SUPPLIES:      pnl.reduce((s, r: any) => s + (r.SUPPLIES || 0), 0),
-        INTERNET:      pnl.reduce((s, r: any) => s + (r.INTERNET || 0), 0),
-        OTHER:         pnl.reduce((s, r: any) => s + (r.OTHER || 0), 0),
+        UTILITIES:     pnl.reduce((s, r: any) => s + (r.UTILITIES    || 0), 0),
+        CLEANING:      pnl.reduce((s, r: any) => s + (r.CLEANING     || 0), 0),
+        REPAIRS:       pnl.reduce((s, r: any) => s + (r.REPAIRS      || 0), 0),
+        SUPPLIES:      pnl.reduce((s, r: any) => s + (r.SUPPLIES     || 0), 0),
+        MAINTENANCE:   pnl.reduce((s, r: any) => s + (r.MAINTENANCE  || 0), 0),
+        OTHER:         pnl.reduce((s, r: any) => s + (r.OTHER        || 0), 0),
         totalExpenses: pnl.reduce((s, r) => s + r.totalExpenses, 0),
         netProfit:     pnl.reduce((s, r) => s + r.netProfit, 0),
       }

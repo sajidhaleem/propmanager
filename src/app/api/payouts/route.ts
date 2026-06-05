@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status
     if (search) where.recipientName = { contains: search, mode: 'insensitive' }
 
-    const [payouts, total, aggregate] = await Promise.all([
+    const [payouts, total, aggregate, pendingAgg, paidAgg] = await Promise.all([
       prisma.payout.findMany({
         where,
         orderBy: { date: 'desc' },
@@ -29,10 +29,9 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       prisma.payout.count({ where }),
-      prisma.payout.aggregate({
-        _sum: { amount: true },
-        where,
-      }),
+      prisma.payout.aggregate({ _sum: { amount: true }, where }),
+      prisma.payout.aggregate({ _sum: { amount: true }, where: { ...where, status: 'PENDING' } }),
+      prisma.payout.aggregate({ _sum: { amount: true }, where: { ...where, status: 'PAID'    } }),
     ])
 
     return apiResponse({
@@ -41,7 +40,11 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      summary: { totalAmount: aggregate._sum.amount || 0 },
+      summary: {
+        totalAmount:   aggregate._sum.amount   || 0,
+        pendingAmount: pendingAgg._sum.amount  || 0,
+        paidAmount:    paidAgg._sum.amount     || 0,
+      },
     })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)

@@ -153,8 +153,8 @@ export default function ExpensesPage() {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'Amount']} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => format(v)} />
+                <Tooltip formatter={(v: number) => [format(v), 'Amount']} />
                 <Bar dataKey="amount" fill="#ef4444" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>

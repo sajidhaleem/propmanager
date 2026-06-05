@@ -44,8 +44,8 @@ export default function PayoutsPage() {
 
   const { data, isLoading } = useQuery({ queryKey: ['payouts', params], queryFn: () => fetchPayouts(params) })
   const payouts: Payout[] = data?.data?.data || []
-  const summary = data?.data?.summary || {}
-  const total = data?.data?.total || 0
+  const summary    = data?.data?.summary || {}
+  const total      = data?.data?.total   || 0
   const totalPages = data?.data?.totalPages || 1
 
   const saveMutation = useMutation({
@@ -115,8 +115,6 @@ export default function PayoutsPage() {
     XLSX.writeFile(wb, `payouts-${year}.xlsx`)
   }
 
-  const pendingTotal = payouts.filter(p => p.status === 'PENDING').reduce((s, p) => s + p.amount, 0)
-
   return (
     <div className="space-y-6">
       <PageHeader title="Payouts" description="Track staff payments and disbursements">
@@ -128,12 +126,14 @@ export default function PayoutsPage() {
         <Card><CardContent className="p-6">
           <p className="text-sm text-muted-foreground">Total Paid</p>
           {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-            <p className="text-2xl font-bold mt-2">{format(summary.totalAmount || 0)}</p>
+            <p className="text-2xl font-bold mt-2 text-green-600">{format(summary.paidAmount || 0)}</p>
           )}
         </CardContent></Card>
         <Card className="border-yellow-200 dark:border-yellow-800"><CardContent className="p-6">
           <p className="text-sm text-yellow-600 dark:text-yellow-400">Pending</p>
-          <p className="text-2xl font-bold mt-2 text-yellow-600">{format(pendingTotal)}</p>
+          {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
+            <p className="text-2xl font-bold mt-2 text-yellow-600">{format(summary.pendingAmount || 0)}</p>
+          )}
         </CardContent></Card>
         <Card><CardContent className="p-6">
           <p className="text-sm text-muted-foreground">Total Records</p>
