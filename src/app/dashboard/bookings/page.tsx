@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -53,6 +53,8 @@ export default function BookingsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editBooking, setEditBooking] = useState<Booking | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
+  const [editingAmountValue, setEditingAmountValue] = useState('')
 
   const params: Record<string, string> = { page: String(page), limit: '15' }
   if (search) params.search = search
@@ -116,6 +118,31 @@ export default function BookingsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   })
+
+  const amountMutation = useMutation({
+    mutationFn: async ({ id, rate }: { id: string; rate: number }) => {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      setEditingAmountId(null)
+      toast.success('Amount updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  function saveAmount(id: string) {
+    const val = parseFloat(editingAmountValue)
+    if (isNaN(val) || val < 0) { toast.error('Enter a valid amount'); return }
+    amountMutation.mutate({ id, rate: val })
+  }
 
   function openCreate() {
     setEditBooking(null)
@@ -305,7 +332,40 @@ export default function BookingsPage() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">{format(b.netAmount)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {editingAmountId === b.id ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editingAmountValue}
+                            onChange={(e) => setEditingAmountValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveAmount(b.id)
+                              if (e.key === 'Escape') setEditingAmountId(null)
+                            }}
+                            className="h-7 w-24 text-xs text-right"
+                            autoFocus
+                          />
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700"
+                            onClick={() => saveAmount(b.id)} disabled={amountMutation.isPending}>
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                            onClick={() => setEditingAmountId(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          className="font-semibold tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer w-full text-right"
+                          title="Click to edit amount"
+                          onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.rate)) }}
+                        >
+                          {format(b.rate)}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit booking" onClick={() => openEdit(b)}>
