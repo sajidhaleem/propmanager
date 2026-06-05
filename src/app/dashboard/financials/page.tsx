@@ -169,23 +169,44 @@ export default function FinancialsPage() {
         </span>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards — formula: Net = Gross − Platform Fee */}
       <div className="grid gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Gross Revenue',  value: summary.grossAmount, color: 'text-foreground' },
-          { label: 'Platform Fees',  value: summary.platformFee, color: 'text-red-500' },
-          { label: 'Cleaning Fees',  value: summary.cleaningFee, color: 'text-yellow-600' },
-          { label: 'Net Income',     value: summary.netAmount,   color: 'text-green-600' },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-              {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <p className={`text-2xl font-bold mt-2 ${s.color}`}>{format(s.value || 0)}</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Gross Revenue</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">incl. cleaning fees collected</p>
+            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
+              <p className="text-2xl font-bold mt-2">{format(summary.grossAmount || 0)}</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Cleaning Collected</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">included in gross &amp; net</p>
+            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
+              <p className="text-2xl font-bold mt-2 text-yellow-600">{format(summary.cleaningFee || 0)}</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Platform Fees</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">deducted from gross</p>
+            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
+              <p className="text-2xl font-bold mt-2 text-red-500">-{format(summary.platformFee || 0)}</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="border-green-200 dark:border-green-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Net Income</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">gross − platform fee</p>
+            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
+              <p className="text-2xl font-bold mt-2 text-green-600">{format(summary.netAmount || 0)}</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -234,7 +255,12 @@ export default function FinancialsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Platform</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Received</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Gross</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Fees</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  <span title="Cleaning fee collected from guest — already included in Gross">Cleaning ↑</span>
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  <span title="Fee paid to the booking platform — deducted from Gross">Platform Fee ↓</span>
+                </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Net</th>
                 {isManager && (
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -245,14 +271,14 @@ export default function FinancialsPage() {
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="border-b">
-                    {[...Array(isManager ? 8 : 7)].map((_, j) => (
+                    {[...Array(isManager ? 9 : 8)].map((_, j) => (
                       <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>
                     ))}
                   </tr>
                 ))
               ) : income.length === 0 ? (
                 <tr>
-                  <td colSpan={isManager ? 8 : 7} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={isManager ? 9 : 8} className="px-4 py-12 text-center text-muted-foreground">
                     No income records found.{' '}
                     <Link href="/dashboard/bookings" className="text-primary hover:underline">
                       Mark a booking as Checked Out
@@ -279,8 +305,11 @@ export default function FinancialsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(i.receivedAt)}</td>
                     <td className="px-4 py-3 text-right">{format(i.grossAmount)}</td>
+                    <td className="px-4 py-3 text-right text-yellow-600">
+                      {i.cleaningFee > 0 ? format(i.cleaningFee) : '—'}
+                    </td>
                     <td className="px-4 py-3 text-right text-red-500">
-                      -{format(i.platformFee + i.cleaningFee)}
+                      {i.platformFee > 0 ? `-${format(i.platformFee)}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-green-600">{format(i.netAmount)}</td>
                     {isManager && (
@@ -307,12 +336,13 @@ export default function FinancialsPage() {
             {income.length > 0 && (
               <tfoot>
                 <tr className="border-t bg-muted/50 font-medium">
-                  <td colSpan={isManager ? 4 : 4} className="px-4 py-3 text-muted-foreground">
+                  <td colSpan={4} className="px-4 py-3 text-muted-foreground">
                     Total ({total} records)
                   </td>
                   <td className="px-4 py-3 text-right">{format(summary.grossAmount || 0)}</td>
+                  <td className="px-4 py-3 text-right text-yellow-600">{format(summary.cleaningFee || 0)}</td>
                   <td className="px-4 py-3 text-right text-red-500">
-                    -{format((summary.platformFee || 0) + (summary.cleaningFee || 0))}
+                    {(summary.platformFee || 0) > 0 ? `-${format(summary.platformFee || 0)}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-right text-green-600">{format(summary.netAmount || 0)}</td>
                   {isManager && <td />}
@@ -321,15 +351,18 @@ export default function FinancialsPage() {
             )}
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1}          onClick={() => setPage(p => p - 1)}>Previous</Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages}  onClick={() => setPage(p => p + 1)}>Next</Button>
+        <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
+          <span>Formula: <strong>Net = Gross − Platform Fee</strong>. Cleaning fee is collected from the guest and included in both Gross and Net (record cleaning costs separately under Expenses).</span>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              <span>Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page === 1}          onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages}  onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </Card>
 
       {/* Edit Income Modal */}
