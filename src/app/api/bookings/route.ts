@@ -30,10 +30,16 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status
     if (platform) where.platform = platform
     if (propertyId) where.propertyId = propertyId
-    if (startDate || endDate) {
-      where.checkIn = {}
-      if (startDate) where.checkIn.gte = new Date(startDate)
-      if (endDate) where.checkIn.lte = new Date(endDate)
+    if (startDate && endDate) {
+      // Overlap: booking overlaps with [startDate, endDate] window
+      where.AND = [
+        { checkIn:  { lte: new Date(endDate) } },
+        { checkOut: { gte: new Date(startDate) } },
+      ]
+    } else if (startDate) {
+      where.checkIn = { gte: new Date(startDate) }
+    } else if (endDate) {
+      where.checkIn = { lte: new Date(endDate) }
     }
 
     const [bookings, total] = await Promise.all([

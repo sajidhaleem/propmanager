@@ -99,6 +99,24 @@ export default function BookingsPage() {
     onError: () => toast.error('Delete failed'),
   })
 
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Status updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   function openCreate() {
     setEditBooking(null)
     setForm(EMPTY_FORM)
@@ -244,9 +262,26 @@ export default function BookingsPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={getStatusColor(b.status)} variant="outline">
-                        {b.status.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-                      </Badge>
+                      <Select
+                        value={b.status}
+                        onValueChange={(newStatus) => statusMutation.mutate({ id: b.id, status: newStatus })}
+                      >
+                        <SelectTrigger className={`h-7 w-[130px] text-xs border px-2 ${getStatusColor(b.status)}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[
+                            { value: 'PENDING',     label: 'Pending' },
+                            { value: 'CONFIRMED',   label: 'Confirmed' },
+                            { value: 'CHECKED_IN',  label: 'Checked in' },
+                            { value: 'CHECKED_OUT', label: 'Checked out' },
+                            { value: 'CANCELLED',   label: 'Cancelled' },
+                            { value: 'NO_SHOW',     label: 'No show' },
+                          ].map(({ value, label }) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">{format(b.netAmount)}</td>
                     <td className="px-4 py-3">
