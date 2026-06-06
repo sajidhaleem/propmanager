@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Bell } from 'lucide-react'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, parseISO, addMonths, subMonths,
@@ -248,11 +248,15 @@ export default function CalendarPage() {
                                 slot === 'checkout' ? 'rounded-r mr-0.5' :
                                                       '' // middle: no radius, full width
 
+                              const reminderDay = (b as any).reminderAt
+                                ? isSameDay(parseISO((b as any).reminderAt), day)
+                                : false
+
                               return (
                                 <Link
                                   key={b.id}
                                   href="/dashboard/bookings"
-                                  title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\n${money(b.rate)}`}
+                                  title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\n${money(b.rate)}${reminderDay && (b as any).reminderNote ? '\n🔔 ' + (b as any).reminderNote : ''}`}
                                   className={`block overflow-hidden px-1.5 py-1 text-[10px] leading-tight
                                     hover:brightness-110 transition-all cursor-pointer
                                     ${c.bg} ${c.text} ${radius}`}
@@ -260,7 +264,10 @@ export default function CalendarPage() {
                                   {/* Check-in day: full info */}
                                   {(slot === 'checkin' || slot === 'single') && (
                                     <>
-                                      <div className="font-bold truncate">{b.guestName}</div>
+                                      <div className="font-bold truncate flex items-center gap-0.5">
+                                        {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0 opacity-90" />}
+                                        <span className="truncate">{b.guestName}</span>
+                                      </div>
                                       <div className="opacity-90 mt-0.5">
                                         {format(ci, 'h:mm a')} – {format(co, 'h:mm a')}
                                       </div>
@@ -270,15 +277,19 @@ export default function CalendarPage() {
 
                                   {/* Middle days: just name */}
                                   {slot === 'middle' && (
-                                    <div className="font-semibold truncate opacity-80 py-0.5">
-                                      {b.guestName}
+                                    <div className="font-semibold truncate opacity-80 py-0.5 flex items-center gap-0.5">
+                                      {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0" />}
+                                      <span className="truncate">{b.guestName}</span>
                                     </div>
                                   )}
 
                                   {/* Check-out day: name + checkout time */}
                                   {slot === 'checkout' && (
                                     <>
-                                      <div className="font-semibold truncate opacity-80">{b.guestName}</div>
+                                      <div className="font-semibold truncate opacity-80 flex items-center gap-0.5">
+                                        {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0" />}
+                                        <span className="truncate">{b.guestName}</span>
+                                      </div>
                                       <div className="opacity-70">out {format(co, 'h:mm a')}</div>
                                     </>
                                   )}
@@ -311,6 +322,10 @@ export default function CalendarPage() {
               <span className="text-sm text-muted-foreground">{label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1.5 ml-4">
+            <Bell className="h-3 w-3 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Reminder set</span>
+          </div>
           <span className="ml-auto text-xs text-muted-foreground">Scroll horizontally to see all days →</span>
         </div>
       </Card>

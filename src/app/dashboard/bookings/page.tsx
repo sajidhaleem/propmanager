@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -37,7 +37,7 @@ const EMPTY_FORM = {
   guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '',
   rate: '', cleaningFee: '15', platformFee: '', platform: 'AIRBNB',
   status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
-  miscCharges: '', miscDescription: '',
+  miscCharges: '', miscDescription: '', reminderAt: '', reminderNote: '',
 }
 
 interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
@@ -99,8 +99,9 @@ export default function BookingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             ...payload,
-            checkIn:  payload.checkIn  ? localInputToISO(payload.checkIn)  : undefined,
-            checkOut: payload.checkOut ? localInputToISO(payload.checkOut) : undefined,
+            checkIn:    payload.checkIn    ? localInputToISO(payload.checkIn)    : undefined,
+            checkOut:   payload.checkOut   ? localInputToISO(payload.checkOut)   : undefined,
+            reminderAt: payload.reminderAt ? localInputToISO(payload.reminderAt) : null,
             rate: Number(payload.rate),
             cleaningFee: Number(payload.cleaningFee),
             platformFee: Number(payload.platformFee),
@@ -197,6 +198,7 @@ export default function BookingsPage() {
       platformOther: '',
       miscCharges: String((b as any).miscCharges || ''),
       miscDescription: (b as any).miscDescription || '',
+      reminderAt: '', reminderNote: '',
     })
     setUploadedDocs([])
     setModalOpen(true)
@@ -212,6 +214,8 @@ export default function BookingsPage() {
       platformOther: '',
       miscCharges: String((b as any).miscCharges || ''),
       miscDescription: (b as any).miscDescription || '',
+      reminderAt: toLocalInput((b as any).reminderAt || ''),
+      reminderNote: (b as any).reminderNote || '',
     })
     // Load existing documents for this booking
     fetch(`/api/bookings/${b.id}/documents`)
@@ -561,7 +565,24 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* 14. Notes */}
+            {/* 14. Reminder */}
+            <div className="border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                <Bell className="h-3.5 w-3.5" /> Reminder
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Remind At</Label>
+                  <Input type="datetime-local" value={form.reminderAt} onChange={(e) => setForm({ ...form, reminderAt: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Reminder Note</Label>
+                  <Input value={form.reminderNote} onChange={(e) => setForm({ ...form, reminderNote: e.target.value })} placeholder="e.g. Call guest before check-in" />
+                </div>
+              </div>
+            </div>
+
+            {/* 15. Notes */}
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />

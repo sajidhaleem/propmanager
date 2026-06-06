@@ -25,6 +25,8 @@ export const bookingSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW']).default('CONFIRMED'),
   propertyId: z.string().min(1, 'Property is required'),
   notes: z.string().optional(),
+  reminderAt: z.string().optional(),
+  reminderNote: z.string().optional(),
 })
 
 export const propertySchema = z.object({
