@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Banknote, TrendingUp, CalendarCheck, Building2,
   ArrowUpRight, Clock, AlertCircle, RefreshCw, Check, X,
+  BookOpen, CreditCard, Globe,
 } from 'lucide-react'
 import Link from 'next/link'
 import { StatsCard } from '@/components/dashboard/StatsCard'
@@ -123,23 +124,19 @@ export default function DashboardPage() {
       )}
 
       {!isLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Total Bookings',    value: stats?.totalBookings||0,          href: '/dashboard/bookings' },
-            { label: 'Active Properties', value: stats?.totalProperties||0,        href: '/dashboard/properties' },
-            { label: 'Monthly Expenses',  value: format(stats?.totalExpenses||0),  href: '/dashboard/expenses' },
-            { label: 'Currency',          value: currency,                          href: '/dashboard/settings' },
-          ].map((item) => (
-            <Link key={item.label} href={item.href}>
-              <div className="rounded-xl border bg-card px-4 py-3 hover:bg-accent/50 transition-colors group">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-lg font-bold">{item.value}</p>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </div>
-            </Link>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Link href="/dashboard/bookings" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Total Bookings"    value={stats?.totalBookings||0}         icon={<BookOpen className="h-5 w-5" />}   color="blue"   index={4} />
+          </Link>
+          <Link href="/dashboard/properties" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Active Properties" value={stats?.totalProperties||0}       icon={<Building2 className="h-5 w-5" />}  color="green"  index={5} />
+          </Link>
+          <Link href="/dashboard/expenses" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} icon={<CreditCard className="h-5 w-5" />} color="red"    index={6} />
+          </Link>
+          <Link href="/dashboard/settings" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Currency"          value={currency}                         icon={<Globe className="h-5 w-5" />}      color="purple" index={7} />
+          </Link>
         </div>
       )}
 
