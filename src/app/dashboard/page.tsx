@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Banknote, TrendingUp, CalendarCheck, Building2,
   ArrowUpRight, Clock, AlertCircle, RefreshCw, Check, X,
-  BookOpen, CreditCard, Globe,
+  BookOpen, CreditCard, Globe, CalendarPlus,
 } from 'lucide-react'
 import Link from 'next/link'
 import { StatsCard } from '@/components/dashboard/StatsCard'
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
+import { EmptyState } from '@/components/ui/empty-state'
 import toast from 'react-hot-toast'
 
 async function fetchDashboardStats() {
@@ -100,14 +101,20 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{greeting} 👋</h1>
-          <p className="text-muted-foreground text-sm mt-1">Here&apos;s what&apos;s happening with your properties today.</p>
+      {/* ── Greeting banner ── */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card px-6 py-5">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.08),transparent_60%)]" />
+        <div className="relative flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{greeting} 👋</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Here&apos;s what&apos;s happening with your properties today.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />Refresh
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />Refresh
-        </Button>
       </div>
 
       {isLoading ? (
@@ -176,16 +183,25 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : recentBookings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CalendarCheck className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-sm font-medium">No bookings yet</p>
-              <Button size="sm" className="mt-4" asChild><Link href="/dashboard/bookings">Add Booking</Link></Button>
-            </div>
+            <EmptyState
+              icon={CalendarPlus}
+              title="No bookings yet"
+              description="Create your first booking to start tracking revenue and occupancy."
+              action={{ label: 'Add Booking', onClick: () => window.location.href = '/dashboard/bookings' }}
+            />
           ) : (
             <div className="divide-y">
               {recentBookings.map((b) => (
-                <div key={b.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 transition-colors">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                <div key={b.id} className="relative flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 transition-colors group">
+                  {/* Status accent left border */}
+                  <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-70 ${
+                    b.status === 'CONFIRMED'   ? 'bg-blue-500' :
+                    b.status === 'CHECKED_IN'  ? 'bg-green-500' :
+                    b.status === 'CHECKED_OUT' ? 'bg-purple-500' :
+                    b.status === 'PENDING'     ? 'bg-yellow-500' :
+                    b.status === 'CANCELLED'   ? 'bg-red-400' : 'bg-muted-foreground'
+                  }`} />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold ring-2 ring-primary/10">
                     {b.guestName[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">

@@ -1,8 +1,10 @@
 'use client'
 
+'use client'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Home, Users, Banknote, Activity } from 'lucide-react'
+import { Plus, Edit, Trash2, Home, Users, Banknote, Activity, Building2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -14,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { MagicCard } from '@/components/ui/magic-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { getStatusColor } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Property } from '@/types'
@@ -100,62 +104,94 @@ export default function PropertiesPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {properties.map((p, i) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Card className="relative group overflow-hidden">
-                <div className={`h-2 ${['bg-blue-500','bg-green-500','bg-purple-500','bg-orange-500'][i % 4]}`} />
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Home className="h-5 w-5 text-primary" />
+          {properties.map((p, i) => {
+            const COLORS = [
+              { bar: 'from-blue-400 to-blue-600',   glow: 'rgba(59,130,246,0.10)',  icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+              { bar: 'from-green-400 to-green-600',  glow: 'rgba(34,197,94,0.10)',   icon: 'bg-green-500/15 text-green-600 dark:text-green-400' },
+              { bar: 'from-purple-400 to-violet-600',glow: 'rgba(168,85,247,0.10)',  icon: 'bg-purple-500/15 text-purple-600 dark:text-purple-400' },
+              { bar: 'from-orange-400 to-orange-600',glow: 'rgba(249,115,22,0.10)',  icon: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
+            ]
+            const c = COLORS[i % COLORS.length]
+            return (
+              <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+                <MagicCard glowColor={c.glow} className="relative overflow-hidden rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+                  {/* Gradient top bar */}
+                  <div className={`h-[3px] bg-gradient-to-r ${c.bar}`} />
+
+                  <div className="p-4">
+                    {/* Header row */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.icon}`}>
+                        <Home className="h-5 w-5" />
+                      </div>
+                      <Badge className={getStatusColor(p.status)} variant="outline">
+                        {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(p.status)} variant="outline">
-                      {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
-                    </Badge>
+
+                    {/* Name + description */}
+                    <h3 className="font-semibold text-sm leading-tight mb-0.5">{p.name}</h3>
+                    {p.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>
+                    )}
+
+                    {/* Metrics */}
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-xs text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span>{p.capacity} guests</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Banknote className="h-3.5 w-3.5 shrink-0" />
+                        <span>{format(p.baseRate)}/night</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Activity className="h-3.5 w-3.5 shrink-0" />
+                        <span>{p._count?.bookings || 0} bookings</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="capitalize">{p.type}</span>
+                      </div>
+                    </div>
+
+                    {/* Amenities */}
+                    {p.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {p.amenities.slice(0, 3).map((a) => (
+                          <span key={a} className="text-[11px] bg-muted/70 text-muted-foreground px-2 py-0.5 rounded-full border">
+                            {a}
+                          </span>
+                        ))}
+                        {p.amenities.length > 3 && (
+                          <span className="text-[11px] text-muted-foreground px-1">+{p.amenities.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 pt-1 border-t border-border/60">
+                      <Button variant="ghost" size="sm" className="flex-1 h-8 text-xs mt-2" onClick={() => openEdit(p)}>
+                        <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => { if (confirm('Delete property?')) deleteMutation.mutate(p.id) }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <CardTitle className="text-base mt-2">{p.name}</CardTitle>
-                  {p.description && <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>}
-                </CardHeader>
-                <CardContent className="pb-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Users className="h-3.5 w-3.5" /> {p.capacity} guests
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Banknote className="h-3.5 w-3.5" /> {format(p.baseRate)}/night
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Activity className="h-3.5 w-3.5" /> {p._count?.bookings || 0} bookings
-                    </div>
-                    <div className="text-muted-foreground capitalize">{p.type}</div>
-                  </div>
-                  {p.amenities.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {p.amenities.slice(0, 3).map((a) => (
-                        <span key={a} className="text-xs bg-muted px-1.5 py-0.5 rounded">{a}</span>
-                      ))}
-                      {p.amenities.length > 3 && (
-                        <span className="text-xs text-muted-foreground">+{p.amenities.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(p)}>
-                      <Edit className="h-3.5 w-3.5" />Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive"
-                      onClick={() => { if (confirm('Delete property?')) deleteMutation.mutate(p.id) }}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                </MagicCard>
+              </motion.div>
+            )
+          })}
 
           {properties.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              No properties yet. Add your first property.
+            <div className="col-span-full">
+              <EmptyState
+                icon={Building2}
+                title="No properties yet"
+                description="Add your first property to start managing bookings, tracking revenue, and monitoring occupancy."
+                action={{ label: 'Add Property', onClick: openCreate }}
+              />
             </div>
           )}
         </div>
