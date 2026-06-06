@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import * as XLSX from 'xlsx'
@@ -41,6 +42,18 @@ const EMPTY_FORM = {
 }
 
 interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
+
+function checkInDateLabel(isoStr: string): string {
+  const d = parseISO(isoStr)
+  if (isToday(d))     return 'Today'
+  if (isTomorrow(d))  return 'Tomorrow'
+  if (isYesterday(d)) return 'Yesterday'
+  return fnsFormat(d, 'EEEE, MMM d, yyyy')
+}
+
+function checkInDateKey(isoStr: string): string {
+  return fnsFormat(parseISO(isoStr), 'yyyy-MM-dd')
+}
 
 // Convert a UTC ISO string to a value suitable for datetime-local input (local time)
 function toLocalInput(utcStr: string): string {
@@ -327,7 +340,29 @@ export default function BookingsPage() {
               ) : bookings.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No bookings found</td></tr>
               ) : (
-                bookings.map((b) => (
+                bookings.flatMap((b, i) => {
+                  const dateKey = checkInDateKey(b.checkIn)
+                  const prevDateKey = i > 0 ? checkInDateKey(bookings[i - 1].checkIn) : null
+                  const showLabel = dateKey !== prevDateKey
+                  const rows = []
+
+                  if (showLabel) {
+                    rows.push(
+                      <tr key={`label-${dateKey}`}>
+                        <td colSpan={8} className="px-4 pt-4 pb-1.5">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              {checkInDateLabel(b.checkIn)}
+                            </span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  rows.push(
                   <tr key={b.id} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="font-medium">{b.guestName}</p>
@@ -417,7 +452,10 @@ export default function BookingsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+
+                  return rows
+                })
               )}
             </tbody>
           </table>
