@@ -72,10 +72,10 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4 safe-top">
-        {/* Menu toggle */}
+        {/* Menu toggle — desktop only (mobile uses bottom nav) */}
         <button
           onClick={toggleSidebar}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           aria-label="Toggle sidebar"
         >
           <Menu className="h-4 w-4" />

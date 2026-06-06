@@ -10,13 +10,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden lg:flex lg:w-[260px] lg:shrink-0">
-        <Sidebar />
-      </div>
-
-      {/* Mobile sidebar (absolute) */}
-      <div className="lg:hidden">
         <Sidebar />
       </div>
 
