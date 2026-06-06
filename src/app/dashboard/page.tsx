@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editingPaymentValue, setEditingPaymentValue] = useState('')
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: fetchDashboardStats,
     refetchInterval: 2 * 60 * 1000,
@@ -111,8 +111,12 @@ export default function DashboardPage() {
               Here&apos;s what&apos;s happening with your properties today.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />Refresh
+          <Button
+            variant="ghost" size="sm"
+            className="h-8 gap-1.5 border border-white/20 bg-white/10 text-foreground hover:bg-white/20 backdrop-blur-sm"
+            onClick={() => refetch()} disabled={isFetching}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />Refresh
           </Button>
         </div>
       </div>
