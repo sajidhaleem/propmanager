@@ -44,9 +44,10 @@ interface UploadedDoc { id: string; name: string; mimeType: string; size: number
 
 function checkInDateLabel(isoStr: string): string {
   const d = parseISO(isoStr)
-  if (isToday(d))     return 'Today'
-  if (isTomorrow(d))  return 'Tomorrow'
-  if (isYesterday(d)) return 'Yesterday'
+  const dateStr = fnsFormat(d, 'MMM d, yyyy')
+  if (isToday(d))     return `Today · ${dateStr}`
+  if (isTomorrow(d))  return `Tomorrow · ${dateStr}`
+  if (isYesterday(d)) return `Yesterday · ${dateStr}`
   return fnsFormat(d, 'EEEE, MMM d, yyyy')
 }
 
@@ -379,11 +380,11 @@ export default function BookingsPage() {
               <div className="flex items-center gap-3 px-1">
                 <div className={cn(
                   'flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shrink-0',
-                  group.label === 'Today'
+                  group.label.startsWith('Today')
                     ? 'bg-blue-500 text-white'
-                    : group.label === 'Tomorrow'
+                    : group.label.startsWith('Tomorrow')
                       ? 'bg-green-500 text-white'
-                      : group.label === 'Yesterday'
+                      : group.label.startsWith('Yesterday')
                         ? 'bg-amber-500 text-white'
                         : 'bg-muted text-muted-foreground border'
                 )}>
@@ -432,11 +433,16 @@ export default function BookingsPage() {
                         </div>
 
                         {/* Date range */}
-                        <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                          <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span>
-                          <span>→</span>
-                          <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span>
-                          <span className="text-muted-foreground/60">· {b.nights}n</span>
+                        <div className="hidden sm:flex flex-col gap-0.5 text-xs whitespace-nowrap shrink-0">
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span>
+                            <span className="text-muted-foreground/60">{formatDate(b.checkIn, 'h:mm a')}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span>
+                            <span className="text-muted-foreground/60">{formatDate(b.checkOut, 'h:mm a')}</span>
+                            <span className="text-muted-foreground/50 ml-1">· {b.nights}n</span>
+                          </div>
                         </div>
 
                         {/* Platform */}
