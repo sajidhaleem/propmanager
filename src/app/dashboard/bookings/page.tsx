@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays } from 'lucide-react'
-import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -15,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
+import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
@@ -312,166 +311,233 @@ export default function BookingsPage() {
         </Select>
       </div>
 
-      {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <SortableTh label="Guest"    field="guestName"   sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Property</th>
-                <SortableTh label="Check-in" field="checkIn"     sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Nights"   field="nights"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Platform" field="platform"    sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Status"   field="status"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Amount"   field="totalAmount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                [...Array(8)].map((_, i) => (
-                  <tr key={i} className="border-b">
-                    {[...Array(8)].map((_, j) => (
-                      <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : bookings.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No bookings found</td></tr>
-              ) : (
-                bookings.flatMap((b, i) => {
-                  const dateKey = checkInDateKey(b.checkIn)
-                  const prevDateKey = i > 0 ? checkInDateKey(bookings[i - 1].checkIn) : null
-                  const showLabel = dateKey !== prevDateKey
-                  const rows = []
+      {/* Sort controls */}
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="font-medium">Sort by:</span>
+        {[
+          { field: 'checkIn',     label: 'Check-in' },
+          { field: 'guestName',   label: 'Guest' },
+          { field: 'totalAmount', label: 'Amount' },
+          { field: 'nights',      label: 'Nights' },
+          { field: 'status',      label: 'Status' },
+          { field: 'platform',    label: 'Platform' },
+        ].map(({ field, label }) => (
+          <button
+            key={field}
+            onClick={() => handleSort(field)}
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors',
+              sortBy === field
+                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                : 'hover:bg-accent border-border'
+            )}
+          >
+            {label}
+            {sortBy === field && (
+              <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+        ))}
+      </div>
 
-                  if (showLabel) {
-                    rows.push(
-                      <tr key={`label-${dateKey}`}>
-                        <td colSpan={8} className="px-4 pt-4 pb-1.5">
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              {checkInDateLabel(b.checkIn)}
-                            </span>
-                            <div className="flex-1 h-px bg-border" />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  }
+      {/* Grouped bookings list */}
+      <div className="space-y-6">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="p-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-60" />
+                  </div>
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : bookings.length === 0 ? (
+          <Card className="py-16 text-center text-muted-foreground text-sm">No bookings found</Card>
+        ) : (() => {
+          // Group bookings by check-in date
+          const groups: { dateKey: string; label: string; bookings: Booking[] }[] = []
+          bookings.forEach((b) => {
+            const key = checkInDateKey(b.checkIn)
+            const last = groups[groups.length - 1]
+            if (last && last.dateKey === key) {
+              last.bookings.push(b)
+            } else {
+              groups.push({ dateKey: key, label: checkInDateLabel(b.checkIn), bookings: [b] })
+            }
+          })
 
-                  rows.push(
-                  <tr key={b.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{b.guestName}</p>
-                      {b.guestEmail && <p className="text-xs text-muted-foreground">{b.guestEmail}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{b.property?.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      <div className="whitespace-nowrap text-xs leading-relaxed">
-                        <div><span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span> <span className="text-muted-foreground">{formatDate(b.checkIn, 'h:mm a')}</span></div>
-                        <div><span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span> <span className="text-muted-foreground">{formatDate(b.checkOut, 'h:mm a')}</span></div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{b.nights}</td>
-                    <td className="px-4 py-3">
-                      <Badge className={getPlatformColor(b.platform)} variant="outline">
-                        {b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform === 'VRBO' ? 'VRBO' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase()}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Select
-                        value={b.status}
-                        onValueChange={(newStatus) => statusMutation.mutate({ id: b.id, status: newStatus })}
-                      >
-                        <SelectTrigger className={`h-7 w-[130px] text-xs border px-2 ${getStatusColor(b.status)}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[
-                            { value: 'PENDING',     label: 'Pending' },
-                            { value: 'CONFIRMED',   label: 'Confirmed' },
-                            { value: 'CHECKED_IN',  label: 'Checked in' },
-                            { value: 'CHECKED_OUT', label: 'Checked out' },
-                            { value: 'CANCELLED',   label: 'Cancelled' },
-                            { value: 'NO_SHOW',     label: 'No show' },
-                          ].map(({ value, label }) => (
-                            <SelectItem key={value} value={value}>{label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {editingAmountId === b.id ? (
-                        <div className="flex items-center justify-end gap-1">
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editingAmountValue}
-                            onChange={(e) => setEditingAmountValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveAmount(b.id)
-                              if (e.key === 'Escape') setEditingAmountId(null)
-                            }}
-                            className="h-7 w-24 text-xs text-right"
-                            autoFocus
-                          />
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700"
-                            onClick={() => saveAmount(b.id)} disabled={amountMutation.isPending}>
-                            <Check className="h-3.5 w-3.5" />
+          return groups.map((group) => (
+            <div key={group.dateKey} className="space-y-2">
+              {/* Date section header */}
+              <div className="flex items-center gap-3 px-1">
+                <div className={cn(
+                  'flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shrink-0',
+                  group.label === 'Today'
+                    ? 'bg-blue-500 text-white'
+                    : group.label === 'Tomorrow'
+                      ? 'bg-green-500 text-white'
+                      : group.label === 'Yesterday'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-muted text-muted-foreground border'
+                )}>
+                  <CalendarDays className="h-3 w-3" />
+                  {group.label}
+                </div>
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {group.bookings.length} {group.bookings.length === 1 ? 'booking' : 'bookings'}
+                </span>
+              </div>
+
+              {/* Booking cards */}
+              <div className="space-y-2">
+                {group.bookings.map((b, idx) => (
+                  <motion.div
+                    key={b.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: idx * 0.04 }}
+                  >
+                    <Card className="relative overflow-hidden hover:shadow-md transition-shadow group">
+                      {/* Status left accent */}
+                      <div className={cn(
+                        'absolute left-0 top-0 bottom-0 w-[3px]',
+                        b.status === 'CONFIRMED'   ? 'bg-blue-500' :
+                        b.status === 'CHECKED_IN'  ? 'bg-green-500' :
+                        b.status === 'CHECKED_OUT' ? 'bg-purple-500' :
+                        b.status === 'PENDING'     ? 'bg-amber-500' :
+                        b.status === 'CANCELLED'   ? 'bg-red-400' : 'bg-muted-foreground'
+                      )} />
+
+                      <div className="flex items-center gap-3 pl-5 pr-4 py-3 flex-wrap sm:flex-nowrap">
+                        {/* Avatar */}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold ring-2 ring-primary/10">
+                          {b.guestName[0].toUpperCase()}
+                        </div>
+
+                        {/* Guest + property */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{b.guestName}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {b.property?.name}
+                            {b.guestEmail && <> · {b.guestEmail}</>}
+                          </p>
+                        </div>
+
+                        {/* Date range */}
+                        <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                          <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span>
+                          <span>→</span>
+                          <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span>
+                          <span className="text-muted-foreground/60">· {b.nights}n</span>
+                        </div>
+
+                        {/* Platform */}
+                        <div className="hidden md:block shrink-0">
+                          <Badge className={getPlatformColor(b.platform)} variant="outline">
+                            {b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform === 'VRBO' ? 'VRBO' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase()}
+                          </Badge>
+                        </div>
+
+                        {/* Status selector */}
+                        <div className="shrink-0">
+                          <Select
+                            value={b.status}
+                            onValueChange={(s) => statusMutation.mutate({ id: b.id, status: s })}
+                          >
+                            <SelectTrigger className={`h-7 w-[128px] text-xs border px-2 ${getStatusColor(b.status)}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[
+                                { value: 'PENDING',     label: 'Pending' },
+                                { value: 'CONFIRMED',   label: 'Confirmed' },
+                                { value: 'CHECKED_IN',  label: 'Checked in' },
+                                { value: 'CHECKED_OUT', label: 'Checked out' },
+                                { value: 'CANCELLED',   label: 'Cancelled' },
+                                { value: 'NO_SHOW',     label: 'No show' },
+                              ].map(({ value, label }) => (
+                                <SelectItem key={value} value={value}>{label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Amount */}
+                        <div className="shrink-0 min-w-[80px] text-right">
+                          {editingAmountId === b.id ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number" min="0"
+                                value={editingAmountValue}
+                                onChange={(e) => setEditingAmountValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveAmount(b.id)
+                                  if (e.key === 'Escape') setEditingAmountId(null)
+                                }}
+                                className="h-7 w-20 text-xs text-right"
+                                autoFocus
+                              />
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600"
+                                onClick={() => saveAmount(b.id)} disabled={amountMutation.isPending}>
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                                onClick={() => setEditingAmountId(null)}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              className="font-bold text-sm tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors"
+                              title="Click to edit amount"
+                              onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.rate)) }}
+                            >
+                              {format(b.rate)}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}>
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
-                            onClick={() => setEditingAmountId(null)}>
-                            <X className="h-3.5 w-3.5" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Duplicate" onClick={() => openCopy(b)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete"
+                            onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      ) : (
-                        <button
-                          className="font-semibold tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer w-full text-right"
-                          title="Click to edit amount"
-                          onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.rate)) }}
-                        >
-                          {format(b.rate)}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit booking" onClick={() => openEdit(b)}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Duplicate booking" onClick={() => openCopy(b)}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete booking"
-                          onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                  )
-
-                  return rows
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
             </div>
+          ))
+        })()}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Page {page} of {totalPages} · {total} total</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
           </div>
-        )}
-      </Card>
+        </div>
+      )}
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
