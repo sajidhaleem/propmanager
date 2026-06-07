@@ -83,7 +83,7 @@ export default function BookingsPage() {
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
   const [editingAmountValue, setEditingAmountValue] = useState('')
   const [sortBy,    setSortBy]    = useState('checkIn')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
