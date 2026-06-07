@@ -430,6 +430,13 @@ export default function BookingsPage() {
                             {b.property?.name}
                             {b.guestEmail && <> · {b.guestEmail}</>}
                           </p>
+                          {/* Mobile-only check-in/out with time */}
+                          <div className="flex sm:hidden items-center gap-1.5 mt-1 text-[11px] text-muted-foreground whitespace-nowrap">
+                            <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d, h:mm a')}</span>
+                            <span>→</span>
+                            <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d, h:mm a')}</span>
+                            <span className="text-muted-foreground/60">· {b.nights}n</span>
+                          </div>
                         </div>
 
                         {/* Date range */}
