@@ -374,6 +374,11 @@ export default function BookingsPage() {
             }
           })
 
+          // Within each date, show AM check-ins before PM
+          groups.forEach((g) => {
+            g.bookings.sort((a, bk) => parseISO(a.checkIn).getHours() - parseISO(bk.checkIn).getHours())
+          })
+
           return groups.map((group) => (
             <div key={group.dateKey} className="space-y-2">
               {/* Date section header */}
