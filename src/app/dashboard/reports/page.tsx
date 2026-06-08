@@ -15,7 +15,6 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell,
 } from 'recharts'
-import * as XLSX from 'xlsx'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const PLATFORM_COLORS = ['#FF5A5F','#3b82f6','#6366f1','#f59e0b','#6b7280']
@@ -73,7 +72,8 @@ export default function ReportsPage() {
   const totalExpenses = monthly.reduce((s: number, m: any) => s + m.expenses, 0)
   const totalNet = totalRevenue - totalExpenses
 
-  function exportMonthly() {
+  async function exportMonthly() {
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(monthly.map((m: any) => ({
       Month: MONTHS[m.month - 1], Year: m.year,
       Revenue: m.revenue, Expenses: m.expenses, 'Net Income': m.net,
@@ -83,7 +83,8 @@ export default function ReportsPage() {
     XLSX.writeFile(wb, `annual-report-${year}.xlsx`)
   }
 
-  function exportPnL() {
+  async function exportPnL() {
+    const XLSX = await import('xlsx')
     const rows = [...pnlRows, { ...pnlTotals, month: 0 }].map(r => ({
       'Month':           r.month === 0 ? 'TOTAL' : MONTHS[r.month - 1],
       'Airbnb Revenue':  r.airbnbRevenue || 0,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -18,7 +18,6 @@ import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
-import * as XLSX from 'xlsx'
 
 async function fetchBookings(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
@@ -103,6 +102,20 @@ export default function BookingsPage() {
   const total = data?.data?.total || 0
   const totalPages = data?.data?.totalPages || 1
   const properties = propertiesData?.data || []
+
+  const groupedBookings = useMemo(() => {
+    const groups: { dateKey: string; label: string; bookings: Booking[] }[] = []
+    bookings.forEach((b) => {
+      const key = checkInDateKey(b.checkIn)
+      const last = groups[groups.length - 1]
+      if (last && last.dateKey === key) last.bookings.push(b)
+      else groups.push({ dateKey: key, label: checkInDateLabel(b.checkIn), bookings: [b] })
+    })
+    groups.forEach((g) => {
+      g.bookings.sort((a, bk) => parseISO(a.checkIn).getHours() - parseISO(bk.checkIn).getHours())
+    })
+    return groups
+  }, [bookings])
 
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -267,7 +280,8 @@ export default function BookingsPage() {
     toast.success('Document removed')
   }
 
-  function exportToExcel() {
+  async function exportToExcel() {
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(bookings.map((b) => ({
       Guest: b.guestName, Email: b.guestEmail, 'Check-in': formatDate(b.checkIn),
       'Check-out': formatDate(b.checkOut), Nights: b.nights, Rate: b.rate,
@@ -361,25 +375,8 @@ export default function BookingsPage() {
           </div>
         ) : bookings.length === 0 ? (
           <Card className="py-16 text-center text-muted-foreground text-sm">No bookings found</Card>
-        ) : (() => {
-          // Group bookings by check-in date
-          const groups: { dateKey: string; label: string; bookings: Booking[] }[] = []
-          bookings.forEach((b) => {
-            const key = checkInDateKey(b.checkIn)
-            const last = groups[groups.length - 1]
-            if (last && last.dateKey === key) {
-              last.bookings.push(b)
-            } else {
-              groups.push({ dateKey: key, label: checkInDateLabel(b.checkIn), bookings: [b] })
-            }
-          })
-
-          // Within each date, show AM check-ins before PM
-          groups.forEach((g) => {
-            g.bookings.sort((a, bk) => parseISO(a.checkIn).getHours() - parseISO(bk.checkIn).getHours())
-          })
-
-          return groups.map((group) => (
+        ) : (
+          groupedBookings.map((group) => (
             <div key={group.dateKey} className="space-y-2">
               {/* Date section header */}
               <div className="flex items-center gap-3 px-1">
@@ -543,7 +540,7 @@ export default function BookingsPage() {
               </div>
             </div>
           ))
-        })()}
+        )}
       </div>
 
       {/* Pagination */}

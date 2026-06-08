@@ -8,12 +8,20 @@ import {
   BookOpen, CreditCard, Globe, CalendarPlus,
 } from 'lucide-react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { StatsCard } from '@/components/dashboard/StatsCard'
-import { RevenueChart } from '@/components/dashboard/RevenueChart'
-import { PlatformChart } from '@/components/dashboard/PlatformChart'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const RevenueChart = dynamic(
+  () => import('@/components/dashboard/RevenueChart').then(m => m.RevenueChart),
+  { ssr: false, loading: () => <Card><CardContent className="p-6"><Skeleton className="h-72" /></CardContent></Card> }
+)
+const PlatformChart = dynamic(
+  () => import('@/components/dashboard/PlatformChart').then(m => m.PlatformChart),
+  { ssr: false, loading: () => <Card><CardContent className="p-6"><Skeleton className="h-72" /></CardContent></Card> }
+)
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatDate, getStatusColor, getPlatformColor } from '@/lib/utils'
@@ -153,12 +161,11 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          {isLoading ? <Card><CardContent className="p-6"><Skeleton className="h-72" /></CardContent></Card>
-            : <RevenueChart data={chartData} />}
+          <RevenueChart data={chartData} />
         </div>
         <div>
-          {isLoading ? <Card><CardContent className="p-6"><Skeleton className="h-72" /></CardContent></Card>
-            : bookingsByPlatform.length > 0 ? <PlatformChart data={bookingsByPlatform} />
+          {bookingsByPlatform.length > 0
+            ? <PlatformChart data={bookingsByPlatform} />
             : <Card className="flex items-center justify-center h-full min-h-[280px]"><p className="text-sm text-muted-foreground">No platform data yet</p></Card>}
         </div>
       </div>
