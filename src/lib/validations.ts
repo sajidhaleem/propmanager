@@ -21,6 +21,7 @@ export const bookingSchema = z.object({
   rate: z.number().min(0, 'Rate must be positive'),
   cleaningFee: z.number().min(0).default(0),
   platformFee: z.number().min(0).default(0),
+  paidAmount: z.number().min(0).default(0),
   platform: z.enum(['AIRBNB', 'DIRECT', 'BOOKING_COM', 'VRBO', 'OTHER']),
   status: z.enum(['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW']).default('CONFIRMED'),
   propertyId: z.string().min(1, 'Property is required'),

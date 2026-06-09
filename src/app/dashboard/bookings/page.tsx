@@ -37,6 +37,7 @@ const EMPTY_FORM = {
   rate: '', cleaningFee: '15', platformFee: '', platform: 'AIRBNB',
   status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
   miscCharges: '', miscDescription: '', reminderAt: '', reminderNote: '',
+  paidAmount: '',
 }
 
 interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
@@ -131,6 +132,7 @@ export default function BookingsPage() {
             rate: Number(payload.rate),
             cleaningFee: Number(payload.cleaningFee),
             platformFee: Number(payload.platformFee),
+            paidAmount: Number(payload.paidAmount) || 0,
           }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
@@ -225,6 +227,7 @@ export default function BookingsPage() {
       miscCharges: String((b as any).miscCharges || ''),
       miscDescription: (b as any).miscDescription || '',
       reminderAt: '', reminderNote: '',
+      paidAmount: '',
     })
     setUploadedDocs([])
     setModalOpen(true)
@@ -242,6 +245,7 @@ export default function BookingsPage() {
       miscDescription: (b as any).miscDescription || '',
       reminderAt: toLocalInput((b as any).reminderAt || ''),
       reminderNote: (b as any).reminderNote || '',
+      paidAmount: String(b.paidAmount ?? 0),
     })
     // Load existing documents for this booking
     fetch(`/api/bookings/${b.id}/documents`)
@@ -592,13 +596,39 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* 6. Payment Received */}
+            {/* 6. Rate per night */}
             <div className="space-y-1.5">
-              <Label>Payment Received ({currencyInfo.symbol}) *</Label>
+              <Label>Rate per Night ({currencyInfo.symbol}) *</Label>
               <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
             </div>
 
-            {/* 7–8. Cleaning Fee & Platform Fee side by side */}
+            {/* 7. Paid Amount + Outstanding (computed) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Paid Amount ({currencyInfo.symbol})</Label>
+                <Input type="number" min="0" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground">Outstanding ({currencyInfo.symbol})</Label>
+                {(() => {
+                  const nights = form.checkIn && form.checkOut
+                    ? Math.max(1, Math.ceil((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86400000))
+                    : 0
+                  const total = (Number(form.rate) || 0) * nights + (Number(form.cleaningFee) || 0) + (Number(form.miscCharges) || 0)
+                  const outstanding = Math.max(0, total - (Number(form.paidAmount) || 0))
+                  return (
+                    <div className={cn(
+                      'flex h-9 items-center rounded-md border px-3 text-sm font-medium',
+                      outstanding > 0 ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400'
+                    )}>
+                      {outstanding > 0 ? `${currencyInfo.symbol} ${outstanding.toLocaleString()}` : 'Fully paid ✓'}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* 8–9. Cleaning Fee & Platform Fee side by side */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Cleaning Fee ({currencyInfo.symbol})</Label>

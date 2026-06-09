@@ -45,6 +45,7 @@ export interface Booking {
   platformFee: number
   totalAmount: number
   netAmount: number
+  paidAmount: number
   platform: Platform
   status: BookingStatus
   notes?: string | null

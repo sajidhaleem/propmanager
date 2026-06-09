@@ -66,6 +66,7 @@ model Booking {
   platformFee  Float         @default(0)
   totalAmount  Float
   netAmount    Float
+  paidAmount   Float         @default(0)
   platform        Platform      @default(AIRBNB)
   status          BookingStatus @default(CONFIRMED)
   notes           String?

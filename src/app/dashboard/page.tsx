@@ -37,7 +37,7 @@ async function fetchDashboardStats() {
 }
 
 export default function DashboardPage() {
-  const { format, currency } = useCurrency()
+  const { format } = useCurrency()
   const queryClient = useQueryClient()
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editingPaymentValue, setEditingPaymentValue] = useState('')
@@ -153,8 +153,8 @@ export default function DashboardPage() {
           <Link href="/dashboard/expenses" className="block hover:opacity-90 transition-opacity">
             <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} icon={<CreditCard className="h-5 w-5" />} color="red"    index={6} />
           </Link>
-          <Link href="/dashboard/settings" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Currency"          value={currency}                         icon={<Globe className="h-5 w-5" />}      color="purple" index={7} />
+          <Link href="/dashboard/bookings" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Outstanding"       value={format(stats?.outstandingAmount||0)} subtitle="Unpaid balance" icon={<Globe className="h-5 w-5" />} color="red" index={7} />
           </Link>
         </div>
       )}

@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       monthlyRevenue,
       bookingsByPlatform,
       recentBookings,
+      outstandingAggregate,
     ] = await Promise.all([
       prisma.income.aggregate({
         _sum: { netAmount: true },
@@ -62,6 +63,10 @@ export async function GET(req: NextRequest) {
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { property: { select: { name: true } } },
+      }),
+      prisma.booking.aggregate({
+        _sum: { totalAmount: true, paidAmount: true },
+        where: { status: { notIn: ['CANCELLED', 'NO_SHOW'] } },
       }),
     ])
 
@@ -101,6 +106,8 @@ export async function GET(req: NextRequest) {
       take: 6,
     })
 
+    const totalOutstanding = (outstandingAggregate._sum.totalAmount || 0) - (outstandingAggregate._sum.paidAmount || 0)
+
     return apiResponse({
       stats: {
         totalRevenue: currentRevenue,
@@ -114,6 +121,7 @@ export async function GET(req: NextRequest) {
         revenueGrowth,
         expenseGrowth,
         bookedNights,
+        outstandingAmount: Math.max(0, totalOutstanding),
       },
       monthlyRevenue: monthlyRevenue.map((m) => ({
         month: `${m.year}-${String(m.month).padStart(2, '0')}`,

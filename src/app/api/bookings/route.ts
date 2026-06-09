@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     const miscCharges = (data as any).miscCharges ?? 0
     const totalAmount = data.rate * nights + data.cleaningFee + miscCharges
     const netAmount = totalAmount - data.platformFee
+    const paidAmount = (data as any).paidAmount ?? 0
 
     // Conflict check
     const conflict = await prisma.booking.findFirst({
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
         nights,
         totalAmount,
         netAmount,
+        paidAmount,
         miscCharges,
         miscDescription: (data as any).miscDescription ?? null,
       },
