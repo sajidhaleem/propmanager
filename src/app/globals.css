@@ -243,6 +243,11 @@
   50% { transform: translateY(-3px); }
 }
 
+@keyframes spotlight {
+  0%   { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
+}
+
 @keyframes accordion-down {
   from { height: 0; }
   to { height: var(--radix-accordion-content-height); }
@@ -265,6 +270,7 @@
   .animate-bounce-subtle { animation: bounce-subtle 1.5s ease-in-out infinite; }
   .animate-accordion-down { animation: accordion-down 0.2s ease-out; }
   .animate-accordion-up { animation: accordion-up 0.2s ease-out; }
+  .animate-spotlight { animation: spotlight 2s ease 0.75s 1 forwards; }
 }
 
 /* ============================================================
