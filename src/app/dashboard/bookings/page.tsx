@@ -178,11 +178,11 @@ export default function BookingsPage() {
   })
 
   const amountMutation = useMutation({
-    mutationFn: async ({ id, rate }: { id: string; rate: number }) => {
+    mutationFn: async ({ id, paidAmount }: { id: string; paidAmount: number }) => {
       const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rate }),
+        body: JSON.stringify({ paidAmount }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
@@ -191,7 +191,7 @@ export default function BookingsPage() {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       setEditingAmountId(null)
-      toast.success('Amount updated')
+      toast.success('Paid amount updated')
     },
     onError: (e: Error) => toast.error(e.message),
   })
@@ -199,7 +199,7 @@ export default function BookingsPage() {
   function saveAmount(id: string) {
     const val = parseFloat(editingAmountValue)
     if (isNaN(val) || val < 0) { toast.error('Enter a valid amount'); return }
-    amountMutation.mutate({ id, rate: val })
+    amountMutation.mutate({ id, paidAmount: val })
   }
 
   function openCreate() {
@@ -288,8 +288,9 @@ export default function BookingsPage() {
     const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(bookings.map((b) => ({
       Guest: b.guestName, Email: b.guestEmail, 'Check-in': formatDate(b.checkIn),
-      'Check-out': formatDate(b.checkOut), Nights: b.nights, Rate: b.rate,
-      Total: b.totalAmount, Net: b.netAmount, Platform: b.platform, Status: b.status,
+      'Check-out': formatDate(b.checkOut), Nights: b.nights, 'Rate/Night': b.rate,
+      Total: b.totalAmount, Paid: b.paidAmount ?? 0, Outstanding: b.totalAmount - (b.paidAmount ?? 0),
+      Net: b.netAmount, Platform: b.platform, Status: b.status,
       Property: b.property?.name,
     })))
     const wb = XLSX.utils.book_new()
@@ -514,13 +515,20 @@ export default function BookingsPage() {
                               </Button>
                             </div>
                           ) : (
-                            <button
-                              className="font-bold text-sm tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors"
-                              title="Click to edit amount"
-                              onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.rate)) }}
-                            >
-                              {format(b.rate)}
-                            </button>
+                            <div className="flex flex-col items-end">
+                              <button
+                                className="font-bold text-sm tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors"
+                                title="Click to edit paid amount"
+                                onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.paidAmount ?? 0)) }}
+                              >
+                                {format(b.paidAmount ?? 0)}
+                              </button>
+                              {(b.totalAmount - (b.paidAmount ?? 0)) > 0 && (
+                                <span className="text-[10px] text-amber-500 font-medium leading-none mt-0.5">
+                                  {format(b.totalAmount - (b.paidAmount ?? 0))} owed
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
 

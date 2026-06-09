@@ -49,11 +49,11 @@ export default function DashboardPage() {
   })
 
   const paymentMutation = useMutation({
-    mutationFn: async ({ id, rate }: { id: string; rate: number }) => {
+    mutationFn: async ({ id, paidAmount }: { id: string; paidAmount: number }) => {
       const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rate }),
+        body: JSON.stringify({ paidAmount }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
@@ -69,13 +69,13 @@ export default function DashboardPage() {
 
   function startEditPayment(b: Booking) {
     setEditingPaymentId(b.id)
-    setEditingPaymentValue(String(b.rate))
+    setEditingPaymentValue(String(b.paidAmount ?? 0))
   }
 
   function savePayment(id: string) {
     const val = parseFloat(editingPaymentValue)
     if (isNaN(val) || val < 0) { toast.error('Enter a valid amount'); return }
-    paymentMutation.mutate({ id, rate: val })
+    paymentMutation.mutate({ id, paidAmount: val })
   }
 
   function cancelEdit() {
@@ -174,7 +174,7 @@ export default function DashboardPage() {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
             <CardTitle className="text-base">Recent Bookings</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Click the amount to edit payment received</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Click the amount to edit paid amount</p>
           </div>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/dashboard/bookings" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
@@ -256,13 +256,20 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                   ) : (
-                    <button
-                      className="text-sm font-semibold tabular-nums shrink-0 hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
-                      title="Click to edit payment received"
-                      onClick={() => startEditPayment(b)}
-                    >
-                      {format(b.rate)}
-                    </button>
+                    <div className="flex flex-col items-end shrink-0">
+                      <button
+                        className="text-sm font-semibold tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
+                        title="Click to edit paid amount"
+                        onClick={() => startEditPayment(b)}
+                      >
+                        {format(b.paidAmount ?? 0)}
+                      </button>
+                      {(b.totalAmount - (b.paidAmount ?? 0)) > 0 && (
+                        <span className="text-[10px] text-amber-500 font-medium">
+                          {format(b.totalAmount - (b.paidAmount ?? 0))} owed
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

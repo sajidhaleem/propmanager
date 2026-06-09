@@ -256,7 +256,7 @@ export default function CalendarPage() {
                                 <Link
                                   key={b.id}
                                   href="/dashboard/bookings"
-                                  title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\n${money(b.rate)}${reminderDay && (b as any).reminderNote ? '\n🔔 ' + (b as any).reminderNote : ''}`}
+                                  title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\nTotal: ${money(b.totalAmount)} · Paid: ${money(b.paidAmount ?? 0)}${reminderDay && (b as any).reminderNote ? '\n🔔 ' + (b as any).reminderNote : ''}`}
                                   className={`block overflow-hidden px-1.5 py-1 text-[10px] leading-tight
                                     hover:brightness-110 transition-all cursor-pointer
                                     ${c.bg} ${c.text} ${radius}`}
@@ -271,7 +271,7 @@ export default function CalendarPage() {
                                       <div className="opacity-90 mt-0.5">
                                         {format(ci, 'h:mm a')} – {format(co, 'h:mm a')}
                                       </div>
-                                      <div className="font-semibold opacity-90">{money(b.rate)}</div>
+                                      <div className="font-semibold opacity-90">{money(b.totalAmount)}</div>
                                     </>
                                   )}
 
