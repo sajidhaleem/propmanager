@@ -2,15 +2,19 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
+import { isSameDay, parseISO, addDays } from 'date-fns'
 import {
   Banknote, TrendingUp, CalendarCheck, Building2,
   ArrowUpRight, Clock, AlertCircle, RefreshCw, Check, X,
-  BookOpen, CreditCard, Globe, CalendarPlus,
+  BookOpen, CreditCard, Globe,
+  ArrowDownToLine, ArrowUpFromLine, CalendarClock,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const RevenueChart = dynamic(
   () => import('@/components/dashboard/RevenueChart').then(m => m.RevenueChart),
@@ -41,6 +45,7 @@ export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editingPaymentValue, setEditingPaymentValue] = useState('')
+  const [activeDay, setActiveDay] = useState<'today' | 'tomorrow'>('today')
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['dashboard', 'stats'],
@@ -97,7 +102,95 @@ export default function DashboardPage() {
   const monthlyRevenue = data?.data?.monthlyRevenue || []
   const expensesByMonth = data?.data?.expensesByMonth || []
   const bookingsByPlatform = data?.data?.bookingsByPlatform || []
-  const recentBookings: Booking[] = data?.data?.recentBookings || []
+  const upcomingBookings: Booking[] = data?.data?.upcomingBookings || []
+
+  const todayDate = new Date()
+  const tomorrowDate = addDays(todayDate, 1)
+
+  const bucketFor = (date: Date) => ({
+    arrivals: upcomingBookings.filter(b => isSameDay(parseISO(b.checkIn), date)),
+    departures: upcomingBookings.filter(b => isSameDay(parseISO(b.checkOut), date)),
+  })
+  const todayBucket = bucketFor(todayDate)
+  const tomorrowBucket = bucketFor(tomorrowDate)
+  const activeBucket = activeDay === 'today' ? todayBucket : tomorrowBucket
+  const todayCount = todayBucket.arrivals.length + todayBucket.departures.length
+  const tomorrowCount = tomorrowBucket.arrivals.length + tomorrowBucket.departures.length
+
+  function renderActivityRow(b: Booking, type: 'arrival' | 'departure') {
+    const time = type === 'arrival' ? b.checkIn : b.checkOut
+    const Icon = type === 'arrival' ? ArrowDownToLine : ArrowUpFromLine
+    return (
+      <div key={`${type}-${b.id}`} className="relative flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 transition-colors group">
+        <div className={cn(
+          'absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-70',
+          type === 'arrival' ? 'bg-green-500' : 'bg-amber-500'
+        )} />
+        <div className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2',
+          type === 'arrival' ? 'bg-green-500/10 text-green-600 ring-green-500/10' : 'bg-amber-500/10 text-amber-600 ring-amber-500/10'
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{b.guestName}</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            {b.property?.name} · <Clock className="h-3 w-3" /> {formatDate(time, 'h:mm a')}
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <Badge className={getPlatformColor(b.platform)} variant="outline">{b.platform === 'BOOKING_COM' ? 'BDC' : b.platform}</Badge>
+          <Badge className={getStatusColor(b.status)} variant="outline">{b.status.replace('_', ' ')}</Badge>
+        </div>
+
+        {/* Inline payment edit */}
+        {editingPaymentId === b.id ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <Input
+              type="number"
+              min="0"
+              value={editingPaymentValue}
+              onChange={(e) => setEditingPaymentValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') savePayment(b.id)
+                if (e.key === 'Escape') cancelEdit()
+              }}
+              className="h-7 w-24 text-xs text-right"
+              autoFocus
+            />
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700"
+              onClick={() => savePayment(b.id)}
+              disabled={paymentMutation.isPending}
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+              onClick={cancelEdit}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-end shrink-0">
+            <button
+              className="text-sm font-semibold tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
+              title="Click to edit paid amount"
+              onClick={() => startEditPayment(b)}
+            >
+              {format(b.paidAmount ?? 0)}
+            </button>
+            {(b.totalAmount - (b.paidAmount ?? 0)) > 0 && (
+              <span className="text-[10px] text-amber-500 font-medium">
+                {format(b.totalAmount - (b.paidAmount ?? 0))} owed
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const chartData = monthlyRevenue.map((r: any) => {
     const exp = expensesByMonth.find((e: any) => e.month === r.month)
@@ -170,17 +263,54 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 gap-4 flex-wrap">
           <div>
-            <CardTitle className="text-base">Recent Bookings</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Click the amount to edit paid amount</p>
+            <CardTitle className="text-base">Arrivals &amp; Departures</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Who&apos;s checking in or out · click the amount to edit paid amount</p>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/bookings" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-              View all <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </Button>
+
+          <div className="flex items-center gap-2">
+            {/* Animated Today / Tomorrow pill switcher */}
+            <div className="relative flex items-center gap-1 rounded-full border bg-muted/40 p-1">
+              {(['today', 'tomorrow'] as const).map((day) => {
+                const count = day === 'today' ? todayCount : tomorrowCount
+                const active = activeDay === day
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setActiveDay(day)}
+                    className={cn(
+                      'relative isolate rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      active ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {active && (
+                      <motion.div
+                        layoutId="dayTabBg"
+                        className="absolute inset-0 -z-10 rounded-full bg-primary"
+                        transition={{ type: 'spring', duration: 0.4, bounce: 0.2 }}
+                      />
+                    )}
+                    <span className="relative">{day === 'today' ? 'Today' : 'Tomorrow'}</span>
+                    {count > 0 && (
+                      <span className={cn(
+                        'relative ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]',
+                        active ? 'bg-white/25' : 'bg-muted-foreground/15'
+                      )}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard/bookings" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                View all <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -193,87 +323,49 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          ) : recentBookings.length === 0 ? (
-            <EmptyState
-              icon={CalendarPlus}
-              title="No bookings yet"
-              description="Create your first booking to start tracking revenue and occupancy."
-              action={{ label: 'Add Booking', onClick: () => window.location.href = '/dashboard/bookings' }}
-            />
           ) : (
-            <div className="divide-y">
-              {recentBookings.map((b) => (
-                <div key={b.id} className="relative flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 transition-colors group">
-                  {/* Status accent left border */}
-                  <div className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-70 ${
-                    b.status === 'CONFIRMED'   ? 'bg-blue-500' :
-                    b.status === 'CHECKED_IN'  ? 'bg-green-500' :
-                    b.status === 'CHECKED_OUT' ? 'bg-purple-500' :
-                    b.status === 'PENDING'     ? 'bg-yellow-500' :
-                    b.status === 'CANCELLED'   ? 'bg-red-400' : 'bg-muted-foreground'
-                  }`} />
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold ring-2 ring-primary/10">
-                    {b.guestName[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{b.guestName}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      {b.property?.name} · <Clock className="h-3 w-3" /> {formatDate(b.checkIn, 'MMM d')} – {formatDate(b.checkOut, 'MMM d')}
-                    </p>
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2 shrink-0">
-                    <Badge className={getPlatformColor(b.platform)} variant="outline">{b.platform === 'BOOKING_COM' ? 'BDC' : b.platform}</Badge>
-                    <Badge className={getStatusColor(b.status)} variant="outline">{b.status.replace('_', ' ')}</Badge>
-                  </div>
-
-                  {/* Inline payment edit */}
-                  {editingPaymentId === b.id ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={editingPaymentValue}
-                        onChange={(e) => setEditingPaymentValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') savePayment(b.id)
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                        className="h-7 w-24 text-xs text-right"
-                        autoFocus
-                      />
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700"
-                        onClick={() => savePayment(b.id)}
-                        disabled={paymentMutation.isPending}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
-                        onClick={cancelEdit}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-end shrink-0">
-                      <button
-                        className="text-sm font-semibold tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        title="Click to edit paid amount"
-                        onClick={() => startEditPayment(b)}
-                      >
-                        {format(b.paidAmount ?? 0)}
-                      </button>
-                      {(b.totalAmount - (b.paidAmount ?? 0)) > 0 && (
-                        <span className="text-[10px] text-amber-500 font-medium">
-                          {format(b.totalAmount - (b.paidAmount ?? 0))} owed
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeDay}
+                initial={{ opacity: 0, x: activeDay === 'today' ? -8 : 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: activeDay === 'today' ? 8 : -8 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                {activeBucket.arrivals.length === 0 && activeBucket.departures.length === 0 ? (
+                  <EmptyState
+                    icon={CalendarClock}
+                    title={`No activity ${activeDay === 'today' ? 'today' : 'tomorrow'}`}
+                    description={`No check-ins or check-outs scheduled for ${activeDay === 'today' ? 'today' : 'tomorrow'}.`}
+                  />
+                ) : (
+                  <>
+                    {activeBucket.arrivals.length > 0 && (
+                      <div>
+                        <div className="px-6 pt-4 pb-2 flex items-center gap-2 text-xs font-semibold text-green-600 uppercase tracking-wide">
+                          <ArrowDownToLine className="h-3.5 w-3.5" />
+                          Check-ins ({activeBucket.arrivals.length})
+                        </div>
+                        <div className="divide-y">
+                          {activeBucket.arrivals.map((b) => renderActivityRow(b, 'arrival'))}
+                        </div>
+                      </div>
+                    )}
+                    {activeBucket.departures.length > 0 && (
+                      <div className={activeBucket.arrivals.length > 0 ? 'border-t' : ''}>
+                        <div className="px-6 pt-4 pb-2 flex items-center gap-2 text-xs font-semibold text-amber-600 uppercase tracking-wide">
+                          <ArrowUpFromLine className="h-3.5 w-3.5" />
+                          Check-outs ({activeBucket.departures.length})
+                        </div>
+                        <div className="divide-y">
+                          {activeBucket.departures.map((b) => renderActivityRow(b, 'departure'))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
           )}
         </CardContent>
       </Card>

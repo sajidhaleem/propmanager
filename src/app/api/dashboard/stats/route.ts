@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError, apiResponse } from '@/lib/utils'
-import { startOfMonth, endOfMonth, subMonths, getDaysInMonth } from 'date-fns'
+import { startOfMonth, endOfMonth, subMonths, getDaysInMonth, startOfDay, addDays } from 'date-fns'
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       propertiesCount,
       monthlyRevenue,
       bookingsByPlatform,
-      recentBookings,
+      upcomingBookings,
       outstandingAggregate,
     ] = await Promise.all([
       prisma.income.aggregate({
@@ -59,10 +59,17 @@ export async function GET(req: NextRequest) {
         _count: { id: true },
         _sum: { netAmount: true },
       }),
+      // Check-ins / check-outs happening today or tomorrow
       prisma.booking.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' },
+        where: {
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+          OR: [
+            { checkIn: { gte: startOfDay(now), lt: addDays(startOfDay(now), 2) } },
+            { checkOut: { gte: startOfDay(now), lt: addDays(startOfDay(now), 2) } },
+          ],
+        },
         include: { property: { select: { name: true } } },
+        orderBy: { checkIn: 'asc' },
       }),
       prisma.booking.aggregate({
         _sum: { totalAmount: true, paidAmount: true },
@@ -133,7 +140,7 @@ export async function GET(req: NextRequest) {
         expenses: e._sum.amount || 0,
       })),
       bookingsByPlatform,
-      recentBookings,
+      upcomingBookings,
     })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
