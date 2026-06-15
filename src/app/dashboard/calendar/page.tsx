@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, Bell } from 'lucide-react'
 import {
@@ -60,11 +60,13 @@ const ROW_H  = 72    // min row height (px)
 export default function CalendarPage() {
   const [current, setCurrent] = useState(new Date())
   const { format: money } = useCurrency()
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const mStart = startOfMonth(current)
   const mEnd   = endOfMonth(current)
   const days   = eachDayOfInterval({ start: mStart, end: mEnd })
   const today  = new Date()
+  const isCurrentMonth = isSameDay(startOfMonth(today), mStart)
 
   const { data: bData, isLoading: bLoading } = useQuery({
     queryKey: ['calendar', format(mStart, 'yyyy-MM')],
@@ -75,12 +77,27 @@ export default function CalendarPage() {
     queryFn:  fetchProperties,
   })
 
+  const isLoading = bLoading || pLoading
+
+  // Scroll the grid so "today" is in view (a day before it, near the left edge)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || isLoading) return
+    const frame = requestAnimationFrame(() => {
+      if (isCurrentMonth) {
+        const todayIndex = days.findIndex(d => isSameDay(d, today))
+        el.scrollLeft = todayIndex > 0 ? Math.max(0, (todayIndex - 1) * DAY_W) : 0
+      } else {
+        el.scrollLeft = 0
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [current, isCurrentMonth, isLoading])
+
   const bookings: Booking[]  = bData?.data?.data || []
   const properties: Property[] = [...(pData?.data || [])]
     .filter((p: Property) => p.status !== 'INACTIVE')
     .sort((a: Property, b: Property) => a.name.localeCompare(b.name))
-
-  const isLoading = bLoading || pLoading
 
   // Bookings that overlap a given day for a specific property, sorted earliest check-in first
   function cellBookings(propId: string, day: Date): Booking[] {
@@ -121,6 +138,12 @@ export default function CalendarPage() {
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl font-bold tracking-tight">{format(current, 'MMMM yyyy')}</h2>
+            {!isCurrentMonth && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary"
+                onClick={() => setCurrent(new Date())}>
+                Today
+              </Button>
+            )}
           </div>
           <Button variant="outline" size="sm" className="gap-1.5"
             onClick={() => setCurrent(d => addMonths(d, 1))}>
@@ -130,7 +153,7 @@ export default function CalendarPage() {
         </div>
 
         {/* ── Scrollable grid ── */}
-        <div className="overflow-x-auto">
+        <div ref={scrollRef} className="overflow-x-auto">
           <table className="border-collapse table-fixed" style={{ width: totalW, minWidth: totalW }}>
 
             {/* ── Day header row ── */}
@@ -138,7 +161,7 @@ export default function CalendarPage() {
               <tr className="border-b bg-muted/40">
                 {/* Property label */}
                 <th
-                  className="sticky left-0 z-20 border-r bg-muted/40 text-left px-3 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+                  className="sticky left-0 z-20 border-r bg-muted text-left px-3 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]"
                   style={{ width: ROOM_W, minWidth: ROOM_W }}
                 >
                   Room
@@ -184,7 +207,7 @@ export default function CalendarPage() {
               {isLoading ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="border-b">
-                    <td className="sticky left-0 z-10 bg-card border-r px-3 py-3">
+                    <td className="sticky left-0 z-10 bg-card border-r px-3 py-3 shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]">
                       <Skeleton className="h-4 w-20" />
                     </td>
                     {days.map((_, j) => (
@@ -210,8 +233,7 @@ export default function CalendarPage() {
                   >
                     {/* ── Sticky property name cell ── */}
                     <td
-                      className={`sticky left-0 z-10 border-r px-3 py-2 align-middle
-                        ${ri % 2 === 1 ? 'bg-muted/5' : 'bg-card'}`}
+                      className="sticky left-0 z-10 border-r px-3 py-2 align-middle bg-card shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]"
                       style={{ width: ROOM_W, minWidth: ROOM_W }}
                     >
                       <div className="font-semibold text-sm leading-tight">{prop.name}</div>
