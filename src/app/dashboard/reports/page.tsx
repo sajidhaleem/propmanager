@@ -70,6 +70,8 @@ export default function ReportsPage() {
     queryKey: ['insights', 'stats'],
     queryFn: fetchDashboardStats,
     enabled: tab === 'insights',
+    refetchInterval: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
   })
 
   // ── Insight computed values ──────────────────────────────────────
