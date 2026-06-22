@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
+import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
 
 async function fetchBookings(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
@@ -38,6 +39,16 @@ const EMPTY_FORM = {
   status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
   miscCharges: '', miscDescription: '', reminderAt: '', reminderNote: '',
   paidAmount: '',
+  // Hotel Eye / Guest identity
+  guestCnic: '', guestFatherName: '', guestGender: '', guestAddress: '',
+  guestProvince: '', guestDistrict: '',
+  tempAddress: '', tempProvince: '', tempDistrict: '',
+  purposeOfVisit: '',
+  accompanyingMale: '0', accompanyingFemale: '0', accompanyingChildren: '0',
+  roomNumber: '',
+  // Reference/Dealer
+  refName: '', refFatherName: '', refBusiness: '', refAddress: '', refCell: '',
+  refVerified: false,
 }
 
 interface UploadedDoc { id: string; name: string; mimeType: string; size: number }
@@ -133,6 +144,9 @@ export default function BookingsPage() {
             cleaningFee: Number(payload.cleaningFee),
             platformFee: Number(payload.platformFee),
             paidAmount: Number(payload.paidAmount) || 0,
+            accompanyingMale:     Number(payload.accompanyingMale)     || 0,
+            accompanyingFemale:   Number(payload.accompanyingFemale)   || 0,
+            accompanyingChildren: Number(payload.accompanyingChildren) || 0,
           }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
@@ -202,6 +216,45 @@ export default function BookingsPage() {
     amountMutation.mutate({ id, paidAmount: val })
   }
 
+  function applyScannedCnic(data: CnicData) {
+    setForm(f => ({
+      ...f,
+      guestName:      data.name        || f.guestName,
+      guestFatherName: data.father_name || f.guestFatherName,
+      guestCnic:      data.cnic        || f.guestCnic,
+      guestGender:    data.gender      || f.guestGender,
+      guestAddress:   data.address     || f.guestAddress,
+    }))
+  }
+
+  async function pushToHotelEye(b: Booking) {
+    const payload = {
+      cnic:        (b as any).guestCnic        || '',
+      name:        b.guestName,
+      father_name: (b as any).guestFatherName  || '',
+      gender:      (b as any).guestGender      || '',
+      address:     (b as any).guestAddress     || '',
+      check_in:    b.checkIn,
+      check_out:   b.checkOut,
+      room:        (b as any).roomNumber       || b.property?.name || '',
+      purpose:     (b as any).purposeOfVisit   || '',
+      male:        (b as any).accompanyingMale || 0,
+      female:      (b as any).accompanyingFemale || 0,
+      children:    (b as any).accompanyingChildren || 0,
+    }
+    try {
+      const res = await fetch('http://localhost:5000/fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Hotel Eye tool not running')
+      toast.success('Hotel Eye browser opened — log in then check-in will auto-fill')
+    } catch {
+      toast.error('Start the Hotel Eye tool first (run hotel-eye-cnic/run.bat)', { duration: 5000 })
+    }
+  }
+
   function openCreate() {
     setEditBooking(null)
     setForm(EMPTY_FORM)
@@ -211,23 +264,25 @@ export default function BookingsPage() {
   function openCopy(b: Booking) {
     setEditBooking(null)
     setForm({
-      guestName: b.guestName,
-      guestEmail: b.guestEmail || '',
-      guestPhone: b.guestPhone || '',
-      checkIn: '',
-      checkOut: '',
-      rate: String(b.rate),
-      cleaningFee: String(b.cleaningFee),
-      platformFee: String(b.platformFee),
-      platform: b.platform,
-      status: 'CONFIRMED',
-      propertyId: b.propertyId,
-      notes: b.notes || '',
-      platformOther: '',
-      miscCharges: String((b as any).miscCharges || ''),
-      miscDescription: (b as any).miscDescription || '',
-      reminderAt: '', reminderNote: '',
-      paidAmount: '',
+      guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
+      checkIn: '', checkOut: '',
+      rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
+      platform: b.platform, status: 'CONFIRMED', propertyId: b.propertyId,
+      notes: b.notes || '', platformOther: '',
+      miscCharges: String((b as any).miscCharges || ''), miscDescription: (b as any).miscDescription || '',
+      reminderAt: '', reminderNote: '', paidAmount: '',
+      guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
+      guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
+      guestProvince: (b as any).guestProvince || '', guestDistrict: (b as any).guestDistrict || '',
+      tempAddress: (b as any).tempAddress || '', tempProvince: (b as any).tempProvince || '',
+      tempDistrict: (b as any).tempDistrict || '', purposeOfVisit: (b as any).purposeOfVisit || '',
+      accompanyingMale: String((b as any).accompanyingMale || 0),
+      accompanyingFemale: String((b as any).accompanyingFemale || 0),
+      accompanyingChildren: String((b as any).accompanyingChildren || 0),
+      roomNumber: (b as any).roomNumber || '',
+      refName: (b as any).refName || '', refFatherName: (b as any).refFatherName || '',
+      refBusiness: (b as any).refBusiness || '', refAddress: (b as any).refAddress || '',
+      refCell: (b as any).refCell || '', refVerified: (b as any).refVerified || false,
     })
     setUploadedDocs([])
     setModalOpen(true)
@@ -236,16 +291,26 @@ export default function BookingsPage() {
     setEditBooking(b)
     setForm({
       guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
-      checkIn: toLocalInput(b.checkIn),
-      checkOut: toLocalInput(b.checkOut),
+      checkIn: toLocalInput(b.checkIn), checkOut: toLocalInput(b.checkOut),
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
       platform: b.platform, status: b.status, propertyId: b.propertyId, notes: b.notes || '',
-      platformOther: '',
-      miscCharges: String((b as any).miscCharges || ''),
+      platformOther: '', miscCharges: String((b as any).miscCharges || ''),
       miscDescription: (b as any).miscDescription || '',
       reminderAt: toLocalInput((b as any).reminderAt || ''),
       reminderNote: (b as any).reminderNote || '',
       paidAmount: String(b.paidAmount ?? 0),
+      guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
+      guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
+      guestProvince: (b as any).guestProvince || '', guestDistrict: (b as any).guestDistrict || '',
+      tempAddress: (b as any).tempAddress || '', tempProvince: (b as any).tempProvince || '',
+      tempDistrict: (b as any).tempDistrict || '', purposeOfVisit: (b as any).purposeOfVisit || '',
+      accompanyingMale: String((b as any).accompanyingMale || 0),
+      accompanyingFemale: String((b as any).accompanyingFemale || 0),
+      accompanyingChildren: String((b as any).accompanyingChildren || 0),
+      roomNumber: (b as any).roomNumber || '',
+      refName: (b as any).refName || '', refFatherName: (b as any).refFatherName || '',
+      refBusiness: (b as any).refBusiness || '', refAddress: (b as any).refAddress || '',
+      refCell: (b as any).refCell || '', refVerified: (b as any).refVerified || false,
     })
     // Load existing documents for this booking
     fetch(`/api/bookings/${b.id}/documents`)
@@ -540,6 +605,9 @@ export default function BookingsPage() {
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Duplicate" onClick={() => openCopy(b)}>
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600" title="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
+                            <Send className="h-3.5 w-3.5" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete"
                             onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
                             <Trash2 className="h-3.5 w-3.5" />
@@ -573,6 +641,9 @@ export default function BookingsPage() {
             <DialogTitle>{editBooking ? 'Edit Booking' : form.guestName ? `Copy Booking — ${form.guestName}` : 'New Booking'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+
+            {/* CNIC Scanner */}
+            <CnicScanner onExtracted={applyScannedCnic} />
 
             {/* 1. Guest Name */}
             <div className="space-y-1.5">
@@ -739,7 +810,142 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* 15. Notes */}
+            {/* Hotel Eye fields */}
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <ScanLine className="h-3.5 w-3.5" /> Hotel Eye / Guest Identity
+              </p>
+
+              {/* CNIC + Gender */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>CNIC #</Label>
+                  <Input value={form.guestCnic} onChange={(e) => setForm({ ...form, guestCnic: e.target.value })} placeholder="12345-1234567-1" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Gender</Label>
+                  <select
+                    value={form.guestGender}
+                    onChange={(e) => setForm({ ...form, guestGender: e.target.value })}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">— Select —</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Father Name */}
+              <div className="space-y-1.5">
+                <Label>Father Name</Label>
+                <Input value={form.guestFatherName} onChange={(e) => setForm({ ...form, guestFatherName: e.target.value })} placeholder="Father's full name" />
+              </div>
+
+              {/* Permanent Address */}
+              <div className="space-y-1.5">
+                <Label>Permanent Address</Label>
+                <Input value={form.guestAddress} onChange={(e) => setForm({ ...form, guestAddress: e.target.value })} placeholder="As on CNIC" />
+              </div>
+
+              {/* Province + District */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Province</Label>
+                  <Input value={form.guestProvince} onChange={(e) => setForm({ ...form, guestProvince: e.target.value })} placeholder="e.g. Punjab" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>District</Label>
+                  <Input value={form.guestDistrict} onChange={(e) => setForm({ ...form, guestDistrict: e.target.value })} placeholder="e.g. Lahore" />
+                </div>
+              </div>
+
+              {/* Temporary Address */}
+              <div className="space-y-1.5">
+                <Label>Temporary Address (at property)</Label>
+                <Input value={form.tempAddress} onChange={(e) => setForm({ ...form, tempAddress: e.target.value })} placeholder="Hotel / property address" />
+              </div>
+
+              {/* Temp Province + District */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Temp Province</Label>
+                  <Input value={form.tempProvince} onChange={(e) => setForm({ ...form, tempProvince: e.target.value })} placeholder="e.g. KPK" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Temp District</Label>
+                  <Input value={form.tempDistrict} onChange={(e) => setForm({ ...form, tempDistrict: e.target.value })} placeholder="e.g. Peshawar" />
+                </div>
+              </div>
+
+              {/* Room# + Purpose */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Room #</Label>
+                  <Input value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} placeholder="101" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Purpose of Visit</Label>
+                  <Input value={form.purposeOfVisit} onChange={(e) => setForm({ ...form, purposeOfVisit: e.target.value })} placeholder="Tourism, Business…" />
+                </div>
+              </div>
+
+              {/* Accompanying Guests */}
+              <div className="space-y-1.5">
+                <Label>Accompanying Guests</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Male',     key: 'accompanyingMale' },
+                    { label: 'Female',   key: 'accompanyingFemale' },
+                    { label: 'Children', key: 'accompanyingChildren' },
+                  ].map(({ label, key }) => (
+                    <div key={key} className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <Input type="number" min="0" value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Reference / Dealer */}
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Local Reference / Dealer</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Name</Label>
+                  <Input value={form.refName} onChange={(e) => setForm({ ...form, refName: e.target.value })} placeholder="Reference name" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Father Name</Label>
+                  <Input value={form.refFatherName} onChange={(e) => setForm({ ...form, refFatherName: e.target.value })} placeholder="Father's name" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Business</Label>
+                  <Input value={form.refBusiness} onChange={(e) => setForm({ ...form, refBusiness: e.target.value })} placeholder="Business name" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Cell #</Label>
+                  <Input value={form.refCell} onChange={(e) => setForm({ ...form, refCell: e.target.value })} placeholder="+92 300 0000000" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Address</Label>
+                  <Input value={form.refAddress} onChange={(e) => setForm({ ...form, refAddress: e.target.value })} placeholder="Reference address" />
+                </div>
+                <div className="flex items-center gap-2 col-span-2">
+                  <input
+                    type="checkbox"
+                    id="refVerified"
+                    checked={!!form.refVerified}
+                    onChange={(e) => setForm({ ...form, refVerified: e.target.checked })}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <label htmlFor="refVerified" className="text-sm cursor-pointer">Reference Verified</label>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />

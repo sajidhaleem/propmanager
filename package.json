@@ -26,6 +26,7 @@
     "prepare": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@auth/prisma-adapter": "^2.7.2",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^3.9.1",

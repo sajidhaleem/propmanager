@@ -28,6 +28,28 @@ export const bookingSchema = z.object({
   notes: z.string().optional(),
   reminderAt: z.string().nullable().optional(),
   reminderNote: z.string().nullable().optional(),
+  // Hotel Eye / Guest identity
+  guestCnic: z.string().optional(),
+  guestFatherName: z.string().optional(),
+  guestGender: z.string().optional(),
+  guestAddress: z.string().optional(),
+  guestProvince: z.string().optional(),
+  guestDistrict: z.string().optional(),
+  tempAddress: z.string().optional(),
+  tempProvince: z.string().optional(),
+  tempDistrict: z.string().optional(),
+  purposeOfVisit: z.string().optional(),
+  accompanyingMale: z.number().int().min(0).optional(),
+  accompanyingFemale: z.number().int().min(0).optional(),
+  accompanyingChildren: z.number().int().min(0).optional(),
+  roomNumber: z.string().optional(),
+  // Hotel Eye reference/dealer
+  refName: z.string().optional(),
+  refFatherName: z.string().optional(),
+  refBusiness: z.string().optional(),
+  refAddress: z.string().optional(),
+  refCell: z.string().optional(),
+  refVerified: z.boolean().optional(),
 })
 
 export const propertySchema = z.object({

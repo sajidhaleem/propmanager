@@ -78,6 +78,31 @@ model Booking {
   reminderAt      DateTime?
   reminderNote    String?
   documents       Document[]
+
+  // Hotel Eye / Guest identity fields
+  guestCnic            String?
+  guestFatherName      String?
+  guestGender          String?
+  guestAddress         String?
+  guestProvince        String?
+  guestDistrict        String?
+  tempAddress          String?
+  tempProvince         String?
+  tempDistrict         String?
+  purposeOfVisit       String?
+  accompanyingMale     Int?     @default(0)
+  accompanyingFemale   Int?     @default(0)
+  accompanyingChildren Int?     @default(0)
+  roomNumber           String?
+
+  // Hotel Eye reference/dealer
+  refName              String?
+  refFatherName        String?
+  refBusiness          String?
+  refAddress           String?
+  refCell              String?
+  refVerified          Boolean? @default(false)
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
