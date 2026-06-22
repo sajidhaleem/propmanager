@@ -284,19 +284,19 @@ export default function ReportsPage() {
   const pnlRows: any[] = pnlData?.data?.pnl    || []
   const pnlTotals: any = pnlData?.data?.totals || {}
 
-  const chartMonthly   = monthly.map((m: any) => ({ month: MONTHS[m.month - 1], Revenue: m.revenue, Expenses: m.expenses, 'Net Income': m.net }))
+  const chartMonthly   = monthly.map((m: any) => ({ month: MONTHS[m.month - 1], Revenue: m.revenue, Expenses: m.totalExpenses, 'Net Income': m.net }))
   const totalRevenue   = monthly.reduce((s: number, m: any) => s + m.revenue, 0)
-  const totalExpenses  = monthly.reduce((s: number, m: any) => s + m.expenses, 0)
+  const totalExpenses  = monthly.reduce((s: number, m: any) => s + m.totalExpenses, 0)
   const totalNet       = totalRevenue - totalExpenses
 
   async function exportMonthly() {
     const XLSX = await import('xlsx')
-    const ws = XLSX.utils.json_to_sheet(monthly.map((m: any) => ({ Month: MONTHS[m.month - 1], Year: m.year, Revenue: m.revenue, Expenses: m.expenses, 'Net Income': m.net })))
+    const ws = XLSX.utils.json_to_sheet(monthly.map((m: any) => ({ Month: MONTHS[m.month - 1], Year: m.year, Revenue: m.revenue, 'Operational Expenses': m.expenses, Payouts: m.payouts, 'Total Expenses': m.totalExpenses, 'Net Income': m.net })))
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, `Report ${year}`); XLSX.writeFile(wb, `annual-report-${year}.xlsx`)
   }
   async function exportPnL() {
     const XLSX = await import('xlsx')
-    const rows = [...pnlRows, { ...pnlTotals, month: 0 }].map(r => ({ 'Month': r.month === 0 ? 'TOTAL' : MONTHS[r.month - 1], 'Airbnb Revenue': r.airbnbRevenue||0, 'Other Revenue': r.otherRevenue||0, 'Utilities': r.UTILITIES||0, 'Cleaning': r.CLEANING||0, 'Repairs': r.REPAIRS||0, 'Supplies': r.SUPPLIES||0, 'Maintenance': r.MAINTENANCE||0, 'Other Expenses': r.OTHER||0, 'Total Expenses': r.totalExpenses||0, 'Net Profit': r.netProfit||0 }))
+    const rows = [...pnlRows, { ...pnlTotals, month: 0 }].map(r => ({ 'Month': r.month === 0 ? 'TOTAL' : MONTHS[r.month - 1], 'Airbnb Revenue': r.airbnbRevenue||0, 'Other Revenue': r.otherRevenue||0, 'Utilities': r.UTILITIES||0, 'Cleaning': r.CLEANING||0, 'Repairs': r.REPAIRS||0, 'Supplies': r.SUPPLIES||0, 'Maintenance': r.MAINTENANCE||0, 'Other Expenses': r.OTHER||0, 'Payouts': r.payouts||0, 'Total Expenses': r.totalExpenses||0, 'Net Profit': r.netProfit||0 }))
     const ws = XLSX.utils.json_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, `P&L ${year}`); XLSX.writeFile(wb, `pnl-report-${year}.xlsx`)
   }
 
@@ -547,7 +547,7 @@ export default function ReportsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50 border-b">
-                    {['Month','Airbnb Revenue','Other Revenue','Utilities','Cleaning','Repairs','Supplies','Maintenance','Other Exp.','Total Expenses','Net Profit'].map(h => (
+                    {['Month','Airbnb Revenue','Other Revenue','Utilities','Cleaning','Repairs','Supplies','Maintenance','Other Exp.','Payouts','Total Expenses','Net Profit'].map(h => (
                       <th key={h} className="px-3 py-3 text-right first:text-left font-semibold text-xs text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -564,6 +564,7 @@ export default function ReportsPage() {
                       <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.SUPPLIES||0)}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.MAINTENANCE||0)}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-red-500">{format(row.OTHER||0)}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-orange-600 dark:text-orange-400">{format(row.payouts||0)}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums font-medium text-red-600">{format(row.totalExpenses||0)}</td>
                       <td className={cn('px-3 py-2.5 text-right tabular-nums font-bold', row.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>{format(row.netProfit||0)}</td>
                     </tr>
@@ -581,6 +582,7 @@ export default function ReportsPage() {
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.SUPPLIES||0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.MAINTENANCE||0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-500">{format(pnlTotals.OTHER||0)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-orange-600">{format(pnlTotals.payouts||0)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-red-600">{format(pnlTotals.totalExpenses||0)}</td>
                       <td className={cn('px-3 py-3 text-right tabular-nums', (pnlTotals.netProfit||0) >= 0 ? 'text-green-600' : 'text-red-600')}>{format(pnlTotals.netProfit||0)}</td>
                     </tr>

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type') || 'monthly'
 
     if (type === 'monthly') {
-      const [incomeByMonth, expensesByMonth, bookingsByMonth] = await Promise.all([
+      const [incomeByMonth, expensesByMonth, payoutsByMonth, bookingsByMonth] = await Promise.all([
         prisma.income.groupBy({
           by: ['year', 'month'],
           _sum: { grossAmount: true, netAmount: true, platformFee: true },
@@ -22,6 +22,13 @@ export async function GET(req: NextRequest) {
           by: ['year', 'month'],
           _sum: { amount: true },
           where: { year },
+          orderBy: [{ month: 'asc' }],
+        }),
+        // PAID payouts only — pending not yet disbursed
+        prisma.payout.groupBy({
+          by: ['year', 'month'],
+          _sum: { amount: true },
+          where: { year, status: 'PAID' },
           orderBy: [{ month: 'asc' }],
         }),
         prisma.booking.groupBy({
@@ -36,16 +43,21 @@ export async function GET(req: NextRequest) {
 
       const months = Array.from({ length: 12 }, (_, i) => i + 1)
       const merged = months.map((month) => {
-        const income = incomeByMonth.find((m) => m.month === month)
+        const income   = incomeByMonth.find((m) => m.month === month)
         const expenses = expensesByMonth.find((m) => m.month === month)
+        const payouts  = payoutsByMonth.find((m) => m.month === month)
+        const totalExpenses = (expenses?._sum.amount || 0) + (payouts?._sum.amount || 0)
+        const revenue = income?._sum.netAmount || 0
         return {
           month,
           year,
-          revenue: income?._sum.netAmount || 0,
-          grossRevenue: income?._sum.grossAmount || 0,
-          platformFees: income?._sum.platformFee || 0,
-          expenses: expenses?._sum.amount || 0,
-          net: (income?._sum.netAmount || 0) - (expenses?._sum.amount || 0),
+          revenue,
+          grossRevenue:  income?._sum.grossAmount || 0,
+          platformFees:  income?._sum.platformFee || 0,
+          expenses:      expenses?._sum.amount    || 0,
+          payouts:       payouts?._sum.amount     || 0,
+          totalExpenses,
+          net: revenue - totalExpenses,
         }
       })
 
@@ -66,13 +78,14 @@ export async function GET(req: NextRequest) {
       })
 
       const propertyStats = properties.map((p) => ({
-        id: p.id,
-        name: p.name,
+        id:           p.id,
+        name:         p.name,
         totalBookings: p.bookings.length,
-        totalNights: p.bookings.reduce((sum, b) => sum + b.nights, 0),
+        totalNights:  p.bookings.reduce((sum, b) => sum + b.nights, 0),
         totalRevenue: p.bookings.reduce((sum, b) => sum + b.netAmount, 0),
-        avgRate: p.bookings.length > 0
-          ? p.bookings.reduce((sum, b) => sum + b.netAmount, 0) / p.bookings.reduce((sum, b) => sum + b.nights, 0)
+        avgRate:      p.bookings.length > 0
+          ? p.bookings.reduce((sum, b) => sum + b.netAmount, 0) /
+            Math.max(1, p.bookings.reduce((sum, b) => sum + b.nights, 0))
           : 0,
       }))
 
@@ -92,53 +105,64 @@ export async function GET(req: NextRequest) {
       return apiResponse({ platforms: platformStats, year })
     }
 
-    // ── P&L Report: Month | Airbnb Rev | Utilities | Cleaning | Repairs | Supplies | Internet | Other | Net Profit ──
+    // P&L: Month | Revenue (Airbnb / Other) | Expenses by category | Payouts | Net Profit
     if (type === 'pnl') {
       const EXPENSE_CATS = ['UTILITIES', 'CLEANING', 'REPAIRS', 'SUPPLIES', 'MAINTENANCE', 'OTHER'] as const
       const dateStart = new Date(`${year}-01-01`)
       const dateEnd   = new Date(`${year}-12-31`)
 
-      const [incomeRows, expenseRows] = await Promise.all([
-        // Income by month (all platforms, but we track Airbnb separately)
+      const [incomeRows, expenseRows, payoutRows] = await Promise.all([
         prisma.income.findMany({
           where: { year },
           include: { booking: { select: { platform: true } } },
         }),
-        // Expenses by month + category
         prisma.expense.findMany({
           where: { year, date: { gte: dateStart, lte: dateEnd } },
           select: { month: true, category: true, amount: true },
+        }),
+        // PAID payouts only
+        prisma.payout.findMany({
+          where: { year, status: 'PAID', date: { gte: dateStart, lte: dateEnd } },
+          select: { month: true, type: true, amount: true },
         }),
       ])
 
       const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
       const pnl = MONTHS.map((month) => {
-        const monthIncome = incomeRows.filter(r => r.month === month)
+        const monthIncome = incomeRows.filter((r) => r.month === month)
         const airbnbRevenue = monthIncome
-          .filter(r => r.booking?.platform === 'AIRBNB')
+          .filter((r) => r.booking?.platform === 'AIRBNB')
           .reduce((s, r) => s + r.netAmount, 0)
         const otherRevenue = monthIncome
-          .filter(r => r.booking?.platform !== 'AIRBNB')
+          .filter((r) => r.booking?.platform !== 'AIRBNB')
           .reduce((s, r) => s + r.netAmount, 0)
         const totalRevenue = airbnbRevenue + otherRevenue
 
-        const monthExpenses = expenseRows.filter(r => r.month === month)
+        // Operational expenses by category
+        const monthExpenses = expenseRows.filter((r) => r.month === month)
         const byCategory: Record<string, number> = {}
-        EXPENSE_CATS.forEach(cat => {
+        EXPENSE_CATS.forEach((cat) => {
           byCategory[cat] = monthExpenses
-            .filter(e => e.category === cat)
+            .filter((e) => e.category === cat)
             .reduce((s, e) => s + e.amount, 0)
         })
-        // Non-standard categories go into OTHER
+        // Non-standard categories roll into OTHER
         const trackedCats = EXPENSE_CATS as readonly string[]
         const extraOther = monthExpenses
-          .filter(e => !trackedCats.includes(e.category))
+          .filter((e) => !trackedCats.includes(e.category))
           .reduce((s, e) => s + e.amount, 0)
         byCategory['OTHER'] = (byCategory['OTHER'] || 0) + extraOther
 
-        const totalExpenses = Object.values(byCategory).reduce((s, v) => s + v, 0)
-        const netProfit = totalRevenue - totalExpenses
+        const totalOperationalExpenses = Object.values(byCategory).reduce((s, v) => s + v, 0)
+
+        // Payouts (salaries, commissions, etc.)
+        const totalPayouts = payoutRows
+          .filter((r) => r.month === month)
+          .reduce((s, r) => s + r.amount, 0)
+
+        const totalExpenses = totalOperationalExpenses + totalPayouts
+        const netProfit     = totalRevenue - totalExpenses
 
         return {
           month,
@@ -146,24 +170,28 @@ export async function GET(req: NextRequest) {
           otherRevenue,
           totalRevenue,
           ...byCategory,
+          totalOperationalExpenses,
+          payouts: totalPayouts,
           totalExpenses,
           netProfit,
         }
       })
 
       const totals: Record<string, number> = {
-        month: 0,
-        airbnbRevenue: pnl.reduce((s, r) => s + r.airbnbRevenue, 0),
-        otherRevenue:  pnl.reduce((s, r) => s + r.otherRevenue, 0),
-        totalRevenue:  pnl.reduce((s, r) => s + r.totalRevenue, 0),
-        UTILITIES:     pnl.reduce((s, r: any) => s + (r.UTILITIES    || 0), 0),
-        CLEANING:      pnl.reduce((s, r: any) => s + (r.CLEANING     || 0), 0),
-        REPAIRS:       pnl.reduce((s, r: any) => s + (r.REPAIRS      || 0), 0),
-        SUPPLIES:      pnl.reduce((s, r: any) => s + (r.SUPPLIES     || 0), 0),
-        MAINTENANCE:   pnl.reduce((s, r: any) => s + (r.MAINTENANCE  || 0), 0),
-        OTHER:         pnl.reduce((s, r: any) => s + (r.OTHER        || 0), 0),
-        totalExpenses: pnl.reduce((s, r) => s + r.totalExpenses, 0),
-        netProfit:     pnl.reduce((s, r) => s + r.netProfit, 0),
+        month:                    0,
+        airbnbRevenue:            pnl.reduce((s, r) => s + r.airbnbRevenue, 0),
+        otherRevenue:             pnl.reduce((s, r) => s + r.otherRevenue, 0),
+        totalRevenue:             pnl.reduce((s, r) => s + r.totalRevenue, 0),
+        UTILITIES:                pnl.reduce((s, r: any) => s + (r.UTILITIES   || 0), 0),
+        CLEANING:                 pnl.reduce((s, r: any) => s + (r.CLEANING    || 0), 0),
+        REPAIRS:                  pnl.reduce((s, r: any) => s + (r.REPAIRS     || 0), 0),
+        SUPPLIES:                 pnl.reduce((s, r: any) => s + (r.SUPPLIES    || 0), 0),
+        MAINTENANCE:              pnl.reduce((s, r: any) => s + (r.MAINTENANCE || 0), 0),
+        OTHER:                    pnl.reduce((s, r: any) => s + (r.OTHER       || 0), 0),
+        totalOperationalExpenses: pnl.reduce((s, r) => s + r.totalOperationalExpenses, 0),
+        payouts:                  pnl.reduce((s, r) => s + r.payouts, 0),
+        totalExpenses:            pnl.reduce((s, r) => s + r.totalExpenses, 0),
+        netProfit:                pnl.reduce((s, r) => s + r.netProfit, 0),
       }
 
       return apiResponse({ pnl, totals, year })
