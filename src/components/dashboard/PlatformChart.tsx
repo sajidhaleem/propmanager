@@ -64,7 +64,10 @@ export function PlatformChart({ data }: PlatformChartProps) {
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
                 fontSize: '12px',
+                color: 'hsl(var(--foreground))',
               }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
             />
             <Legend />
           </PieChart>
