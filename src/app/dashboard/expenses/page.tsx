@@ -162,7 +162,15 @@ export default function ExpensesPage() {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => format(v)} />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => {
+                    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+                    if (v >= 1_000) return `${Math.round(v / 1_000)}K`
+                    return String(v)
+                  }}
+                  width={40}
+                />
                 <Tooltip formatter={(v: number) => [format(v), 'Amount']} />
                 <Bar dataKey="amount" fill="#ef4444" radius={[4,4,0,0]} />
               </BarChart>
