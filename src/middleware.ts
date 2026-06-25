@@ -6,6 +6,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
   '/api/health',
+  '/api/admin/seed-data',
   '/manifest.json',
   '/sw.js',
   '/icons',
