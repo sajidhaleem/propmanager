@@ -5,7 +5,7 @@
 [build]
   # Copy built static chunks into public/_next/static so Netlify CDN
   # serves them at /_next/static/ BEFORE the SSR function can intercept
-  command = "npm run build && node scripts/copy-static.mjs"
+  command = "npx prisma db push --accept-data-loss && npm run build && node scripts/copy-static.mjs"
   publish = ".next"
 
 [build.environment]

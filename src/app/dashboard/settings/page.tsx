@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, UserCheck, UserX, Shield, Key,
-  Pencil, Trash2, Eye, EyeOff, Save, Lock,
+  Pencil, Trash2, Eye, EyeOff, Save, Lock, Database, RotateCcw, Download,
 } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
@@ -277,6 +277,7 @@ export default function SettingsPage() {
           <TabsTrigger value="currency">Currency</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="account">My Account</TabsTrigger>
+          <TabsTrigger value="backups">Backups</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
 
@@ -503,6 +504,9 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* ── Backups ── */}
+        <BackupsTab />
+
         {/* ── System Info ── */}
         <TabsContent value="system">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -667,6 +671,158 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ── Backups Tab ───────────────────────────────────────────────────────────────
+type BackupRow = { id: string; label: string; recordCount: number; createdBy: string | null; createdAt: string }
+
+function BackupsTab() {
+  const queryClient = useQueryClient()
+  const [restoring, setRestoring] = useState<BackupRow | null>(null)
+
+  const { data, isLoading } = useQuery<{ success: boolean; data: BackupRow[] }>({
+    queryKey: ['backups'],
+    queryFn: async () => {
+      const res = await fetch('/api/backups')
+      if (!res.ok) throw new Error('Failed')
+      return res.json()
+    },
+  })
+  const backups = data?.data || []
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/backups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      if (!res.ok) throw new Error('Failed to create backup')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backups'] })
+      toast.success('Backup created')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/backups/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete backup')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backups'] })
+      toast.success('Backup deleted')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/backups/${id}/restore`, { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to restore')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries()
+      setRestoring(null)
+      toast.success('Database restored successfully')
+    },
+    onError: (e: Error) => { toast.error(e.message); setRestoring(null) },
+  })
+
+  return (
+    <TabsContent value="backups" className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-4 w-4" />Database Backups
+              </CardTitle>
+              <CardDescription>
+                Automatic daily backup runs on first login each day. Backups include all properties, bookings, income, expenses, and payouts.
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+              <Download className="h-4 w-4" />
+              {createMutation.isPending ? 'Backing up…' : 'Backup Now'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          ) : backups.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground text-sm">
+              No backups yet. Click &quot;Backup Now&quot; or log in tomorrow for an automatic backup.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Label</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Records</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created By</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backups.map((b) => (
+                    <tr key={b.id} className="border-b hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-3 font-medium">{b.label}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{b.recordCount} records</td>
+                      <td className="px-4 py-3 text-muted-foreground">{b.createdBy || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(b.createdAt, 'MMM d, yyyy HH:mm')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" title="Restore this backup" onClick={() => setRestoring(b)}>
+                            <RotateCcw className="h-3.5 w-3.5 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="sm" title="Delete backup"
+                            onClick={() => { if (confirm('Delete this backup?')) deleteMutation.mutate(b.id) }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!restoring} onOpenChange={open => { if (!open) setRestoring(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Restore Backup</DialogTitle>
+            <DialogDescription>
+              This will replace ALL current data with the backup from{' '}
+              <strong>{restoring && formatDate(restoring.createdAt, 'MMM d, yyyy HH:mm')}</strong>{' '}
+              ({restoring?.recordCount} records). This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoring(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={restoreMutation.isPending}
+              onClick={() => restoring && restoreMutation.mutate(restoring.id)}
+            >
+              {restoreMutation.isPending ? 'Restoring…' : 'Yes, Restore'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </TabsContent>
   )
 }
 

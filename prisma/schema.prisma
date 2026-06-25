@@ -232,6 +232,17 @@ model AuditLog {
   @@index([createdAt])
 }
 
+model Backup {
+  id          String   @id @default(cuid())
+  label       String
+  recordCount Int      @default(0)
+  createdBy   String?
+  data        Json
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Document {
   id        String   @id @default(cuid())
   bookingId String

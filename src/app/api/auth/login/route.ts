@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { signToken } from '@/lib/auth'
 import { loginSchema } from '@/lib/validations'
 import { apiError } from '@/lib/utils'
+import { autoBackupIfNeeded } from '@/lib/backup'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest) {
     if (!isValid) {
       return apiError('Invalid email or password', 401)
     }
+
+    // Auto-backup once per day on first login
+    autoBackupIfNeeded(user.email).catch(console.error)
 
     const token = await signToken({
       userId: user.id,
