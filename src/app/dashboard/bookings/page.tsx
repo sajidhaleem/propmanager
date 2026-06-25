@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -95,6 +95,8 @@ export default function BookingsPage() {
   const [editingAmountValue, setEditingAmountValue] = useState('')
   const [sortBy,    setSortBy]    = useState('checkIn')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [sectionOpen, setSectionOpen] = useState({ misc: false, reminder: false, hotelEye: false, reference: false })
+  function toggleSection(key: keyof typeof sectionOpen) { setSectionOpen(s => ({ ...s, [key]: !s[key] })) }
 
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
@@ -259,6 +261,7 @@ export default function BookingsPage() {
     setEditBooking(null)
     setForm(EMPTY_FORM)
     setUploadedDocs([])
+    setSectionOpen({ misc: false, reminder: false, hotelEye: false, reference: false })
     setModalOpen(true)
   }
   function openCopy(b: Booking) {
@@ -285,6 +288,12 @@ export default function BookingsPage() {
       refCell: (b as any).refCell || '', refVerified: (b as any).refVerified || false,
     })
     setUploadedDocs([])
+    setSectionOpen({
+      misc: !!((b as any).miscCharges || (b as any).miscDescription),
+      reminder: false,
+      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName),
+      reference: !!((b as any).refName),
+    })
     setModalOpen(true)
   }
   function openEdit(b: Booking) {
@@ -311,6 +320,12 @@ export default function BookingsPage() {
       refName: (b as any).refName || '', refFatherName: (b as any).refFatherName || '',
       refBusiness: (b as any).refBusiness || '', refAddress: (b as any).refAddress || '',
       refCell: (b as any).refCell || '', refVerified: (b as any).refVerified || false,
+    })
+    setSectionOpen({
+      misc: !!((b as any).miscCharges || (b as any).miscDescription),
+      reminder: !!((b as any).reminderAt || (b as any).reminderNote),
+      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName),
+      reference: !!((b as any).refName),
     })
     // Load existing documents for this booking
     fetch(`/api/bookings/${b.id}/documents`)
@@ -636,334 +651,345 @@ export default function BookingsPage() {
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editBooking ? 'Edit Booking' : form.guestName ? `Copy Booking — ${form.guestName}` : 'New Booking'}</DialogTitle>
+        <DialogContent
+          className="max-w-3xl flex flex-col p-0 gap-0 max-h-[92vh]"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          {/* Sticky header */}
+          <DialogHeader className="px-6 pt-5 pb-4 border-b shrink-0">
+            <DialogTitle className="text-lg">
+              {editBooking ? 'Edit Booking' : form.guestName ? `Copy — ${form.guestName}` : 'New Booking'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+
+          {/* Scrollable body */}
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
             {/* CNIC Scanner */}
             <CnicScanner onExtracted={applyScannedCnic} />
 
-            {/* 1. Guest Name */}
-            <div className="space-y-1.5">
-              <Label>Guest Name *</Label>
-              <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
-            </div>
-
-            {/* 2–3. Email & Phone side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Email</Label>
-                <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} placeholder="guest@email.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Phone</Label>
-                <Input value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} placeholder="+92 300 0000000" />
-              </div>
-            </div>
-
-            {/* 4–5. Check-in & Check-out side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Check-in *</Label>
-                <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Check-out *</Label>
-                <Input type="datetime-local" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
+            {/* ── Guest Details ─────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Guest Details</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Guest Name *</Label>
+                  <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Email</Label>
+                    <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} placeholder="guest@email.com" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Phone</Label>
+                    <Input value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} placeholder="+92 300 0000000" />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 6. Rate per night */}
-            <div className="space-y-1.5">
-              <Label>Rate per Night ({currencyInfo.symbol}) *</Label>
-              <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
+            {/* ── Stay Details ──────────────────────── */}
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Stay Details</p>
+
+              {/* Check-in / Check-out */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Check-in *</Label>
+                  <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Check-out *</Label>
+                  <Input type="datetime-local" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Property + Platform + Status in a row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Property *</Label>
+                  <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Platform *</Label>
+                  <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: 'AIRBNB',      label: 'Airbnb' },
+                        { value: 'DIRECT',      label: 'Direct' },
+                        { value: 'BOOKING_COM', label: 'Booking.com' },
+                        { value: 'VRBO',        label: 'VRBO' },
+                        { value: 'OTHER',       label: 'Other…' },
+                      ].map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.platform === 'OTHER' && (
+                    <Input value={form.platformOther} onChange={(e) => setForm({ ...form, platformOther: e.target.value })} placeholder="e.g. Facebook, Walk-in…" className="mt-2" autoFocus />
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: 'PENDING',     label: 'Pending' },
+                        { value: 'CONFIRMED',   label: 'Confirmed' },
+                        { value: 'CHECKED_IN',  label: 'Checked in' },
+                        { value: 'CHECKED_OUT', label: 'Checked out' },
+                        { value: 'CANCELLED',   label: 'Cancelled' },
+                        { value: 'NO_SHOW',     label: 'No show' },
+                      ].map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Financial row: Rate / Cleaning / Platform fee */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Rate / Night ({currencyInfo.symbol}) *</Label>
+                  <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Cleaning Fee ({currencyInfo.symbol})</Label>
+                  <Input type="number" min="0" value={form.cleaningFee} onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Platform Fee ({currencyInfo.symbol})</Label>
+                  <Input type="number" min="0" value={form.platformFee} onChange={(e) => setForm({ ...form, platformFee: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Paid + Outstanding */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Paid Amount ({currencyInfo.symbol})</Label>
+                  <Input type="number" min="0" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground">Outstanding ({currencyInfo.symbol})</Label>
+                  {(() => {
+                    const nights = form.checkIn && form.checkOut
+                      ? Math.max(1, Math.ceil((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86400000))
+                      : 0
+                    const total = (Number(form.rate) || 0) * nights + (Number(form.cleaningFee) || 0) + (Number(form.miscCharges) || 0)
+                    const outstanding = Math.max(0, total - (Number(form.paidAmount) || 0))
+                    return (
+                      <div className={cn(
+                        'flex h-9 items-center rounded-md border px-3 text-sm font-medium',
+                        outstanding > 0 ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400'
+                      )}>
+                        {outstanding > 0 ? `${currencyInfo.symbol} ${outstanding.toLocaleString()}` : 'Fully paid ✓'}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
             </div>
 
-            {/* 7. Paid Amount + Outstanding (computed) */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Paid Amount ({currencyInfo.symbol})</Label>
-                <Input type="number" min="0" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground">Outstanding ({currencyInfo.symbol})</Label>
-                {(() => {
-                  const nights = form.checkIn && form.checkOut
-                    ? Math.max(1, Math.ceil((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86400000))
-                    : 0
-                  const total = (Number(form.rate) || 0) * nights + (Number(form.cleaningFee) || 0) + (Number(form.miscCharges) || 0)
-                  const outstanding = Math.max(0, total - (Number(form.paidAmount) || 0))
-                  return (
-                    <div className={cn(
-                      'flex h-9 items-center rounded-md border px-3 text-sm font-medium',
-                      outstanding > 0 ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400'
-                    )}>
-                      {outstanding > 0 ? `${currencyInfo.symbol} ${outstanding.toLocaleString()}` : 'Fully paid ✓'}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-
-            {/* 8–9. Cleaning Fee & Platform Fee side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Cleaning Fee ({currencyInfo.symbol})</Label>
-                <Input type="number" min="0" value={form.cleaningFee} onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Platform Fee ({currencyInfo.symbol})</Label>
-                <Input type="number" min="0" value={form.platformFee} onChange={(e) => setForm({ ...form, platformFee: e.target.value })} />
-              </div>
-            </div>
-
-            {/* 9. Property */}
-            <div className="space-y-1.5">
-              <Label>Property *</Label>
-              <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-                <SelectContent>
-                  {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 10. Platform */}
-            <div className="space-y-1.5">
-              <Label>Platform *</Label>
-              <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[
-                    { value: 'AIRBNB',      label: 'Airbnb' },
-                    { value: 'DIRECT',      label: 'Direct' },
-                    { value: 'BOOKING_COM', label: 'Booking.com' },
-                    { value: 'VRBO',        label: 'VRBO' },
-                    { value: 'OTHER',       label: 'Other (specify below)' },
-                  ].map(({ value, label }) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.platform === 'OTHER' && (
-                <Input
-                  value={form.platformOther}
-                  onChange={(e) => setForm({ ...form, platformOther: e.target.value })}
-                  placeholder="e.g. Facebook, Walk-in, Referral…"
-                  className="mt-2"
-                  autoFocus
-                />
+            {/* ── Miscellaneous Charges (collapsible) ─── */}
+            <div className="border-t">
+              <button type="button" onClick={() => toggleSection('misc')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Miscellaneous Charges
+                  {!sectionOpen.misc && (form.miscCharges || form.miscDescription) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                </span>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.misc && 'rotate-180')} />
+              </button>
+              {sectionOpen.misc && (
+                <div className="grid grid-cols-2 gap-4 pb-4">
+                  <div className="space-y-1.5">
+                    <Label>Misc Charges ({currencyInfo.symbol})</Label>
+                    <Input type="number" min="0" value={form.miscCharges} onChange={(e) => setForm({ ...form, miscCharges: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Description</Label>
+                    <Input value={form.miscDescription} onChange={(e) => setForm({ ...form, miscDescription: e.target.value })} placeholder="e.g. Late checkout fee…" />
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* 11. Status */}
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[
-                    { value: 'PENDING',     label: 'Pending' },
-                    { value: 'CONFIRMED',   label: 'Confirmed' },
-                    { value: 'CHECKED_IN',  label: 'Checked in' },
-                    { value: 'CHECKED_OUT', label: 'Checked out' },
-                    { value: 'CANCELLED',   label: 'Cancelled' },
-                    { value: 'NO_SHOW',     label: 'No show' },
-                  ].map(({ value, label }) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* ── Reminder (collapsible) ──────────────── */}
+            <div className="border-t">
+              <button type="button" onClick={() => toggleSection('reminder')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <Bell className="h-3.5 w-3.5" /> Reminder
+                  {!sectionOpen.reminder && (form.reminderAt || form.reminderNote) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                </span>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.reminder && 'rotate-180')} />
+              </button>
+              {sectionOpen.reminder && (
+                <div className="grid grid-cols-2 gap-4 pb-4">
+                  <div className="space-y-1.5">
+                    <Label>Remind At</Label>
+                    <Input type="datetime-local" value={form.reminderAt} onChange={(e) => setForm({ ...form, reminderAt: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Note</Label>
+                    <Input value={form.reminderNote} onChange={(e) => setForm({ ...form, reminderNote: e.target.value })} placeholder="e.g. Call guest before check-in" />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* 12–13. Misc Charges & Description side by side */}
-            <div className="border-t pt-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Miscellaneous Charges</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Misc Charges ({currencyInfo.symbol})</Label>
-                  <Input type="number" min="0" value={form.miscCharges} onChange={(e) => setForm({ ...form, miscCharges: e.target.value })} placeholder="0" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Misc Description</Label>
-                  <Input value={form.miscDescription} onChange={(e) => setForm({ ...form, miscDescription: e.target.value })} placeholder="e.g. Late checkout fee…" />
-                </div>
-              </div>
-            </div>
-
-            {/* 14. Reminder */}
-            <div className="border-t pt-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                <Bell className="h-3.5 w-3.5" /> Reminder
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Remind At</Label>
-                  <Input type="datetime-local" value={form.reminderAt} onChange={(e) => setForm({ ...form, reminderAt: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Reminder Note</Label>
-                  <Input value={form.reminderNote} onChange={(e) => setForm({ ...form, reminderNote: e.target.value })} placeholder="e.g. Call guest before check-in" />
-                </div>
-              </div>
-            </div>
-
-            {/* Hotel Eye fields */}
-            <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <ScanLine className="h-3.5 w-3.5" /> Hotel Eye / Guest Identity
-              </p>
-
-              {/* CNIC + Gender */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>CNIC #</Label>
-                  <Input value={form.guestCnic} onChange={(e) => setForm({ ...form, guestCnic: e.target.value })} placeholder="12345-1234567-1" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Gender</Label>
-                  <select
-                    value={form.guestGender}
-                    onChange={(e) => setForm({ ...form, guestGender: e.target.value })}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    <option value="">— Select —</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Father Name */}
-              <div className="space-y-1.5">
-                <Label>Father Name</Label>
-                <Input value={form.guestFatherName} onChange={(e) => setForm({ ...form, guestFatherName: e.target.value })} placeholder="Father's full name" />
-              </div>
-
-              {/* Permanent Address */}
-              <div className="space-y-1.5">
-                <Label>Permanent Address</Label>
-                <Input value={form.guestAddress} onChange={(e) => setForm({ ...form, guestAddress: e.target.value })} placeholder="As on CNIC" />
-              </div>
-
-              {/* Province + District */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Province</Label>
-                  <Input value={form.guestProvince} onChange={(e) => setForm({ ...form, guestProvince: e.target.value })} placeholder="e.g. Punjab" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>District</Label>
-                  <Input value={form.guestDistrict} onChange={(e) => setForm({ ...form, guestDistrict: e.target.value })} placeholder="e.g. Lahore" />
-                </div>
-              </div>
-
-              {/* Temporary Address */}
-              <div className="space-y-1.5">
-                <Label>Temporary Address (at property)</Label>
-                <Input value={form.tempAddress} onChange={(e) => setForm({ ...form, tempAddress: e.target.value })} placeholder="Hotel / property address" />
-              </div>
-
-              {/* Temp Province + District */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Temp Province</Label>
-                  <Input value={form.tempProvince} onChange={(e) => setForm({ ...form, tempProvince: e.target.value })} placeholder="e.g. KPK" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Temp District</Label>
-                  <Input value={form.tempDistrict} onChange={(e) => setForm({ ...form, tempDistrict: e.target.value })} placeholder="e.g. Peshawar" />
-                </div>
-              </div>
-
-              {/* Room# + Purpose */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Room #</Label>
-                  <Input value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} placeholder="101" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Purpose of Visit</Label>
-                  <Input value={form.purposeOfVisit} onChange={(e) => setForm({ ...form, purposeOfVisit: e.target.value })} placeholder="Tourism, Business…" />
-                </div>
-              </div>
-
-              {/* Accompanying Guests */}
-              <div className="space-y-1.5">
-                <Label>Accompanying Guests</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: 'Male',     key: 'accompanyingMale' },
-                    { label: 'Female',   key: 'accompanyingFemale' },
-                    { label: 'Children', key: 'accompanyingChildren' },
-                  ].map(({ label, key }) => (
-                    <div key={key} className="space-y-1">
-                      <p className="text-xs text-muted-foreground">{label}</p>
-                      <Input type="number" min="0" value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+            {/* ── Hotel Eye / Guest Identity (collapsible) */}
+            <div className="border-t">
+              <button type="button" onClick={() => toggleSection('hotelEye')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <ScanLine className="h-3.5 w-3.5" /> Hotel Eye / Guest Identity
+                  {!sectionOpen.hotelEye && (form.guestCnic || form.guestFatherName) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                </span>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.hotelEye && 'rotate-180')} />
+              </button>
+              {sectionOpen.hotelEye && (
+                <div className="space-y-4 pb-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>CNIC #</Label>
+                      <Input value={form.guestCnic} onChange={(e) => setForm({ ...form, guestCnic: e.target.value })} placeholder="12345-1234567-1" />
                     </div>
-                  ))}
+                    <div className="space-y-1.5">
+                      <Label>Gender</Label>
+                      <select value={form.guestGender} onChange={(e) => setForm({ ...form, guestGender: e.target.value })}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                        <option value="">— Select —</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Father Name</Label>
+                    <Input value={form.guestFatherName} onChange={(e) => setForm({ ...form, guestFatherName: e.target.value })} placeholder="Father's full name" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Permanent Address</Label>
+                    <Input value={form.guestAddress} onChange={(e) => setForm({ ...form, guestAddress: e.target.value })} placeholder="As on CNIC" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Province</Label>
+                      <Input value={form.guestProvince} onChange={(e) => setForm({ ...form, guestProvince: e.target.value })} placeholder="e.g. Punjab" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>District</Label>
+                      <Input value={form.guestDistrict} onChange={(e) => setForm({ ...form, guestDistrict: e.target.value })} placeholder="e.g. Lahore" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Temporary Address (at property)</Label>
+                    <Input value={form.tempAddress} onChange={(e) => setForm({ ...form, tempAddress: e.target.value })} placeholder="Hotel / property address" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Temp Province</Label>
+                      <Input value={form.tempProvince} onChange={(e) => setForm({ ...form, tempProvince: e.target.value })} placeholder="e.g. KPK" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Temp District</Label>
+                      <Input value={form.tempDistrict} onChange={(e) => setForm({ ...form, tempDistrict: e.target.value })} placeholder="e.g. Peshawar" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Room #</Label>
+                      <Input value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} placeholder="101" />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Purpose of Visit</Label>
+                      <Input value={form.purposeOfVisit} onChange={(e) => setForm({ ...form, purposeOfVisit: e.target.value })} placeholder="Tourism, Business…" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Accompanying Guests</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'Male',     key: 'accompanyingMale' },
+                        { label: 'Female',   key: 'accompanyingFemale' },
+                        { label: 'Children', key: 'accompanyingChildren' },
+                      ].map(({ label, key }) => (
+                        <div key={key} className="space-y-1">
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                          <Input type="number" min="0" value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Reference / Dealer */}
-            <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Local Reference / Dealer</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Name</Label>
-                  <Input value={form.refName} onChange={(e) => setForm({ ...form, refName: e.target.value })} placeholder="Reference name" />
+            {/* ── Local Reference / Dealer (collapsible) */}
+            <div className="border-t">
+              <button type="button" onClick={() => toggleSection('reference')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Local Reference / Dealer
+                  {!sectionOpen.reference && form.refName && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                </span>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.reference && 'rotate-180')} />
+              </button>
+              {sectionOpen.reference && (
+                <div className="space-y-3 pb-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Name</Label>
+                      <Input value={form.refName} onChange={(e) => setForm({ ...form, refName: e.target.value })} placeholder="Reference name" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Father Name</Label>
+                      <Input value={form.refFatherName} onChange={(e) => setForm({ ...form, refFatherName: e.target.value })} placeholder="Father's name" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Business</Label>
+                      <Input value={form.refBusiness} onChange={(e) => setForm({ ...form, refBusiness: e.target.value })} placeholder="Business name" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Cell #</Label>
+                      <Input value={form.refCell} onChange={(e) => setForm({ ...form, refCell: e.target.value })} placeholder="+92 300 0000000" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Address</Label>
+                    <Input value={form.refAddress} onChange={(e) => setForm({ ...form, refAddress: e.target.value })} placeholder="Reference address" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="refVerified" checked={!!form.refVerified} onChange={(e) => setForm({ ...form, refVerified: e.target.checked })} className="h-4 w-4 rounded border-input" />
+                    <label htmlFor="refVerified" className="text-sm cursor-pointer">Reference Verified</label>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Father Name</Label>
-                  <Input value={form.refFatherName} onChange={(e) => setForm({ ...form, refFatherName: e.target.value })} placeholder="Father's name" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Business</Label>
-                  <Input value={form.refBusiness} onChange={(e) => setForm({ ...form, refBusiness: e.target.value })} placeholder="Business name" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Cell #</Label>
-                  <Input value={form.refCell} onChange={(e) => setForm({ ...form, refCell: e.target.value })} placeholder="+92 300 0000000" />
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Address</Label>
-                  <Input value={form.refAddress} onChange={(e) => setForm({ ...form, refAddress: e.target.value })} placeholder="Reference address" />
-                </div>
-                <div className="flex items-center gap-2 col-span-2">
-                  <input
-                    type="checkbox"
-                    id="refVerified"
-                    checked={!!form.refVerified}
-                    onChange={(e) => setForm({ ...form, refVerified: e.target.checked })}
-                    className="h-4 w-4 rounded border-input"
-                  />
-                  <label htmlFor="refVerified" className="text-sm cursor-pointer">Reference Verified</label>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Notes */}
-            <div className="space-y-1.5">
+            {/* ── Notes ─────────────────────────────── */}
+            <div className="border-t pt-4 space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />
             </div>
 
-            {/* 15. Documents */}
+            {/* ── Documents ─────────────────────────── */}
             <div className="border-t pt-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Documents</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">Documents</p>
               {editBooking ? (
                 <div className="space-y-3">
-                  {/* Upload button */}
                   <label className={`flex items-center gap-2 cursor-pointer w-fit rounded-lg border border-dashed px-4 py-2.5 text-sm transition-colors ${uploading ? 'opacity-50 pointer-events-none' : 'hover:bg-accent'}`}>
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
                     <span className="text-muted-foreground">{uploading ? 'Uploading…' : 'Upload file'}</span>
                     <span className="text-xs text-muted-foreground/60">PDF, DOC, XLS, Image (max 5MB)</span>
                     <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt" onChange={(e) => handleFileUpload(e, editBooking.id)} disabled={uploading} />
                   </label>
-                  {/* Uploaded files list */}
                   {uploadedDocs.length > 0 && (
                     <div className="space-y-2">
                       {uploadedDocs.map(doc => (
@@ -985,21 +1011,20 @@ export default function BookingsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Upload className="h-4 w-4" />
-                  Save the booking first, then you can upload documents.
+                  Save the booking first, then you can <span className="text-primary">upload documents</span>.
                 </p>
               )}
             </div>
           </div>
-          <DialogFooter>
+
+          {/* Sticky footer */}
+          <DialogFooter className="px-6 py-4 border-t shrink-0 bg-background">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button
               onClick={() => {
                 const payload = { ...form }
-                // Merge platformOther into notes only once, cleanly
                 if (form.platform === 'OTHER' && form.platformOther) {
-                  payload.notes = form.notes
-                    ? `[${form.platformOther}] ${form.notes}`
-                    : form.platformOther
+                  payload.notes = form.notes ? `[${form.platformOther}] ${form.notes}` : form.platformOther
                 }
                 saveMutation.mutate(payload)
               }}
