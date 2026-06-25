@@ -122,7 +122,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barCategoryGap="30%">
+            <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
               <XAxis
                 dataKey="month"
@@ -134,8 +134,13 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => formatMoney(v)}
-                width={60}
+                domain={[0, 'auto']}
+                tickFormatter={(v: number) => {
+                  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+                  if (v >= 1_000) return `${Math.round(v / 1_000)}K`
+                  return String(v)
+                }}
+                width={40}
               />
               <Tooltip
                 content={<CustomTooltip formatMoney={formatMoney} />}

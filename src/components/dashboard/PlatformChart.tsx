@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Label } from 'recharts'
 
 const COLORS = ['#FF5A5F', '#3b82f6', '#6366f1', '#f59e0b', '#6b7280']
 const PLATFORM_LABELS: Record<string, string> = {
@@ -24,6 +24,8 @@ export function PlatformChart({ data }: PlatformChartProps) {
     color: COLORS[i % COLORS.length],
   }))
 
+  const totalBookings = chartData.reduce((s, d) => s + d.value, 0)
+
   return (
     <Card>
       <CardHeader>
@@ -37,6 +39,23 @@ export function PlatformChart({ data }: PlatformChartProps) {
               {chartData.map((entry, index) => (
                 <Cell key={index} fill={entry.color} />
               ))}
+              <Label
+                content={({ viewBox }) => {
+                  const { cx, cy } = viewBox as { cx: number; cy: number }
+                  return (
+                    <g>
+                      <circle cx={cx} cy={cy} r={56} fill="hsl(var(--card))" />
+                      <text x={cx} y={cy - 5} textAnchor="middle" style={{ fontSize: 22, fontWeight: 700, fill: 'hsl(var(--foreground))' }}>
+                        {totalBookings}
+                      </text>
+                      <text x={cx} y={cy + 14} textAnchor="middle" style={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}>
+                        bookings
+                      </text>
+                    </g>
+                  )
+                }}
+                position="center"
+              />
             </Pie>
             <Tooltip
               formatter={(value: number, name: string) => [value, name]}
