@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-clear-secret')
