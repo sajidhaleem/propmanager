@@ -652,9 +652,12 @@ export default function BookingsPage() {
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
-          className="max-w-3xl flex flex-col p-0 gap-0 max-h-[92vh]"
+          className="max-w-3xl p-0 gap-0 overflow-hidden"
           onInteractOutside={(e) => e.preventDefault()}
         >
+          {/* Inner flex wrapper — avoids conflicting with DialogContent's base `grid` class */}
+          <div className="flex flex-col max-h-[92vh]">
+
           {/* Sticky header */}
           <DialogHeader className="px-6 pt-5 pb-4 border-b shrink-0">
             <DialogTitle className="text-lg">
@@ -663,7 +666,7 @@ export default function BookingsPage() {
           </DialogHeader>
 
           {/* Scrollable body */}
-          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-5 space-y-5">
 
             {/* CNIC Scanner */}
             <CnicScanner onExtracted={applyScannedCnic} />
@@ -1033,6 +1036,8 @@ export default function BookingsPage() {
               {saveMutation.isPending ? 'Saving...' : editBooking ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
+
+          </div>{/* end inner flex wrapper */}
         </DialogContent>
       </Dialog>
     </div>
