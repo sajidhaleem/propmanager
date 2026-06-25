@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     { id: 'room-4', name: 'Room 4 - Suite', description: 'Premium suite with living area', type: 'suite', capacity: 4, baseRate: 120, status: 'ACTIVE', amenities: ['WiFi', 'AC', 'TV', 'Living Area', 'Mini Kitchen'] },
   ]
   for (const p of props) {
-    await prisma.property.upsert({ where: { id: p.id }, update: {}, create: p })
+    await prisma.property.upsert({ where: { id: p.id }, update: {}, create: p as any })
   }
 
   // Users
