@@ -11,7 +11,6 @@ const PUBLIC_PATHS = [
   '/icons',
   '/offline.html',
   '/.well-known',
-  '/api/admin/clear-data',
 ]
 
 const SECURITY_HEADERS = {
