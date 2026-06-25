@@ -66,6 +66,14 @@ export async function POST(req: NextRequest) {
       path: '/',
     })
 
+    response.cookies.set('last-activity', String(Date.now()), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 30 * 60,
+      path: '/',
+    })
+
     return response
   } catch (error) {
     console.error('Login error:', error)

@@ -6,7 +6,8 @@ import {
   Eye, EyeOff, Loader2, Building2, ShieldCheck,
   CalendarCheck, Banknote, Check, ArrowRight, Star,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { loginSchema, LoginInput } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
@@ -88,9 +89,11 @@ const fadeUp = (i: number) => ({
   },
 })
 
-export default function LoginPage() {
+function LoginForm() {
   const { login, isLoggingIn } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
+  const searchParams = useSearchParams()
+  const inactivityLogout = searchParams.get('reason') === 'inactivity'
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -251,11 +254,19 @@ export default function LoginPage() {
 
           {/* Header */}
           <div className="mb-7">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-border
-              bg-muted/50 px-3 py-1 text-xs text-muted-foreground mb-4">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Secure · All data encrypted
-            </div>
+            {inactivityLogout ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30
+                bg-amber-500/10 px-3 py-1 text-xs text-amber-600 dark:text-amber-400 mb-4">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Logged out due to 30 minutes of inactivity
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border
+                bg-muted/50 px-3 py-1 text-xs text-muted-foreground mb-4">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                Secure · All data encrypted
+              </div>
+            )}
             <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
             <p className="text-muted-foreground text-sm mt-1.5">
               Sign in to your PropManager account to continue.
@@ -350,5 +361,13 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

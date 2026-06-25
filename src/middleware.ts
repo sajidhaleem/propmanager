@@ -66,6 +66,8 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
+  const INACTIVITY_MAX = 30 * 60  // 30 minutes in seconds
+
   // ── Authenticate API routes ──
   if (pathname.startsWith('/api/')) {
     const token = req.cookies.get('auth-token')?.value
@@ -82,11 +84,30 @@ export async function middleware(req: NextRequest) {
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
       res.cookies.delete('auth-token')
+      res.cookies.delete('last-activity')
       return res
+    }
+    // Enforce inactivity timeout
+    const lastActivity = req.cookies.get('last-activity')?.value
+    if (lastActivity) {
+      const elapsed = (Date.now() - parseInt(lastActivity, 10)) / 1000
+      if (elapsed > INACTIVITY_MAX) {
+        const res = new NextResponse(
+          JSON.stringify({ success: false, error: 'Session expired due to inactivity.' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        )
+        res.cookies.delete('auth-token')
+        res.cookies.delete('last-activity')
+        return res
+      }
     }
     const res = NextResponse.next()
     res.headers.set('X-User-Id', payload.userId)
     res.headers.set('X-User-Role', payload.role)
+    res.cookies.set('last-activity', String(Date.now()), {
+      httpOnly: true, secure: true, sameSite: 'lax',
+      maxAge: INACTIVITY_MAX, path: '/',
+    })
     applySecurityHeaders(res, limitHeaders)
     return res
   }
@@ -103,8 +124,28 @@ export async function middleware(req: NextRequest) {
     if (!payload) {
       const response = NextResponse.redirect(new URL('/login', req.url))
       response.cookies.delete('auth-token')
+      response.cookies.delete('last-activity')
       return response
     }
+    // Enforce inactivity timeout on page navigation too
+    const lastActivity = req.cookies.get('last-activity')?.value
+    if (lastActivity) {
+      const elapsed = (Date.now() - parseInt(lastActivity, 10)) / 1000
+      if (elapsed > INACTIVITY_MAX) {
+        const response = NextResponse.redirect(new URL('/login?reason=inactivity', req.url))
+        response.cookies.delete('auth-token')
+        response.cookies.delete('last-activity')
+        return response
+      }
+    }
+    // Refresh the activity cookie on page visits
+    const res = NextResponse.next()
+    res.cookies.set('last-activity', String(Date.now()), {
+      httpOnly: true, secure: true, sameSite: 'lax',
+      maxAge: INACTIVITY_MAX, path: '/',
+    })
+    applySecurityHeaders(res, limitHeaders)
+    return res
   }
 
   // ── Redirect logged-in users away from login ──
