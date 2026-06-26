@@ -21,8 +21,8 @@ export async function PATCH(
   const { id } = await params
   const { status, error } = await req.json()
 
-  if (!['done', 'failed'].includes(status)) {
-    return apiError('status must be done or failed', 400)
+  if (!['done', 'failed', 'pending'].includes(status)) {
+    return apiError('status must be done, failed, or pending', 400)
   }
 
   await prisma.hotelEyeJob.update({
