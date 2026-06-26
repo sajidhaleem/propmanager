@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, UserCheck, UserX, Shield, Key,
-  Pencil, Trash2, Eye, EyeOff, Save, Lock, Database, RotateCcw, Download,
+  Pencil, Trash2, Eye, EyeOff, Save, Lock, Database, RotateCcw, Download, Layers,
 } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
@@ -275,6 +275,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="currency">
         <TabsList>
           <TabsTrigger value="currency">Currency</TabsTrigger>
+          <TabsTrigger value="platforms">Platforms</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="account">My Account</TabsTrigger>
           <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -283,6 +284,9 @@ export default function SettingsPage() {
 
         {/* ── Currency ── */}
         <CurrencyTab />
+
+        {/* ── Platforms ── */}
+        <PlatformsTab />
 
         {/* ── User Management ── */}
         <TabsContent value="users" className="space-y-4">
@@ -822,6 +826,164 @@ function BackupsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </TabsContent>
+  )
+}
+
+// ── Platforms Tab ─────────────────────────────────────────────────────────────
+
+export type PlatformItem = {
+  value: string      // DB enum value: AIRBNB | DIRECT | BOOKING_COM | VRBO | OTHER
+  label: string      // display name
+  fee:   number      // default platform fee
+  custom?: boolean   // user-added entry
+}
+
+export const DEFAULT_PLATFORMS: PlatformItem[] = [
+  { value: 'AIRBNB',      label: 'Airbnb',       fee: 0 },
+  { value: 'DIRECT',      label: 'Direct',       fee: 0 },
+  { value: 'BOOKING_COM', label: 'Booking.com',  fee: 0 },
+  { value: 'VRBO',        label: 'VRBO',         fee: 0 },
+  { value: 'OTHER',       label: 'Other',        fee: 0 },
+]
+
+function PlatformsTab() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+
+  const { data, isLoading } = useQuery<PlatformItem[]>({
+    queryKey: ['settings', 'platforms'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings?key=platforms')
+      const json = await res.json()
+      return (json.data as { items: PlatformItem[] } | null)?.items ?? DEFAULT_PLATFORMS
+    },
+  })
+
+  const [items, setItems] = useState<PlatformItem[]>([])
+  const [newLabel, setNewLabel] = useState('')
+
+  useEffect(() => {
+    if (data) setItems(data)
+  }, [data])
+
+  const saveMutation = useMutation({
+    mutationFn: async (items: PlatformItem[]) => {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'platforms', value: { items } }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'platforms'] })
+      toast.success('Platforms saved')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  function updateItem(idx: number, patch: Partial<PlatformItem>) {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
+  }
+
+  function removeItem(idx: number) {
+    setItems(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function addCustom() {
+    const label = newLabel.trim()
+    if (!label) return
+    if (items.some(it => it.label.toLowerCase() === label.toLowerCase())) {
+      toast.error('Platform already exists'); return
+    }
+    setItems(prev => [...prev, { value: 'OTHER', label, fee: 0, custom: true }])
+    setNewLabel('')
+  }
+
+  if (isLoading) return (
+    <TabsContent value="platforms">
+      <div className="space-y-2 mt-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+    </TabsContent>
+  )
+
+  return (
+    <TabsContent value="platforms" className="space-y-4 mt-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Layers className="h-4 w-4" />Booking Platforms
+              </CardTitle>
+              <CardDescription>
+                Customize platform names, default fees, and add your own. Changes apply to the booking form immediately.
+              </CardDescription>
+            </div>
+            {isAdmin && (
+              <Button size="sm" onClick={() => saveMutation.mutate(items)} disabled={saveMutation.isPending}>
+                <Save className="h-4 w-4" />
+                {saveMutation.isPending ? 'Saving…' : 'Save'}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {/* Header row */}
+          <div className="grid grid-cols-[1fr_180px_60px_36px] gap-2 px-2 pb-1 border-b text-xs font-medium text-muted-foreground">
+            <span>Label (shown in app)</span>
+            <span>Default Fee (amount)</span>
+            <span>Type</span>
+            <span />
+          </div>
+
+          {items.map((item, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_180px_60px_36px] gap-2 items-center">
+              <Input
+                value={item.label}
+                onChange={e => updateItem(idx, { label: e.target.value })}
+                disabled={!isAdmin}
+                className="h-8 text-sm"
+              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  value={item.fee}
+                  onChange={e => updateItem(idx, { fee: Number(e.target.value) || 0 })}
+                  disabled={!isAdmin}
+                  className="h-8 text-sm pr-2"
+                />
+              </div>
+              <Badge variant="outline" className={item.custom ? 'text-violet-600 border-violet-400/40 bg-violet-500/10 text-[10px]' : 'text-muted-foreground text-[10px]'}>
+                {item.custom ? 'custom' : 'built-in'}
+              </Badge>
+              {isAdmin && item.custom ? (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeItem(idx)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              ) : <div />}
+            </div>
+          ))}
+
+          {/* Add custom platform */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 pt-3 border-t mt-3">
+              <Input
+                value={newLabel}
+                onChange={e => setNewLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustom()}
+                placeholder="New platform name (e.g. Facebook, Walk-in)"
+                className="h-8 text-sm"
+              />
+              <Button size="sm" variant="outline" onClick={addCustom} disabled={!newLabel.trim()}>
+                <Plus className="h-4 w-4" />Add
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </TabsContent>
   )
 }

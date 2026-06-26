@@ -257,6 +257,12 @@ model HotelEyeJob {
   @@index([status, createdAt])
 }
 
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
 model Document {
   id        String   @id @default(cuid())
   bookingId String

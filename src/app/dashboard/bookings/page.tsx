@@ -19,6 +19,7 @@ import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
+import { DEFAULT_PLATFORMS, type PlatformItem } from '@/app/dashboard/settings/page'
 
 async function fetchBookings(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
@@ -113,6 +114,16 @@ export default function BookingsPage() {
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
   const { data: propertiesData } = useQuery({ queryKey: ['properties'], queryFn: fetchProperties })
+  const { data: platformsData } = useQuery<PlatformItem[]>({
+    queryKey: ['settings', 'platforms'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings?key=platforms')
+      const json = await res.json()
+      return (json.data as { items: PlatformItem[] } | null)?.items ?? DEFAULT_PLATFORMS
+    },
+    staleTime: 60_000,
+  })
+  const platforms: PlatformItem[] = platformsData ?? DEFAULT_PLATFORMS
 
   const bookings: Booking[] = data?.data?.data || []
   const total = data?.data?.total || 0
@@ -420,8 +431,8 @@ export default function BookingsPage() {
           <SelectTrigger className="w-40"><SelectValue placeholder="Platform" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Platforms</SelectItem>
-            {['AIRBNB','DIRECT','BOOKING_COM','VRBO','OTHER'].map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
+            {platforms.map((p, i) => (
+              <SelectItem key={i} value={p.custom ? `OTHER:${p.label}` : p.value}>{p.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -566,7 +577,17 @@ export default function BookingsPage() {
                         {/* Platform */}
                         <div className="hidden md:block shrink-0">
                           <Badge className={getPlatformColor(b.platform)} variant="outline">
-                            {b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform === 'VRBO' ? 'VRBO' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase()}
+                            {(() => {
+                              const notes = b.notes || ''
+                              if (b.platform === 'OTHER') {
+                                const m = notes.match(/^\[([^\]]+)\]/)
+                                if (m) return m[1]
+                                const custom = platforms.find(p => p.custom && p.value === 'OTHER')
+                                return custom?.label ?? 'Other'
+                              }
+                              return platforms.find(p => p.value === b.platform)?.label
+                                ?? (b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase())
+                            })()}
                           </Badge>
                         </div>
 
@@ -758,21 +779,30 @@ export default function BookingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Platform *</Label>
-                  <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v, platformOther: v !== 'OTHER' ? '' : form.platformOther })}>
+                  <Select
+                    value={form.platform === 'OTHER' && form.platformOther
+                      ? `OTHER:${form.platformOther}`
+                      : form.platform}
+                    onValueChange={(v) => {
+                      const item = platforms.find(p => (p.custom ? `OTHER:${p.label}` : p.value) === v)
+                      setForm({
+                        ...form,
+                        platform: item?.value ?? v,
+                        platformOther: item?.custom ? item.label : '',
+                        platformFee: item && item.fee > 0 ? String(item.fee) : form.platformFee,
+                      })
+                    }}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[
-                        { value: 'AIRBNB',      label: 'Airbnb' },
-                        { value: 'DIRECT',      label: 'Direct' },
-                        { value: 'BOOKING_COM', label: 'Booking.com' },
-                        { value: 'VRBO',        label: 'VRBO' },
-                        { value: 'OTHER',       label: 'Other…' },
-                      ].map(({ value, label }) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {platforms.map((p, i) => (
+                        <SelectItem key={i} value={p.custom ? `OTHER:${p.label}` : p.value}>
+                          {p.label}{p.fee > 0 ? ` (${p.fee} default)` : ''}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.platform === 'OTHER' && (
+                  {form.platform === 'OTHER' && !form.platformOther && (
                     <Input value={form.platformOther} onChange={(e) => setForm({ ...form, platformOther: e.target.value })} placeholder="e.g. Facebook, Walk-in…" className="mt-2" autoFocus />
                   )}
                 </div>
