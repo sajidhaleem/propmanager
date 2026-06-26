@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search')
     const status = searchParams.get('status')
     const platform = searchParams.get('platform')
+    const hotelEyeStatus = searchParams.get('hotelEyeStatus')
     const propertyId = searchParams.get('propertyId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
     }
     if (status) where.status = status
     if (platform) where.platform = platform
+    if (hotelEyeStatus) where.hotelEyeStatus = hotelEyeStatus
     if (propertyId) where.propertyId = propertyId
     if (startDate && endDate) {
       // Overlap: booking overlaps with [startDate, endDate] window

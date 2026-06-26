@@ -103,6 +103,8 @@ model Booking {
   refCell              String?
   refVerified          Boolean? @default(false)
 
+  hotelEyeStatus  String   @default("NOT_ENTERED") // NOT_ENTERED | ENTERED
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -247,6 +249,7 @@ model HotelEyeJob {
   id        String   @id @default(cuid())
   status    String   @default("pending") // pending | processing | done | failed
   payload   Json
+  bookingId String?
   error     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

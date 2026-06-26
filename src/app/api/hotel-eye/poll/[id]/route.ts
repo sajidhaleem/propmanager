@@ -25,10 +25,17 @@ export async function PATCH(
     return apiError('status must be done, failed, or pending', 400)
   }
 
-  await prisma.hotelEyeJob.update({
+  const job = await prisma.hotelEyeJob.update({
     where: { id },
     data: { status, error: error || null },
   })
+
+  if (status === 'done' && job.bookingId) {
+    await prisma.booking.update({
+      where: { id: job.bookingId },
+      data: { hotelEyeStatus: 'ENTERED' },
+    }).catch(() => {/* booking may have been deleted */})
+  }
 
   return NextResponse.json({ success: true })
 }

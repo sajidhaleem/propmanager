@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
     const payload = await req.json()
 
     // Deduplicate: if same CNIC already has a pending/processing job, reuse it
-    const cnic = (payload as any).cnic as string | undefined
+    const cnic      = (payload as any).cnic      as string | undefined
+    const bookingId = (payload as any).bookingId as string | undefined
+
     if (cnic) {
       const existing = await prisma.hotelEyeJob.findFirst({
         where: {
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const job = await prisma.hotelEyeJob.create({ data: { payload } })
+    const job = await prisma.hotelEyeJob.create({ data: { payload, bookingId: bookingId ?? null } })
     return NextResponse.json({ success: true, jobId: job.id })
   } catch (err: any) {
     if (err.message === 'Unauthorized') return apiError('Unauthorized', 401)

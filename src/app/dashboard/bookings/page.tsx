@@ -88,6 +88,7 @@ export default function BookingsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
+  const [hotelEyeFilter, setHotelEyeFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [editBooking, setEditBooking] = useState<Booking | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -108,6 +109,7 @@ export default function BookingsPage() {
   if (search) params.search = search
   if (statusFilter !== 'all') params.status = statusFilter
   if (platformFilter !== 'all') params.platform = platformFilter
+  if (hotelEyeFilter !== 'all') params.hotelEyeStatus = hotelEyeFilter
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
   const { data: propertiesData } = useQuery({ queryKey: ['properties'], queryFn: fetchProperties })
@@ -231,6 +233,7 @@ export default function BookingsPage() {
 
   async function pushToHotelEye(b: Booking) {
     const payload = {
+      bookingId:   b.id,
       cnic:        (b as any).guestCnic        || '',
       name:        b.guestName,
       father_name: (b as any).guestFatherName  || '',
@@ -410,6 +413,14 @@ export default function BookingsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={hotelEyeFilter} onValueChange={(v) => { setHotelEyeFilter(v); setPage(1) }}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Hotel Eye" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Hotel Eye</SelectItem>
+            <SelectItem value="NOT_ENTERED">Not Entered</SelectItem>
+            <SelectItem value="ENTERED">Entered</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Sort controls */}
@@ -545,6 +556,19 @@ export default function BookingsPage() {
                           <Badge className={getPlatformColor(b.platform)} variant="outline">
                             {b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform === 'VRBO' ? 'VRBO' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase()}
                           </Badge>
+                        </div>
+
+                        {/* Hotel Eye status */}
+                        <div className="hidden md:block shrink-0">
+                          {(b as any).hotelEyeStatus === 'ENTERED' ? (
+                            <Badge variant="outline" className="text-green-600 border-green-600/40 bg-green-500/10 text-[10px] px-1.5 py-0">
+                              HE ✓
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 text-[10px] px-1.5 py-0">
+                              HE —
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Status selector */}
