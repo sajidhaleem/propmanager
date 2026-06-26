@@ -245,15 +245,16 @@ export default function BookingsPage() {
       children:    (b as any).accompanyingChildren || 0,
     }
     try {
-      const res = await fetch('http://localhost:5000/fill', {
+      const res = await fetch('/api/hotel-eye/fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Hotel Eye tool not running')
-      toast.success('Hotel Eye browser opened — log in then check-in will auto-fill')
-    } catch {
-      toast.error('Start the Hotel Eye tool first (run hotel-eye-cnic/run.bat)', { duration: 5000 })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Hotel Eye tool not reachable')
+      toast.success('Hotel Eye browser opened — log in then fields will auto-fill')
+    } catch (e: any) {
+      toast.error(e.message || 'Start the Hotel Eye tool (run start-tunnel.bat on your PC)', { duration: 6000 })
     }
   }
 
