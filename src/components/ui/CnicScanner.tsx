@@ -1,8 +1,7 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
-import { ScanLine, Camera, Upload, X, Loader2, CheckCircle2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useRef, useState, DragEvent } from 'react'
+import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -20,127 +19,202 @@ interface Props {
   className?: string
 }
 
-export function CnicScanner({ onExtracted, className }: Props) {
-  const [mode, setMode] = useState<'idle' | 'uploading' | 'webcam' | 'scanning' | 'done'>('idle')
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+type SideState = 'idle' | 'scanning' | 'done' | 'error'
 
-  const scanImage = useCallback(async (file: File | Blob) => {
-    setMode('scanning')
+interface SideData {
+  state: SideState
+  preview: string | null
+}
+
+const EMPTY: SideData = { state: 'idle', preview: null }
+
+export function CnicScanner({ onExtracted, className }: Props) {
+  const [front, setFront] = useState<SideData>(EMPTY)
+  const [back,  setBack]  = useState<SideData>(EMPTY)
+  const [frontDrag, setFrontDrag] = useState(false)
+  const [backDrag,  setBackDrag]  = useState(false)
+
+  const frontRef = useRef<HTMLInputElement>(null)
+  const backRef  = useRef<HTMLInputElement>(null)
+
+  async function scan(file: File | Blob, side: 'front' | 'back', preview: string) {
+    const set = side === 'front' ? setFront : setBack
+    set({ preview, state: 'scanning' })
+
     const fd = new FormData()
     fd.append('file', file)
+    fd.append('side', side)
+
     try {
-      const res = await fetch('/api/cnic-extract', { method: 'POST', body: fd })
+      const res  = await fetch('/api/cnic-extract', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Extraction failed')
-      onExtracted(json.data ?? json)
-      setMode('done')
-      toast.success('CNIC scanned — fields filled')
-    } catch (e: any) {
-      toast.error(e.message || 'Could not read CNIC')
-      setMode('idle')
-    }
-  }, [onExtracted])
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+      // Emit result — applyScannedCnic uses `data.field || f.field` so
+      // empty strings from this side won't overwrite values from the other side
+      onExtracted(json.data ?? json)
+      set(prev => ({ ...prev, state: 'done' }))
+      toast.success(side === 'front' ? 'Front scanned — name & CNIC filled' : 'Back scanned — address filled')
+    } catch (e: any) {
+      set(prev => ({ ...prev, state: 'error' }))
+      toast.error(e.message || `Could not read CNIC ${side}`)
+    }
+  }
+
+  function pickFile(e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-    setMode('uploading')
-    scanImage(file)
+    scan(file, side, URL.createObjectURL(file))
     e.target.value = ''
   }
 
-  async function startWebcam() {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      setStream(s)
-      setMode('webcam')
-      setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = s }, 100)
-    } catch {
-      toast.error('Camera not available')
+  function drop(e: DragEvent<HTMLDivElement>, side: 'front' | 'back') {
+    e.preventDefault()
+    ;(side === 'front' ? setFrontDrag : setBackDrag)(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file || !file.type.startsWith('image/')) {
+      toast.error('Please drop an image file')
+      return
     }
+    scan(file, side, URL.createObjectURL(file))
   }
 
-  function captureWebcam() {
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    if (!video || !canvas) return
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d')!.drawImage(video, 0, 0)
-    const url = canvas.toDataURL('image/jpeg', 0.92)
-    setPreviewUrl(url)
-    stream?.getTracks().forEach(t => t.stop())
-    setStream(null)
-    canvas.toBlob(blob => { if (blob) scanImage(blob) }, 'image/jpeg', 0.92)
-  }
-
-  function reset() {
-    stream?.getTracks().forEach(t => t.stop())
-    setStream(null)
-    setPreviewUrl(null)
-    setMode('idle')
-  }
+  const bothDone = front.state === 'done' && back.state === 'done'
 
   return (
     <div className={cn('rounded-xl border bg-muted/30 p-4 space-y-3', className)}>
       <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
         <ScanLine className="h-4 w-4 text-primary" />
-        CNIC Scanner — scan ID to auto-fill guest fields
+        CNIC Scanner — upload front &amp; back to auto-fill guest fields
       </div>
 
-      {/* Webcam view */}
-      {mode === 'webcam' && (
-        <div className="space-y-2">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-lg border bg-black max-h-48 object-cover" />
-          <canvas ref={canvasRef} className="hidden" />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={captureWebcam} className="flex-1">Capture</Button>
-            <Button size="sm" variant="outline" onClick={reset}>Cancel</Button>
-          </div>
+      <div className="grid grid-cols-2 gap-3">
+        {/* Front */}
+        <input ref={frontRef} type="file" accept="image/*" className="hidden" onChange={e => pickFile(e, 'front')} />
+        <DropZone
+          label="Front side"
+          hint="CNIC No · Name · DOB"
+          data={front}
+          dragging={frontDrag}
+          onClick={() => front.state !== 'scanning' && frontRef.current?.click()}
+          onDrop={e => drop(e, 'front')}
+          onDragOver={e => { e.preventDefault(); setFrontDrag(true) }}
+          onDragLeave={() => setFrontDrag(false)}
+          onReset={() => setFront(EMPTY)}
+        />
+
+        {/* Back */}
+        <input ref={backRef} type="file" accept="image/*" className="hidden" onChange={e => pickFile(e, 'back')} />
+        <DropZone
+          label="Back side"
+          hint="Address"
+          data={back}
+          dragging={backDrag}
+          onClick={() => back.state !== 'scanning' && backRef.current?.click()}
+          onDrop={e => drop(e, 'back')}
+          onDragOver={e => { e.preventDefault(); setBackDrag(true) }}
+          onDragLeave={() => setBackDrag(false)}
+          onReset={() => setBack(EMPTY)}
+        />
+      </div>
+
+      {bothDone && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900/40 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Both sides scanned — all guest fields populated
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── DropZone ─────────────────────────────────────────────────────────────────
+
+interface DropZoneProps {
+  label: string
+  hint: string
+  data: SideData
+  dragging: boolean
+  onClick: () => void
+  onDrop: (e: DragEvent<HTMLDivElement>) => void
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void
+  onDragLeave: () => void
+  onReset: () => void
+}
+
+function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, onDragLeave, onReset }: DropZoneProps) {
+  const { state, preview } = data
+  const scanning = state === 'scanning'
+  const done     = state === 'done'
+  const error    = state === 'error'
+
+  return (
+    <div
+      className={cn(
+        'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed',
+        'min-h-[120px] p-3 text-center gap-1.5 select-none transition-colors',
+        !preview && 'cursor-pointer',
+        dragging       && 'border-primary bg-primary/5',
+        !dragging && !preview && 'border-border hover:border-primary/50 hover:bg-muted/50',
+        preview        && 'border-transparent bg-card cursor-pointer',
+      )}
+      onClick={onClick}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+    >
+      {/* Background preview */}
+      {preview && (
+        <div className="absolute inset-0 rounded-lg overflow-hidden">
+          <img src={preview} alt={label} className="w-full h-full object-cover opacity-50" />
+          <div className="absolute inset-0 bg-black/30 rounded-lg" />
         </div>
       )}
 
-      {/* Scanning / preview */}
-      {(mode === 'uploading' || mode === 'scanning') && previewUrl && (
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-          <img src={previewUrl} alt="CNIC" className="h-16 w-24 rounded object-cover border shrink-0" />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Reading CNIC with Claude Vision…
-          </div>
-        </div>
-      )}
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-1">
+        {scanning && (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">Reading…</span>
+          </>
+        )}
+        {done && (
+          <>
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <span className="text-xs font-medium text-green-600 dark:text-green-400">Scanned</span>
+            <span className={cn('text-[10px] font-bold tracking-widest', preview ? 'text-white/70' : 'text-muted-foreground')}>{label.toUpperCase()}</span>
+          </>
+        )}
+        {error && (
+          <>
+            <X className="h-5 w-5 text-destructive" />
+            <span className="text-xs text-destructive">Failed</span>
+            <span className="text-[10px] text-muted-foreground">Click to retry</span>
+          </>
+        )}
+        {state === 'idle' && (
+          <>
+            {dragging
+              ? <Upload className="h-5 w-5 text-primary" />
+              : <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            }
+            <span className="text-xs font-semibold">{label}</span>
+            <span className="text-[10px] text-muted-foreground">{hint}</span>
+            <span className="text-[10px] text-muted-foreground">Drop or click to upload</span>
+          </>
+        )}
+      </div>
 
-      {/* Done */}
-      {mode === 'done' && (
-        <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900/40 p-3">
-          <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            CNIC read — guest fields populated below
-          </div>
-          <Button size="sm" variant="ghost" onClick={reset} className="h-7 w-7 p-0 text-muted-foreground">
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
-
-      {/* Actions */}
-      {(mode === 'idle' || mode === 'done') && (
-        <div className="flex gap-2 flex-wrap">
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="gap-1.5">
-            <Upload className="h-3.5 w-3.5" /> Upload CNIC Photo
-          </Button>
-          <Button size="sm" variant="outline" onClick={startWebcam} className="gap-1.5">
-            <Camera className="h-3.5 w-3.5" /> Use Camera
-          </Button>
-        </div>
+      {/* Reset × */}
+      {(done || error) && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onReset() }}
+          className="absolute top-1.5 right-1.5 z-20 h-5 w-5 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
       )}
     </div>
   )
