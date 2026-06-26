@@ -108,8 +108,14 @@ export default function DashboardPage() {
   const tomorrowDate = addDays(todayDate, 1)
 
   const bucketFor = (date: Date) => ({
-    arrivals: upcomingBookings.filter(b => isSameDay(parseISO(b.checkIn), date)),
-    departures: upcomingBookings.filter(b => isSameDay(parseISO(b.checkOut), date)),
+    arrivals:   upcomingBookings.filter(b =>
+      isSameDay(parseISO(b.checkIn), date) &&
+      ['CONFIRMED', 'PENDING'].includes(b.status)
+    ),
+    departures: upcomingBookings.filter(b =>
+      isSameDay(parseISO(b.checkOut), date) &&
+      b.status === 'CHECKED_IN'
+    ),
   })
   const todayBucket = bucketFor(todayDate)
   const tomorrowBucket = bucketFor(tomorrowDate)
