@@ -251,10 +251,10 @@ export default function BookingsPage() {
         body: JSON.stringify(payload),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Hotel Eye tool not reachable')
-      toast.success('Hotel Eye browser opened — log in then fields will auto-fill')
+      if (!res.ok) throw new Error(json.error || 'Failed to queue job')
+      toast.success('Queued — Hotel Eye tool on your PC will open the browser shortly')
     } catch (e: any) {
-      toast.error(e.message || 'Start the Hotel Eye tool (run start-tunnel.bat on your PC)', { duration: 6000 })
+      toast.error(e.message || 'Failed to queue Hotel Eye job', { duration: 5000 })
     }
   }
 

@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   '/icons',
   '/offline.html',
   '/.well-known',
+  '/api/hotel-eye/poll',
 ]
 
 const SECURITY_HEADERS = {

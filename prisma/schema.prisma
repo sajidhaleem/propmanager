@@ -243,6 +243,17 @@ model Backup {
   @@index([createdAt])
 }
 
+model HotelEyeJob {
+  id        String   @id @default(cuid())
+  status    String   @default("pending") // pending | processing | done | failed
+  payload   Json
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
 model Document {
   id        String   @id @default(cuid())
   bookingId String
