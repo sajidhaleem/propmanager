@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus, UserCheck, UserX, Shield, Key,
+  Plus, UserCheck, UserX, Shield, Key, X,
   Pencil, Trash2, Eye, EyeOff, Save, Lock, Database, RotateCcw, Download, Layers,
 } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
@@ -816,6 +816,8 @@ function FinanceTab() {
 
   const [items, setItems] = useState<PlatformItem[]>([])
   const [newLabel, setNewLabel] = useState('')
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [editDraft, setEditDraft] = useState<PlatformItem | null>(null)
 
   useEffect(() => {
     if (platformData) setItems(platformData)
@@ -958,38 +960,88 @@ function FinanceTab() {
             <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (
             <>
-              <div className="grid grid-cols-[1fr_180px_60px_36px] gap-2 px-2 pb-1 border-b text-xs font-medium text-muted-foreground">
+              <div className="grid grid-cols-[1fr_160px_64px_72px] gap-2 px-2 pb-1 border-b text-xs font-medium text-muted-foreground">
                 <span>Label (shown in app)</span>
-                <span>Default Fee (amount)</span>
+                <span>Default Fee</span>
                 <span>Type</span>
                 <span />
               </div>
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr_180px_60px_36px] gap-2 items-center">
-                  <Input
-                    value={item.label}
-                    onChange={e => updateItem(idx, { label: e.target.value })}
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={item.fee}
-                    onChange={e => updateItem(idx, { fee: Number(e.target.value) || 0 })}
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                  <Badge variant="outline" className={item.custom ? 'text-violet-600 border-violet-400/40 bg-violet-500/10 text-[10px]' : 'text-muted-foreground text-[10px]'}>
-                    {item.custom ? 'custom' : 'built-in'}
-                  </Badge>
-                  {isAdmin && item.custom ? (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeItem(idx)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  ) : <div />}
-                </div>
-              ))}
+              {items.map((item, idx) => {
+                const isEditing = editingIdx === idx
+                return (
+                  <div key={idx} className={`grid grid-cols-[1fr_160px_64px_72px] gap-2 items-center rounded-md px-1 py-0.5 ${isEditing ? 'bg-muted/40 ring-1 ring-primary/20' : ''}`}>
+                    {isEditing && editDraft ? (
+                      <>
+                        <Input
+                          value={editDraft.label}
+                          onChange={e => setEditDraft(d => d ? { ...d, label: e.target.value } : d)}
+                          autoFocus
+                          className="h-8 text-sm"
+                        />
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editDraft.fee}
+                          onChange={e => setEditDraft(d => d ? { ...d, fee: Number(e.target.value) || 0 } : d)}
+                          className="h-8 text-sm"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm px-2 truncate">{item.label}</span>
+                        <span className="text-sm px-2 text-muted-foreground">{item.fee > 0 ? item.fee : '—'}</span>
+                      </>
+                    )}
+                    <Badge variant="outline" className={item.custom ? 'text-violet-600 border-violet-400/40 bg-violet-500/10 text-[10px]' : 'text-muted-foreground text-[10px]'}>
+                      {item.custom ? 'custom' : 'built-in'}
+                    </Badge>
+                    {isAdmin && (
+                      <div className="flex items-center gap-0.5 justify-end">
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary"
+                              title="Save"
+                              onClick={() => {
+                                if (editDraft) updateItem(idx, editDraft)
+                                setEditingIdx(null); setEditDraft(null)
+                              }}
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7"
+                              title="Cancel"
+                              onClick={() => { setEditingIdx(null); setEditDraft(null) }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7"
+                              title="Edit"
+                              onClick={() => { setEditingIdx(idx); setEditDraft({ ...item }) }}
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                              title="Delete"
+                              onClick={() => {
+                                if (confirm(`Delete "${item.label}"?`)) removeItem(idx)
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
               {isAdmin && (
                 <div className="flex items-center gap-2 pt-3 border-t mt-3">
                   <Input
