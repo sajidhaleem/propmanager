@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -710,10 +710,9 @@ export default function BookingsPage() {
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
-          className="max-w-3xl p-0 gap-0 overflow-hidden"
+          className="max-w-5xl p-0 gap-0 overflow-hidden"
           onInteractOutside={(e) => e.preventDefault()}
         >
-          {/* Inner flex wrapper — avoids conflicting with DialogContent's base `grid` class */}
           <div className="flex flex-col max-h-[92vh]">
 
           {/* Sticky header */}
@@ -723,8 +722,11 @@ export default function BookingsPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Scrollable body */}
-          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-5 space-y-5">
+          {/* Two-column body */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+
+          {/* Scrollable form */}
+          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-5 space-y-5 border-r">
 
             {/* CNIC Scanner */}
             <CnicScanner onExtracted={applyScannedCnic} />
@@ -1085,10 +1087,110 @@ export default function BookingsPage() {
                 </p>
               )}
             </div>
+          </div>{/* end scrollable form */}
+
+          {/* ── Right summary panel ───────────────────── */}
+          <div className="w-[270px] shrink-0 overflow-y-auto bg-muted/20 px-4 py-5 space-y-4 text-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Summary</p>
+
+            {/* Nights + totals - always visible */}
+            {(() => {
+              const nights = form.checkIn && form.checkOut
+                ? Math.max(1, Math.ceil((new Date(form.checkOut).getTime() - new Date(form.checkIn).getTime()) / 86400000))
+                : 0
+              const total = (Number(form.rate)||0)*nights + (Number(form.cleaningFee)||0) + (Number(form.miscCharges)||0)
+              const outstanding = Math.max(0, total - (Number(form.paidAmount)||0))
+              return (
+                <div className="rounded-lg border bg-background p-3 space-y-1.5">
+                  {nights > 0 && <SumRow label="Nights" value={String(nights)} />}
+                  {total > 0  && <SumRow label="Total"  value={format(total)} />}
+                  {(Number(form.paidAmount)||0) > 0 && <SumRow label="Paid" value={format(Number(form.paidAmount))} />}
+                  {outstanding > 0
+                    ? <SumRow label="Outstanding" value={format(outstanding)} cls="text-amber-500 font-semibold" />
+                    : total > 0 ? <SumRow label="Outstanding" value="Fully paid ✓" cls="text-green-600 font-semibold" /> : null}
+                </div>
+              )
+            })()}
+
+            {/* Guest */}
+            <SumSection title="Guest">
+              <SumRow label="Name"    value={form.guestName} />
+              <SumRow label="Email"   value={form.guestEmail} />
+              <SumRow label="Phone"   value={form.guestPhone} />
+            </SumSection>
+
+            {/* Stay */}
+            <SumSection title="Stay">
+              <SumRow label="Check-in"  value={form.checkIn  ? fnsFormat(new Date(form.checkIn),  'MMM d yyyy, HH:mm') : ''} />
+              <SumRow label="Check-out" value={form.checkOut ? fnsFormat(new Date(form.checkOut), 'MMM d yyyy, HH:mm') : ''} />
+              <SumRow label="Property"  value={properties.find((p: any) => p.id === form.propertyId)?.name ?? ''} />
+              <SumRow label="Platform"  value={form.platformOther || platforms.find(p => p.value === form.platform)?.label || form.platform} />
+              <SumRow label="Status"    value={form.status} />
+            </SumSection>
+
+            {/* Financials */}
+            <SumSection title="Financials">
+              <SumRow label="Rate/night"    value={form.rate       ? `${currencyInfo.symbol} ${form.rate}`       : ''} />
+              <SumRow label="Cleaning fee"  value={form.cleaningFee? `${currencyInfo.symbol} ${form.cleaningFee}`: ''} />
+              <SumRow label="Platform fee"  value={form.platformFee? `${currencyInfo.symbol} ${form.platformFee}`: ''} />
+              <SumRow label="Misc charges"  value={form.miscCharges? `${currencyInfo.symbol} ${form.miscCharges}`: ''} />
+              {form.miscDescription && <SumRow label="Misc note" value={form.miscDescription} />}
+            </SumSection>
+
+            {/* Hotel Eye */}
+            {(form.guestCnic || form.guestFatherName || form.guestAddress || form.purposeOfVisit) && (
+              <SumSection title="Hotel Eye / Identity">
+                <SumRow label="CNIC"          value={form.guestCnic} />
+                <SumRow label="Father"        value={form.guestFatherName} />
+                <SumRow label="Gender"        value={form.guestGender} />
+                <SumRow label="Address"       value={form.guestAddress} />
+                <SumRow label="Province"      value={form.guestProvince} />
+                <SumRow label="District"      value={form.guestDistrict} />
+                <SumRow label="Temp Address"  value={form.tempAddress} />
+                <SumRow label="Temp Province" value={form.tempProvince} />
+                <SumRow label="Temp District" value={form.tempDistrict} />
+                <SumRow label="Room #"        value={form.roomNumber} />
+                <SumRow label="Purpose"       value={form.purposeOfVisit} />
+                {(Number(form.accompanyingMale)||Number(form.accompanyingFemale)||Number(form.accompanyingChildren)) > 0 && (
+                  <SumRow label="Guests" value={`M:${form.accompanyingMale} F:${form.accompanyingFemale} C:${form.accompanyingChildren}`} />
+                )}
+              </SumSection>
+            )}
+
+            {/* Reference */}
+            {form.refName && (
+              <SumSection title="Reference / Dealer">
+                <SumRow label="Name"     value={form.refName} />
+                <SumRow label="Father"   value={form.refFatherName} />
+                <SumRow label="Business" value={form.refBusiness} />
+                <SumRow label="Cell"     value={form.refCell} />
+                <SumRow label="Address"  value={form.refAddress} />
+                {form.refVerified && <SumRow label="Verified" value="Yes ✓" cls="text-green-600" />}
+              </SumSection>
+            )}
+
+            {/* Notes & reminder */}
+            {form.notes && (
+              <SumSection title="Notes">
+                <p className="text-xs text-foreground break-words">{form.notes}</p>
+              </SumSection>
+            )}
+            {form.reminderAt && (
+              <SumSection title="Reminder">
+                <SumRow label="At"   value={fnsFormat(new Date(form.reminderAt), 'MMM d yyyy, HH:mm')} />
+                <SumRow label="Note" value={form.reminderNote} />
+              </SumSection>
+            )}
           </div>
+
+          </div>{/* end two-column body */}
 
           {/* Sticky footer */}
           <DialogFooter className="px-6 py-4 border-t shrink-0 bg-background">
+            <Button variant="ghost" className="mr-auto text-muted-foreground hover:text-destructive"
+              onClick={() => { if (confirm('Clear all fields?')) setForm(EMPTY_FORM) }}>
+              Clear
+            </Button>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button
               onClick={() => {
@@ -1107,6 +1209,25 @@ export default function BookingsPage() {
           </div>{/* end inner flex wrapper */}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function SumSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{title}</p>
+      <div className="rounded-lg border bg-background px-3 py-2 space-y-1">{children}</div>
+    </div>
+  )
+}
+
+function SumRow({ label, value, cls }: { label: string; value?: string | number; cls?: string }) {
+  if (!value && value !== 0) return null
+  return (
+    <div className="flex items-start justify-between gap-2 text-xs">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className={cn('text-right break-words max-w-[140px]', cls)}>{value}</span>
     </div>
   )
 }
