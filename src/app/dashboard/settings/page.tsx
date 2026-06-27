@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { CurrencySelector } from '@/components/ui/CurrencySelector'
 import { getCurrency } from '@/lib/currencies'
 import { useCurrency } from '@/hooks/useCurrency'
+import { type PlatformItem, DEFAULT_PLATFORMS } from '@/lib/platforms'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type UserRow = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }
@@ -800,21 +801,6 @@ function BackupsTab() {
 }
 
 // ── Platforms Tab ─────────────────────────────────────────────────────────────
-
-export type PlatformItem = {
-  value: string      // DB enum value: AIRBNB | DIRECT | BOOKING_COM | VRBO | OTHER
-  label: string      // display name
-  fee:   number      // default platform fee
-  custom?: boolean   // user-added entry
-}
-
-export const DEFAULT_PLATFORMS: PlatformItem[] = [
-  { value: 'AIRBNB',      label: 'Airbnb',       fee: 0 },
-  { value: 'DIRECT',      label: 'Direct',       fee: 0 },
-  { value: 'BOOKING_COM', label: 'Booking.com',  fee: 0 },
-  { value: 'VRBO',        label: 'VRBO',         fee: 0 },
-  { value: 'OTHER',       label: 'Other',        fee: 0 },
-]
 
 function PlatformsTab() {
   const queryClient = useQueryClient()

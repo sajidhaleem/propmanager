@@ -19,7 +19,7 @@ import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
-import { DEFAULT_PLATFORMS, type PlatformItem } from '@/app/dashboard/settings/page'
+import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 
 async function fetchBookings(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
