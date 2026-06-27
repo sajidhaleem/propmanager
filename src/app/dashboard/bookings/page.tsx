@@ -455,8 +455,7 @@ export default function BookingsPage() {
           { field: 'totalAmount', label: 'Amount' },
           { field: 'nights',      label: 'Nights' },
           { field: 'status',      label: 'Status' },
-          { field: 'platform',       label: 'Platform' },
-          { field: 'hotelEyeStatus', label: 'Hotel Eye' },
+          { field: 'platform', label: 'Platform' },
         ].map(({ field, label }) => (
           <button
             key={field}
@@ -474,6 +473,17 @@ export default function BookingsPage() {
             )}
           </button>
         ))}
+        <button
+          onClick={() => { setHotelEyeFilter(f => f === 'ENTERED' ? 'all' : 'ENTERED'); setPage(1) }}
+          className={cn(
+            'flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors',
+            hotelEyeFilter === 'ENTERED'
+              ? 'bg-green-600 text-white border-green-600 font-semibold'
+              : 'hover:bg-accent border-border'
+          )}
+        >
+          HE: Filed
+        </button>
       </div>
 
       {/* Grouped bookings list */}
