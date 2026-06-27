@@ -455,7 +455,8 @@ export default function BookingsPage() {
           { field: 'totalAmount', label: 'Amount' },
           { field: 'nights',      label: 'Nights' },
           { field: 'status',      label: 'Status' },
-          { field: 'platform',    label: 'Platform' },
+          { field: 'platform',       label: 'Platform' },
+          { field: 'hotelEyeStatus', label: 'Hotel Eye' },
         ].map(({ field, label }) => (
           <button
             key={field}
@@ -594,12 +595,12 @@ export default function BookingsPage() {
                         {/* Hotel Eye status */}
                         <div className="hidden md:block shrink-0">
                           {(b as any).hotelEyeStatus === 'ENTERED' ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600/40 bg-green-500/10 text-[10px] px-1.5 py-0">
-                              HE ✓
+                            <Badge variant="outline" className="text-green-600 border-green-600/40 bg-green-500/10 text-[10px] px-2 py-0 gap-1">
+                              HE: Filed
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 text-[10px] px-1.5 py-0">
-                              HE —
+                            <Badge variant="outline" className="text-amber-500 border-amber-500/40 bg-amber-500/10 text-[10px] px-2 py-0 gap-1">
+                              HE: Pending
                             </Badge>
                           )}
                         </div>
