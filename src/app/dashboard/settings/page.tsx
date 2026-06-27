@@ -279,7 +279,6 @@ export default function SettingsPage() {
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="account">My Account</TabsTrigger>
           <TabsTrigger value="backups">Backups</TabsTrigger>
-          <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
 
         {/* ── Currency ── */}
@@ -511,36 +510,6 @@ export default function SettingsPage() {
         {/* ── Backups ── */}
         <BackupsTab />
 
-        {/* ── System Info ── */}
-        <TabsContent value="system">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" />Security</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>✓ JWT authentication with 7-day expiry</p>
-                <p>✓ Role-based access control (RBAC)</p>
-                <p>✓ HTTP-only cookies</p>
-                <p>✓ bcrypt password hashing (cost 12)</p>
-                <p>✓ Input validation via Zod</p>
-                <p>✓ SQL injection prevention via Prisma ORM</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Key className="h-4 w-4" />System Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>App: PropManager v1.0.0</p>
-                <p>Framework: Next.js 15</p>
-                <p>Database: PostgreSQL + Prisma ORM</p>
-                <p>Auth: Custom JWT</p>
-                <p>Environment: {process.env.NODE_ENV}</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* ── Add User Modal ── */}
