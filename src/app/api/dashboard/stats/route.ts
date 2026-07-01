@@ -31,14 +31,21 @@ export async function GET(req: NextRequest) {
       upcomingBookings,
       outstandingAggregate,
     ] = await Promise.all([
-      // Revenue — use income.netAmount (gross minus platform fee)
-      prisma.income.aggregate({
-        _sum: { netAmount: true },
-        where: { receivedAt: { gte: thisMonthStart, lte: thisMonthEnd } },
+      // Revenue — paidAmount from bookings checking out this month
+      // (income records only exist post-checkout, so paidAmount is always current)
+      prisma.booking.aggregate({
+        _sum: { paidAmount: true },
+        where: {
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+          checkOut: { gte: thisMonthStart, lte: thisMonthEnd },
+        },
       }),
-      prisma.income.aggregate({
-        _sum: { netAmount: true },
-        where: { receivedAt: { gte: lastMonthStart, lte: lastMonthEnd } },
+      prisma.booking.aggregate({
+        _sum: { paidAmount: true },
+        where: {
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+          checkOut: { gte: lastMonthStart, lte: lastMonthEnd },
+        },
       }),
       // Expenses (operational costs)
       prisma.expense.aggregate({
@@ -92,8 +99,8 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    const currentRevenue  = currentIncome._sum.netAmount   || 0
-    const lastRevenue     = lastMonthIncome._sum.netAmount  || 0
+    const currentRevenue  = currentIncome._sum.paidAmount  || 0
+    const lastRevenue     = lastMonthIncome._sum.paidAmount || 0
     const currentExp      = (currentExpenses._sum.amount || 0) + (currentPayouts._sum.amount || 0)
     const lastExp         = (lastMonthExpenses._sum.amount || 0) + (lastMonthPayouts._sum.amount || 0)
 
