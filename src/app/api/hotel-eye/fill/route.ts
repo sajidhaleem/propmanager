@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       const existing = await prisma.hotelEyeJob.findFirst({
         where: {
           status: { in: ['pending', 'processing'] },
+          ...(bookingId ? { bookingId } : {}),
           payload: { path: ['cnic'], equals: cnic },
         },
         orderBy: { createdAt: 'desc' },

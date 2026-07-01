@@ -15,18 +15,21 @@ function checkSecret(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!checkSecret(req)) return apiError('Forbidden', 403)
 
-  const job = await prisma.hotelEyeJob.findFirst({
-    where: { status: 'pending' },
-    orderBy: { createdAt: 'asc' },
-  })
+  // Atomic claim: SELECT ... FOR UPDATE SKIP LOCKED prevents two pollers grabbing the same job
+  const rows = await prisma.$queryRaw<{ id: string; payload: unknown }[]>`
+    UPDATE "HotelEyeJob"
+    SET status = 'processing', "updatedAt" = NOW()
+    WHERE id = (
+      SELECT id FROM "HotelEyeJob"
+      WHERE status = 'pending'
+      ORDER BY "createdAt" ASC
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING id, payload
+  `
 
-  if (!job) return NextResponse.json({ job: null })
+  if (!rows.length) return NextResponse.json({ job: null })
 
-  // Mark as processing immediately so two pollers don't grab the same job
-  await prisma.hotelEyeJob.update({
-    where: { id: job.id },
-    data: { status: 'processing' },
-  })
-
-  return NextResponse.json({ job: { id: job.id, payload: job.payload } })
+  return NextResponse.json({ job: { id: rows[0].id, payload: rows[0].payload } })
 }

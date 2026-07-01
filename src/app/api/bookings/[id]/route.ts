@@ -70,8 +70,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             cleaningFee: booking.cleaningFee,
             netAmount: booking.netAmount,
             receivedAt: new Date(),
-            month: new Date().getMonth() + 1,
-            year: new Date().getFullYear(),
+            month: booking.checkOut.getMonth() + 1,
+            year: booking.checkOut.getFullYear(),
           },
         })
       }
