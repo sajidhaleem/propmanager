@@ -66,7 +66,7 @@ function slotType(b: Booking, day: Date): Slot | null {
 
 const ROOM_W = 130
 const DAY_W  = 132
-const ROW_H  = 72
+const ROW_H  = 88
 
 // ── Day-view constants ─────────────────────────────────────────────────────
 
@@ -707,14 +707,14 @@ export default function CalendarPage() {
                                     href="/dashboard/bookings"
                                     title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\nTotal: ${money(b.totalAmount)} · Paid: ${money(b.paidAmount ?? 0)}`}
                                     className={cn(
-                                      'block overflow-hidden px-1.5 py-1 text-[10px] leading-tight hover:brightness-110 transition-all cursor-pointer',
+                                      'block overflow-hidden px-1.5 py-1 text-xs leading-tight hover:brightness-110 transition-all cursor-pointer',
                                       c.bg, c.text, radius,
                                     )}
                                   >
                                     {(slot === 'checkin' || slot === 'single') && (
                                       <>
                                         <div className="font-bold truncate flex items-center gap-0.5">
-                                          {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0 opacity-90" />}
+                                          {reminderDay && <Bell className="h-3 w-3 shrink-0 opacity-90" />}
                                           <span className="truncate">{b.guestName}</span>
                                         </div>
                                         <div className="opacity-90 mt-0.5">
@@ -725,14 +725,14 @@ export default function CalendarPage() {
                                     )}
                                     {slot === 'middle' && (
                                       <div className="font-semibold truncate opacity-80 py-0.5 flex items-center gap-0.5">
-                                        {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0" />}
+                                        {reminderDay && <Bell className="h-3 w-3 shrink-0" />}
                                         <span className="truncate">{b.guestName}</span>
                                       </div>
                                     )}
                                     {slot === 'checkout' && (
                                       <>
                                         <div className="font-semibold truncate opacity-80 flex items-center gap-0.5">
-                                          {reminderDay && <Bell className="h-2.5 w-2.5 shrink-0" />}
+                                          {reminderDay && <Bell className="h-3 w-3 shrink-0" />}
                                           <span className="truncate">{b.guestName}</span>
                                         </div>
                                         <div className="opacity-70">out {format(co, 'h:mm a')}</div>
