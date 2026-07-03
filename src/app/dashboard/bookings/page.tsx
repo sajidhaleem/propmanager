@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -20,6 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
+import { useSearchParams } from 'next/navigation'
 
 async function fetchBookings(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString()
@@ -99,6 +100,28 @@ export default function BookingsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [sectionOpen, setSectionOpen] = useState({ misc: false, reminder: false, hotelEye: false, reference: false })
   function toggleSection(key: keyof typeof sectionOpen) { setSectionOpen(s => ({ ...s, [key]: !s[key] })) }
+
+  // Auto-open booking modal when arriving from the calendar day view with ?checkIn=
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const checkIn = searchParams.get('checkIn')
+    if (!checkIn) return
+    // Format checkIn for datetime-local input (YYYY-MM-DDTHH:MM)
+    const localValue = checkIn.length === 10 ? `${checkIn}T10:00` : checkIn.slice(0, 16)
+    // Compute a default checkout 1 day later at noon
+    const ciDate = new Date(localValue)
+    const coDate = new Date(ciDate)
+    coDate.setDate(coDate.getDate() + 1)
+    coDate.setHours(12, 0, 0, 0)
+    const checkOut = coDate.toISOString().slice(0, 16)
+    setEditBooking(null)
+    setForm({ ...EMPTY_FORM, checkIn: localValue, checkOut })
+    setUploadedDocs([])
+    setSectionOpen({ misc: false, reminder: false, hotelEye: false, reference: false })
+    setModalOpen(true)
+    // Remove the query param from the URL without reloading
+    window.history.replaceState({}, '', '/dashboard/bookings')
+  }, [])
 
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
