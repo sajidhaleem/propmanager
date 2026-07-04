@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { getSessionFromRequest, signToken } from '@/lib/auth'
 import { apiError, apiResponse } from '@/lib/utils'
 import { z } from 'zod'
+import { emailField } from '@/lib/validations'
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
@@ -13,9 +14,9 @@ export async function GET(req: NextRequest) {
 
 const selfUpdateSchema = z.object({
   name:            z.string().min(2).optional(),
-  email:           z.string().email().optional(),
+  email:           emailField.optional(),
   currentPassword: z.string().optional(),
-  newPassword:     z.string().min(6).optional(),
+  newPassword:     z.string().min(8).optional(),
 })
 
 export async function PATCH(req: NextRequest) {

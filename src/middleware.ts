@@ -61,7 +61,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Allow public paths ──
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     const res = NextResponse.next()
     applySecurityHeaders(res, limitHeaders)
     return res
@@ -88,19 +88,18 @@ export async function middleware(req: NextRequest) {
       res.cookies.delete('last-activity')
       return res
     }
-    // Enforce inactivity timeout
+    // Enforce inactivity timeout — the cookie has maxAge = INACTIVITY_MAX,
+    // so a missing cookie means it expired (or was deleted): fail closed
     const lastActivity = req.cookies.get('last-activity')?.value
-    if (lastActivity) {
-      const elapsed = (Date.now() - parseInt(lastActivity, 10)) / 1000
-      if (elapsed > INACTIVITY_MAX) {
-        const res = new NextResponse(
-          JSON.stringify({ success: false, error: 'Session expired due to inactivity.' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        )
-        res.cookies.delete('auth-token')
-        res.cookies.delete('last-activity')
-        return res
-      }
+    const elapsed = lastActivity ? (Date.now() - parseInt(lastActivity, 10)) / 1000 : Infinity
+    if (elapsed > INACTIVITY_MAX) {
+      const res = new NextResponse(
+        JSON.stringify({ success: false, error: 'Session expired due to inactivity.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+      res.cookies.delete('auth-token')
+      res.cookies.delete('last-activity')
+      return res
     }
     const res = NextResponse.next()
     res.headers.set('X-User-Id', payload.userId)
@@ -128,16 +127,14 @@ export async function middleware(req: NextRequest) {
       response.cookies.delete('last-activity')
       return response
     }
-    // Enforce inactivity timeout on page navigation too
+    // Enforce inactivity timeout on page navigation too (missing cookie = expired)
     const lastActivity = req.cookies.get('last-activity')?.value
-    if (lastActivity) {
-      const elapsed = (Date.now() - parseInt(lastActivity, 10)) / 1000
-      if (elapsed > INACTIVITY_MAX) {
-        const response = NextResponse.redirect(new URL('/login?reason=inactivity', req.url))
-        response.cookies.delete('auth-token')
-        response.cookies.delete('last-activity')
-        return response
-      }
+    const elapsed = lastActivity ? (Date.now() - parseInt(lastActivity, 10)) / 1000 : Infinity
+    if (elapsed > INACTIVITY_MAX) {
+      const response = NextResponse.redirect(new URL('/login?reason=inactivity', req.url))
+      response.cookies.delete('auth-token')
+      response.cookies.delete('last-activity')
+      return response
     }
     // Refresh the activity cookie on page visits
     const res = NextResponse.next()

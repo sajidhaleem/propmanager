@@ -4,13 +4,14 @@ import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
 import { apiError, apiResponse } from '@/lib/utils'
 import { z } from 'zod'
+import { emailField } from '@/lib/validations'
 
 const adminUpdateSchema = z.object({
   name:     z.string().min(2).optional(),
-  email:    z.string().email().optional(),
+  email:    emailField.optional(),
   role:     z.enum(['ADMIN', 'MANAGER', 'STAFF']).optional(),
   isActive: z.boolean().optional(),
-  password: z.string().min(6).optional(),
+  password: z.string().min(8).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
