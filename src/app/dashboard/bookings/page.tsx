@@ -190,6 +190,7 @@ function BookingsInner() {
             cleaningFee: Number(payload.cleaningFee),
             platformFee: Number(payload.platformFee),
             paidAmount: Number(payload.paidAmount) || 0,
+            miscCharges: Number(payload.miscCharges) || 0,
             accompanyingMale:     Number(payload.accompanyingMale)     || 0,
             accompanyingFemale:   Number(payload.accompanyingFemale)   || 0,
             accompanyingChildren: Number(payload.accompanyingChildren) || 0,
