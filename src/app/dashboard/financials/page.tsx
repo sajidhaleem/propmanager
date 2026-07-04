@@ -74,7 +74,7 @@ export default function FinancialsPage() {
   })
 
   const { data: pData } = useQuery({
-    queryKey: ['properties'],
+    queryKey: ['properties', 'all'],
     queryFn:  fetchProperties,
   })
 

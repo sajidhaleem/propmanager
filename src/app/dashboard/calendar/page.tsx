@@ -78,10 +78,18 @@ function formatHour(h: number) {
   return `${display}:00 ${suffix}`
 }
 
-function bookingOverlapsHour(b: Booking, hour: number): boolean {
+// Which timeline slot a booking belongs to on a given day:
+// arrival day → check-in hour, departure day → check-out hour,
+// mid-stay days → first slot (shown as "in residence").
+type DaySlotKind = 'checkin' | 'checkout' | 'stay'
+
+function bookingSlotForDay(b: Booking, day: Date): { hour: number; kind: DaySlotKind } {
   const ci = parseISO(b.checkIn)
   const co = parseISO(b.checkOut)
-  return ci.getHours() === hour
+  const clampHour = (h: number) => Math.min(23, Math.max(6, h))
+  if (isSameDay(ci, day)) return { hour: clampHour(ci.getHours()), kind: 'checkin' }
+  if (isSameDay(co, day)) return { hour: clampHour(co.getHours()), kind: 'checkout' }
+  return { hour: 6, kind: 'stay' }
 }
 
 function bookingsForDay(bookings: Booking[], day: Date): Booking[] {
@@ -118,9 +126,14 @@ function MiniCalendar({
     ...days,
   ]
 
-  // Track dates with bookings
+  // Track dates with bookings (entire stay range, not just check-in day)
   const datesWithBookings = new Set(
-    bookings.map(b => format(parseISO(b.checkIn), 'yyyy-MM-dd'))
+    bookings.flatMap(b => {
+      const ci = parseISO(b.checkIn)
+      const co = parseISO(b.checkOut)
+      if (isNaN(ci.getTime()) || isNaN(co.getTime()) || co < ci) return []
+      return eachDayOfInterval({ start: ci, end: co }).map(d => format(d, 'yyyy-MM-dd'))
+    })
   )
 
   return (
@@ -320,7 +333,7 @@ function DayTimeline({
           </div>
         ) : (
           HOURS.map((hour) => {
-            const bksThisHour = dayBookings.filter(b => bookingOverlapsHour(b, hour))
+            const bksThisHour = dayBookings.filter(b => bookingSlotForDay(b, selectedDay).hour === hour)
             const rowH = 76
             // Current time line
             const showNowLine = nowMinute !== null && Math.floor(nowMinute / 60) + 6 === hour
@@ -362,6 +375,7 @@ function DayTimeline({
                     const ci = parseISO(b.checkIn)
                     const co = parseISO(b.checkOut)
                     const c = STATUS_COLORS[b.status] || STATUS_COLORS.CONFIRMED
+                    const kind = bookingSlotForDay(b, selectedDay).kind
                     return (
                       <Link
                         key={b.id}
@@ -375,7 +389,9 @@ function DayTimeline({
                       >
                         <div className="font-semibold truncate">{b.guestName}</div>
                         <div className="text-xs opacity-70 mt-0.5">
-                          {format(ci, 'h:mm a')} – {format(co, 'h:mm a')}
+                          {kind === 'checkin'  && <>In {format(ci, 'h:mm a')} · out {format(co, 'MMM d, h:mm a')}</>}
+                          {kind === 'checkout' && <>Checks out {format(co, 'h:mm a')}</>}
+                          {kind === 'stay'     && <>In residence · out {format(co, 'MMM d, h:mm a')}</>}
                           {b.property && <> · {b.property.name}</>}
                         </div>
                       </Link>
@@ -419,11 +435,12 @@ export default function CalendarPage() {
     queryFn:  () => fetchCalendarBookings(format(mStart, 'yyyy-MM-dd'), format(mEnd, 'yyyy-MM-dd')),
   })
 
-  // Day-view: fetch bookings for a wider window (today + 30 days for upcoming + selected day)
-  const dayWindowStart = format(startOfDay(today), 'yyyy-MM-dd')
-  const dayWindowEnd   = format(endOfDay(addDays(today, 60)), 'yyyy-MM-dd')
+  // Day-view: fetch a window bracketing the selected day's month
+  // (covers in-progress stays that started earlier + upcoming list)
+  const dayWindowStart = format(addDays(startOfMonth(selectedDay), -31), 'yyyy-MM-dd')
+  const dayWindowEnd   = format(addDays(endOfMonth(selectedDay), 60), 'yyyy-MM-dd')
   const { data: dayData, isLoading: dayLoading } = useQuery({
-    queryKey: ['calendar-day', dayWindowStart],
+    queryKey: ['calendar-day', format(selectedDay, 'yyyy-MM')],
     queryFn:  () => fetchCalendarBookings(dayWindowStart, dayWindowEnd),
     enabled:  view === 'day',
   })

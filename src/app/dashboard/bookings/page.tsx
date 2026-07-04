@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -81,7 +81,7 @@ function localInputToISO(localInput: string): string {
   return new Date(localInput).toISOString()
 }
 
-export default function BookingsPage() {
+function BookingsInner() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
   const [page, setPage] = useState(1)
@@ -108,12 +108,14 @@ export default function BookingsPage() {
     if (!checkIn) return
     // Format checkIn for datetime-local input (YYYY-MM-DDTHH:MM)
     const localValue = checkIn.length === 10 ? `${checkIn}T10:00` : checkIn.slice(0, 16)
-    // Compute a default checkout 1 day later at noon
+    // Default checkout: next day at noon, kept in LOCAL wall-clock time
+    // (toISOString() would shift it to UTC, -5h in PKT)
     const ciDate = new Date(localValue)
     const coDate = new Date(ciDate)
     coDate.setDate(coDate.getDate() + 1)
     coDate.setHours(12, 0, 0, 0)
-    const checkOut = coDate.toISOString().slice(0, 16)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const checkOut = `${coDate.getFullYear()}-${pad(coDate.getMonth() + 1)}-${pad(coDate.getDate())}T12:00`
     setEditBooking(null)
     setForm({ ...EMPTY_FORM, checkIn: localValue, checkOut })
     setUploadedDocs([])
@@ -121,7 +123,7 @@ export default function BookingsPage() {
     setModalOpen(true)
     // Remove the query param from the URL without reloading
     window.history.replaceState({}, '', '/dashboard/bookings')
-  }, [])
+  }, [searchParams])
 
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
@@ -132,7 +134,8 @@ export default function BookingsPage() {
   const params: Record<string, string> = { page: String(page), limit: '15', sortBy, sortOrder }
   if (search) params.search = search
   if (statusFilter !== 'all') params.status = statusFilter
-  if (platformFilter !== 'all') params.platform = platformFilter
+  // Custom platforms are stored as enum OTHER (label lives in notes)
+  if (platformFilter !== 'all') params.platform = platformFilter.startsWith('OTHER:') ? 'OTHER' : platformFilter
   if (hotelEyeFilter !== 'all') params.hotelEyeStatus = hotelEyeFilter
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
@@ -154,6 +157,11 @@ export default function BookingsPage() {
   const properties = propertiesData?.data || []
 
   const groupedBookings = useMemo(() => {
+    // Date-header grouping only makes sense when rows are ordered by check-in;
+    // under other sorts render one flat group to avoid repeated date headers
+    if (sortBy !== 'checkIn') {
+      return bookings.length ? [{ dateKey: 'all', label: '', bookings }] : []
+    }
     const groups: { dateKey: string; label: string; bookings: Booking[] }[] = []
     bookings.forEach((b) => {
       const key = checkInDateKey(b.checkIn)
@@ -165,7 +173,7 @@ export default function BookingsPage() {
       g.bookings.sort((a, bk) => parseISO(a.checkIn).getHours() - parseISO(bk.checkIn).getHours())
     })
     return groups
-  }, [bookings])
+  }, [bookings, sortBy])
 
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -266,6 +274,10 @@ export default function BookingsPage() {
   }
 
   async function pushToHotelEye(b: Booking) {
+    if (!(b as any).guestCnic) {
+      toast.error('Add the guest CNIC before pushing to Hotel Eye')
+      return
+    }
     const payload = {
       bookingId:        b.id,
       cnic:             (b as any).guestCnic             || '',
@@ -431,7 +443,7 @@ export default function BookingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Bookings" description={`${total} total bookings`}>
-        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export</Button>
+        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />New Booking</Button>
       </PageHeader>
 
@@ -532,8 +544,8 @@ export default function BookingsPage() {
         ) : (
           groupedBookings.map((group) => (
             <div key={group.dateKey} className="space-y-2">
-              {/* Date section header */}
-              <div className="flex items-center gap-3 px-1">
+              {/* Date section header (hidden for the flat non-date-sorted group) */}
+              {group.label && <div className="flex items-center gap-3 px-1">
                 <div className={cn(
                   'flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shrink-0',
                   group.label.startsWith('Today')
@@ -551,7 +563,7 @@ export default function BookingsPage() {
                 <span className="text-xs text-muted-foreground shrink-0">
                   {group.bookings.length} {group.bookings.length === 1 ? 'booking' : 'bookings'}
                 </span>
-              </div>
+              </div>}
 
               {/* Booking cards */}
               <div className="space-y-2">
@@ -576,7 +588,7 @@ export default function BookingsPage() {
                       <div className="flex items-center gap-3 pl-5 pr-4 py-3 flex-wrap sm:flex-nowrap">
                         {/* Avatar */}
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold ring-2 ring-primary/10">
-                          {b.guestName[0].toUpperCase()}
+                          {b.guestName?.[0]?.toUpperCase() ?? '?'}
                         </div>
 
                         {/* Guest + property */}
@@ -1263,5 +1275,13 @@ function SumRow({ label, value, cls }: { label: string; value?: string | number;
       <span className="text-muted-foreground shrink-0">{label}</span>
       <span className={cn('text-right break-words max-w-[140px]', cls)}>{value}</span>
     </div>
+  )
+}
+
+export default function BookingsPage() {
+  return (
+    <Suspense>
+      <BookingsInner />
+    </Suspense>
   )
 }

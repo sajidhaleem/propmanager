@@ -112,7 +112,7 @@ export default function ReportsPage() {
   const margin        = iStats?.totalRevenue > 0 ? Math.round(((iStats.totalRevenue - iStats.totalExpenses) / iStats.totalRevenue) * 100) : 0
   const expenseRatio  = iStats?.totalRevenue > 0 ? Math.round((iStats.totalExpenses / iStats.totalRevenue) * 100) : 0
   const totalNights   = (iStats?.totalProperties || 0) * 30
-  const emptyNights   = totalNights - (iStats?.bookedNights || 0)
+  const emptyNights   = Math.max(0, totalNights - (iStats?.bookedNights || 0))
   const revPerNight   = (iStats?.bookedNights || 0) > 0 ? Math.round(iStats.totalRevenue / iStats.bookedNights) : 0
   const revenueAt70   = Math.round(totalNights * 0.70) * revPerNight
   const revenueAt80   = Math.round(totalNights * 0.80) * revPerNight
