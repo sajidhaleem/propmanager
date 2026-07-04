@@ -5,14 +5,19 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
+export const emailField = z
+  .string()
+  .email('Invalid email address')
+  .transform((v) => v.toLowerCase().trim())
+
 export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
+  email: emailField,
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['ADMIN', 'MANAGER', 'STAFF']).default('STAFF'),
 })
 
-export const bookingSchema = z.object({
+export const bookingBaseSchema = z.object({
   guestName: z.string().min(2, 'Guest name is required'),
   guestEmail: z.string().email().optional().or(z.literal('')),
   guestPhone: z.string().optional(),
@@ -22,6 +27,8 @@ export const bookingSchema = z.object({
   cleaningFee: z.number().min(0).default(0),
   platformFee: z.number().min(0).default(0),
   paidAmount: z.number().min(0).default(0),
+  miscCharges: z.number().min(0).default(0),
+  miscDescription: z.string().nullable().optional(),
   platform: z.enum(['AIRBNB', 'DIRECT', 'BOOKING_COM', 'VRBO', 'OTHER']),
   status: z.enum(['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW']).default('CONFIRMED'),
   propertyId: z.string().min(1, 'Property is required'),
@@ -50,6 +57,22 @@ export const bookingSchema = z.object({
   refAddress: z.string().optional(),
   refCell: z.string().optional(),
   refVerified: z.boolean().optional(),
+})
+
+export const bookingSchema = bookingBaseSchema.superRefine((data, ctx) => {
+  const ci = new Date(data.checkIn)
+  const co = new Date(data.checkOut)
+  if (isNaN(ci.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['checkIn'], message: 'Invalid check-in date' })
+    return
+  }
+  if (isNaN(co.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['checkOut'], message: 'Invalid check-out date' })
+    return
+  }
+  if (co <= ci) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['checkOut'], message: 'Check-out must be after check-in' })
+  }
 })
 
 export const propertySchema = z.object({

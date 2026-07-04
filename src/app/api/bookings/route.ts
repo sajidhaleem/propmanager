@@ -82,10 +82,10 @@ export async function POST(req: NextRequest) {
     if (checkOut <= checkIn) return apiError('Check-out must be after check-in')
 
     const nights = Math.max(1, differenceInCalendarDays(checkOut, checkIn))
-    const miscCharges = (data as any).miscCharges ?? 0
+    const miscCharges = data.miscCharges
     const totalAmount = data.rate * nights + data.cleaningFee + miscCharges
     const netAmount = totalAmount - data.platformFee
-    const paidAmount = (data as any).paidAmount ?? 0
+    const paidAmount = data.paidAmount
 
     // Conflict check
     const conflict = await prisma.booking.findFirst({
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         netAmount,
         paidAmount,
         miscCharges,
-        miscDescription: (data as any).miscDescription ?? null,
+        miscDescription: data.miscDescription ?? null,
       },
       include: { property: { select: { id: true, name: true } } },
     })

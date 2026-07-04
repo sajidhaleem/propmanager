@@ -10,8 +10,8 @@ export async function GET(
 ) {
   try {
     await requireAuth(req)
-    const { docId } = await params
-    const document = await prisma.document.findUnique({ where: { id: docId } })
+    const { id, docId } = await params
+    const document = await prisma.document.findFirst({ where: { id: docId, bookingId: id } })
     if (!document) return apiError('Document not found', 404)
 
     const buffer = Buffer.from(document.data, 'base64')
@@ -36,7 +36,9 @@ export async function DELETE(
 ) {
   try {
     await requireAuth(req)
-    const { docId } = await params
+    const { id, docId } = await params
+    const document = await prisma.document.findFirst({ where: { id: docId, bookingId: id } })
+    if (!document) return apiError('Document not found', 404)
     await prisma.document.delete({ where: { id: docId } })
     return apiResponse({ message: 'Document deleted' })
   } catch (error: any) {

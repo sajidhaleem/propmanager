@@ -52,6 +52,32 @@ export interface Booking {
   propertyId: string
   property?: Property
   income?: Income | null
+  miscCharges?: number
+  miscDescription?: string | null
+  reminderAt?: string | null
+  reminderNote?: string | null
+  hotelEyeStatus?: string | null
+  // Hotel Eye / guest identity
+  guestCnic?: string | null
+  guestFatherName?: string | null
+  guestGender?: string | null
+  guestAddress?: string | null
+  guestProvince?: string | null
+  guestDistrict?: string | null
+  tempAddress?: string | null
+  tempProvince?: string | null
+  tempDistrict?: string | null
+  purposeOfVisit?: string | null
+  accompanyingMale?: number | null
+  accompanyingFemale?: number | null
+  accompanyingChildren?: number | null
+  roomNumber?: string | null
+  refName?: string | null
+  refFatherName?: string | null
+  refBusiness?: string | null
+  refAddress?: string | null
+  refCell?: string | null
+  refVerified?: boolean | null
   createdAt: string
   updatedAt: string
 }
