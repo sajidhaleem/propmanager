@@ -2,22 +2,23 @@ import { prisma } from '@/lib/db'
 import { format } from 'date-fns'
 
 export async function createBackup(label: string, createdBy?: string) {
-  const [properties, bookings, income, expenses, payouts] = await Promise.all([
+  const [properties, bookings, income, expenses, payouts, documents] = await Promise.all([
     prisma.property.findMany(),
     prisma.booking.findMany(),
     prisma.income.findMany(),
     prisma.expense.findMany(),
     prisma.payout.findMany(),
+    prisma.document.findMany(),
   ])
 
-  const recordCount = properties.length + bookings.length + income.length + expenses.length + payouts.length
+  const recordCount = properties.length + bookings.length + income.length + expenses.length + payouts.length + documents.length
 
   return prisma.backup.create({
     data: {
       label,
       recordCount,
       createdBy,
-      data: { properties, bookings, income, expenses, payouts },
+      data: { properties, bookings, income, expenses, payouts, documents },
     },
   })
 }
