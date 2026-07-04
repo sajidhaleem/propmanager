@@ -27,9 +27,19 @@ export async function PATCH(
     const updateData: any = { ...result.data }
     if (updateData.receivedAt) {
       const d            = new Date(updateData.receivedAt)
+      if (isNaN(d.getTime())) return apiError('Invalid date')
       updateData.receivedAt = d
       updateData.month   = d.getMonth() + 1
       updateData.year    = d.getFullYear()
+    }
+
+    // Keep netAmount consistent with gross − platform fee when components change
+    if (updateData.grossAmount !== undefined || updateData.platformFee !== undefined) {
+      const current = await prisma.income.findUnique({ where: { id } })
+      if (!current) return apiError('Income record not found', 404)
+      const gross = updateData.grossAmount ?? current.grossAmount
+      const fee   = updateData.platformFee ?? current.platformFee
+      updateData.netAmount = gross - fee
     }
 
     const income = await prisma.income.update({
@@ -52,7 +62,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(req, ['ADMIN'])
+    await requireRole(req, ['ADMIN', 'MANAGER'])
     const { id } = await params
     await prisma.income.delete({ where: { id } })
     return apiResponse({ message: 'Income record deleted' })

@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
           _count: { id: true },
           _sum: { nights: true, netAmount: true },
           where: {
-            checkIn: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+            checkIn: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
           },
         }),
       ])
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
         include: {
           bookings: {
             where: {
-              checkIn: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+              checkIn: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
               status: { notIn: ['CANCELLED', 'NO_SHOW'] },
             },
             select: { nights: true, netAmount: true, status: true },
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         _count: { id: true },
         _sum: { netAmount: true, nights: true },
         where: {
-          checkIn: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+          checkIn: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
           status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         },
       })
@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
     if (type === 'pnl') {
       const EXPENSE_CATS = ['UTILITIES', 'CLEANING', 'REPAIRS', 'SUPPLIES', 'MAINTENANCE', 'OTHER'] as const
       const dateStart = new Date(`${year}-01-01`)
-      const dateEnd   = new Date(`${year}-12-31`)
+      const dateEnd   = new Date(`${year + 1}-01-01`)
 
       const [incomeRows, expenseRows, payoutRows] = await Promise.all([
         prisma.income.findMany({
@@ -117,12 +117,12 @@ export async function GET(req: NextRequest) {
           include: { booking: { select: { platform: true } } },
         }),
         prisma.expense.findMany({
-          where: { year, date: { gte: dateStart, lte: dateEnd } },
+          where: { year, date: { gte: dateStart, lt: dateEnd } },
           select: { month: true, category: true, amount: true },
         }),
         // PAID payouts only
         prisma.payout.findMany({
-          where: { year, status: 'PAID', date: { gte: dateStart, lte: dateEnd } },
+          where: { year, status: 'PAID', date: { gte: dateStart, lt: dateEnd } },
           select: { month: true, type: true, amount: true },
         }),
       ])

@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    let text = (response.content[0] as any).text.trim()
+    const block = response.content[0]
+    if (!block || block.type !== 'text') return apiError('Could not parse CNIC data from image', 422)
+    let text = block.text.trim()
     if (text.startsWith('```')) {
       text = text.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim()
     }
@@ -77,6 +79,6 @@ export async function POST(req: NextRequest) {
     if (err.message === 'Unauthorized') return apiError('Unauthorized', 401)
     if (err instanceof SyntaxError) return apiError('Could not parse CNIC data from image', 422)
     console.error('CNIC extract error:', err)
-    return apiError('Extraction failed: ' + err.message, 500)
+    return apiError('Extraction failed. Please try again with a clearer image.', 500)
   }
 }

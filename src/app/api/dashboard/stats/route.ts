@@ -104,7 +104,9 @@ export async function GET(req: NextRequest) {
     const currentExp      = (currentExpenses._sum.amount || 0) + (currentPayouts._sum.amount || 0)
     const lastExp         = (lastMonthExpenses._sum.amount || 0) + (lastMonthPayouts._sum.amount || 0)
 
-    const revenueGrowth = lastRevenue === 0 ? 100 : Math.round(((currentRevenue - lastRevenue) / lastRevenue) * 100)
+    const revenueGrowth = lastRevenue === 0
+      ? (currentRevenue === 0 ? 0 : 100)
+      : Math.round(((currentRevenue - lastRevenue) / lastRevenue) * 100)
     const expenseGrowth = lastExp === 0 ? 0   : Math.round(((currentExp - lastExp) / lastExp) * 100)
 
     // Occupancy calculation for current month

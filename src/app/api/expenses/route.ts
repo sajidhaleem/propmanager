@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
     if (!result.success) return apiError(result.error.errors[0].message)
 
     const date = new Date(result.data.date)
+    if (isNaN(date.getTime())) return apiError('Invalid date')
     const expense = await prisma.expense.create({
       data: {
         ...result.data,

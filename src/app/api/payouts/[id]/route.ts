@@ -15,6 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const data: any = { ...result.data }
     if (data.date) {
       const date = new Date(data.date)
+      if (isNaN(date.getTime())) return apiError('Invalid date')
       data.date = date
       data.month = date.getMonth() + 1
       data.year = date.getFullYear()
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireRole(req, ['ADMIN'])
+    await requireRole(req, ['ADMIN', 'MANAGER'])
     const { id } = await params
     await prisma.payout.delete({ where: { id } })
     return apiResponse({ message: 'Payout deleted' })
