@@ -219,6 +219,23 @@ function BookingsInner() {
     onError: () => toast.error('Delete failed'),
   })
 
+  const hotelEyeStatusMutation = useMutation({
+    mutationFn: async ({ id, hotelEyeStatus }: { id: string; hotelEyeStatus: string }) => {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotelEyeStatus }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      toast.success('Hotel Eye status updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await fetch(`/api/bookings/${id}`, {
@@ -639,15 +656,23 @@ function BookingsInner() {
 
                         {/* Hotel Eye status */}
                         <div className="hidden md:block shrink-0">
-                          {(b as any).hotelEyeStatus === 'ENTERED' ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600/40 bg-green-500/10 text-[10px] px-2 py-0 gap-1">
-                              HE: Filed
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-amber-500 border-amber-500/40 bg-amber-500/10 text-[10px] px-2 py-0 gap-1">
-                              HE: Pending
-                            </Badge>
-                          )}
+                          <Select
+                            value={b.hotelEyeStatus === 'ENTERED' ? 'ENTERED' : 'NOT_ENTERED'}
+                            onValueChange={(s) => hotelEyeStatusMutation.mutate({ id: b.id, hotelEyeStatus: s })}
+                          >
+                            <SelectTrigger className={cn(
+                              'h-6 w-[110px] text-[10px] px-2 rounded-full border gap-1',
+                              b.hotelEyeStatus === 'ENTERED'
+                                ? 'text-green-600 border-green-600/40 bg-green-500/10'
+                                : 'text-amber-500 border-amber-500/40 bg-amber-500/10'
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NOT_ENTERED">HE: Pending</SelectItem>
+                              <SelectItem value="ENTERED">HE: Filed</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         {/* Status selector */}
