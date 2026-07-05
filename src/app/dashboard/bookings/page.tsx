@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -84,6 +84,7 @@ function localInputToISO(localInput: string): string {
 function BookingsInner() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
+  const shouldReduceMotion = useReducedMotion()
   const [page, setPage] = useState(1)
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
   const [uploading, setUploading] = useState(false)
@@ -588,9 +589,9 @@ function BookingsInner() {
                 {group.bookings.map((b, idx) => (
                   <motion.div
                     key={b.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: idx * 0.04 }}
+                    transition={{ duration: shouldReduceMotion ? 0.01 : 0.2, delay: shouldReduceMotion ? 0 : idx * 0.04 }}
                   >
                     <Card className="relative overflow-hidden hover:shadow-md transition-shadow group">
                       {/* Status left accent */}

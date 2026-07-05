@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { isSameDay, parseISO, addDays } from 'date-fns'
 import {
   Banknote, TrendingUp, CalendarCheck, Building2,
@@ -43,6 +43,7 @@ async function fetchDashboardStats() {
 export default function DashboardPage() {
   const { format } = useCurrency()
   const queryClient = useQueryClient()
+  const shouldReduceMotion = useReducedMotion()
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editingPaymentValue, setEditingPaymentValue] = useState('')
   const [activeDay, setActiveDay] = useState<'today' | 'tomorrow'>('today')
@@ -295,7 +296,9 @@ export default function DashboardPage() {
                       <motion.div
                         layoutId="dayTabBg"
                         className="absolute inset-0 -z-10 rounded-full bg-primary"
-                        transition={{ type: 'spring', duration: 0.4, bounce: 0.2 }}
+                        transition={shouldReduceMotion
+                          ? { duration: 0.01 }
+                          : { type: 'spring', duration: 0.4, bounce: 0.2 }}
                       />
                     )}
                     <span className="relative">{day === 'today' ? 'Today' : 'Tomorrow'}</span>
@@ -333,10 +336,10 @@ export default function DashboardPage() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeDay}
-                initial={{ opacity: 0, x: activeDay === 'today' ? -8 : 8 }}
+                initial={{ opacity: 0, x: shouldReduceMotion ? 0 : (activeDay === 'today' ? -8 : 8) }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: activeDay === 'today' ? 8 : -8 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
+                exit={{ opacity: 0, x: shouldReduceMotion ? 0 : (activeDay === 'today' ? 8 : -8) }}
+                transition={{ duration: shouldReduceMotion ? 0.01 : 0.18, ease: 'easeOut' }}
               >
                 {activeBucket.arrivals.length === 0 && activeBucket.departures.length === 0 ? (
                   <EmptyState

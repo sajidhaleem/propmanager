@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MagicCard } from '@/components/ui/magic-card'
@@ -58,12 +58,13 @@ export function StatsCard({
   const isPositive = change !== undefined && change > 0
   const isNeutral  = change === undefined || change === 0
   const isNumeric  = typeof value === 'number'
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.07, ease: 'easeOut' }}
+      transition={{ duration: shouldReduceMotion ? 0.01 : 0.35, delay: shouldReduceMotion ? 0 : index * 0.07, ease: 'easeOut' }}
     >
       <MagicCard
         glowColor={cfg.glow}

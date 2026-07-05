@@ -159,7 +159,7 @@ export default function FinancialsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader title="Income" description="Revenue auto-recorded when a booking is checked out">
         <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export</Button>
       </PageHeader>

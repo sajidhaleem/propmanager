@@ -402,3 +402,24 @@
   body { @apply bg-white text-black; }
   .card { @apply border border-gray-200 shadow-none; }
 }
+
+/* ============================================================
+   REDUCED MOTION
+   Movement/position animations are disabled; opacity/color
+   transitions are kept since they aid comprehension without
+   triggering motion sensitivity.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in, .animate-slide-left, .animate-slide-right,
+  .animate-scale-in, .animate-bounce-subtle, .animate-spotlight,
+  .shimmer {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transform: none !important;
+  }
+
+  .card-hover:hover {
+    transform: none;
+  }
+}

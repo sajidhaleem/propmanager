@@ -492,7 +492,7 @@ export default function CalendarPage() {
   const totalW = ROOM_W + days.length * DAY_W
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Calendar"
         description={

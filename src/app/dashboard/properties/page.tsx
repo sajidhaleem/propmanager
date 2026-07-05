@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Home, Users, Banknote, Activity, Building2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -34,6 +34,7 @@ const EMPTY_FORM = {
 export default function PropertiesPage() {
   const { format } = useCurrency()
   const queryClient = useQueryClient()
+  const shouldReduceMotion = useReducedMotion()
   const [modalOpen, setModalOpen] = useState(false)
   const [editProperty, setEditProperty] = useState<Property | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -111,7 +112,12 @@ export default function PropertiesPage() {
             ]
             const c = COLORS[i % COLORS.length]
             return (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: shouldReduceMotion ? 0.01 : 0.3, delay: shouldReduceMotion ? 0 : i * 0.08 }}
+              >
                 <MagicCard glowColor={c.glow} className="relative overflow-hidden rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
                   {/* Gradient top bar */}
                   <div className={`h-[3px] bg-gradient-to-r ${c.bar}`} />

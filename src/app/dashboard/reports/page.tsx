@@ -8,7 +8,7 @@ import {
   ChevronDown, Banknote, CalendarCheck, Building2, BookOpen, CreditCard,
   Zap, Home,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -53,6 +53,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; text: string; rin
 // ── Expandable action item ─────────────────────────────────────────
 function ActionItem({ num, text, accentBg }: { num: number; text: string; accentBg: string }) {
   const [open, setOpen] = useState(false)
+  const shouldReduceMotion = useReducedMotion()
   const headline = text.split(/\.\s/)[0]
   return (
     <button
@@ -72,7 +73,7 @@ function ActionItem({ num, text, accentBg }: { num: number; text: string; accent
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: shouldReduceMotion ? 0.01 : 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
             <p className="mt-2 ml-8 text-sm text-muted-foreground leading-relaxed">{text}</p>
@@ -86,6 +87,7 @@ function ActionItem({ num, text, accentBg }: { num: number; text: string; accent
 export default function ReportsPage() {
   const [year, setYear]               = useState(String(currentYear))
   const { format }                    = useCurrency()
+  const shouldReduceMotion            = useReducedMotion()
   const [tab, setTab]                 = useState('insights')
   const [selectedTile, setSelectedTile] = useState<string | null>('revenue')
 
@@ -418,10 +420,10 @@ export default function ReportsPage() {
                 {activeTile && (
                   <motion.div
                     key={activeTile.id}
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -8 }}
+                    transition={{ duration: shouldReduceMotion ? 0.01 : 0.22, ease: 'easeOut' }}
                   >
                     <Card className={cn('overflow-hidden border', activeTile.status === 'urgent' && 'border-red-200 dark:border-red-900/40')}>
                       {/* Colour accent bar */}

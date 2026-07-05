@@ -270,7 +270,7 @@ export default function SettingsPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader title="Settings" description="Manage users, roles, and system configuration" />
 
       <Tabs defaultValue="finance">

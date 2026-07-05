@@ -127,7 +127,7 @@ export default function ExpensesPage() {
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader title="Expenses" description="Track operational costs and expenses">
         <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Expense</Button>
