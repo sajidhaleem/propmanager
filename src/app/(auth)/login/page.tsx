@@ -50,9 +50,9 @@ const STATS = [
     icon: Building2,
     label: 'Properties',
     value: '12+',
-    gradient: 'from-blue-500 to-blue-700',
-    bg: 'bg-blue-500/10 border-blue-500/20',
-    text: 'text-blue-300',
+    gradient: 'from-primary to-primary',
+    bg: 'bg-primary/10 border-primary/20',
+    text: 'text-primary',
   },
   {
     icon: CalendarCheck,
@@ -106,23 +106,23 @@ function LoginForm() {
           LEFT — branding panel
       ═══════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex lg:w-[46%] xl:w-[42%] relative overflow-hidden flex-col justify-between p-12
-        bg-[linear-gradient(135deg,#060b18_0%,#0d1535_50%,#08021a_100%)]">
+        bg-[linear-gradient(135deg,#1a0f0a_0%,#2a1712_50%,#150a06_100%)]">
 
         {/* dot grid */}
         <div className="absolute inset-0 opacity-[0.12] pointer-events-none"
           style={{
-            backgroundImage: 'radial-gradient(circle, #6b8cff 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, #d9825a 1px, transparent 1px)',
             backgroundSize: '26px 26px',
           }}
         />
 
         {/* Spotlight from aceternity */}
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#60a5fa" />
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#e08552" />
 
         {/* ambient glow blobs */}
-        <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-blue-600/6 blur-[130px] pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 h-[500px] w-[500px] rounded-full bg-purple-700/6 blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-blue-500/4 blur-[80px] pointer-events-none" />
+        <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[130px] pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 h-[500px] w-[500px] rounded-full bg-orange-700/8 blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-primary/6 blur-[80px] pointer-events-none" />
 
         {/* ── Logo ── */}
         <motion.div
@@ -132,8 +132,8 @@ function LoginForm() {
           className="relative z-10 flex items-center gap-3"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl
-            bg-gradient-to-br from-blue-500 to-blue-700
-            shadow-lg shadow-blue-600/40 ring-1 ring-white/10">
+            bg-primary
+            shadow-lg shadow-primary/40 ring-1 ring-white/10">
             <Building2 className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -154,10 +154,10 @@ function LoginForm() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-500/20
-              bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 mb-5 w-fit"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/20
+              bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-5 w-fit"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
             Property Management Platform
           </motion.div>
 
@@ -165,10 +165,10 @@ function LoginForm() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[2.6rem] xl:text-5xl font-bold leading-[1.1] text-white mb-5"
+            className="font-display text-[2.6rem] xl:text-5xl font-semibold leading-[1.1] text-white mb-5"
           >
             Your properties,<br />
-            <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="text-primary">
               perfectly managed.
             </span>
           </motion.h1>
@@ -203,8 +203,8 @@ function LoginForm() {
             {FEATURES.map((f, i) => (
               <motion.div key={f} {...fadeUp(i + 3)} className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full
-                  bg-blue-500/15 border border-blue-500/25">
-                  <Check className="h-2.5 w-2.5 text-blue-400" />
+                  bg-primary/15 border border-primary/25">
+                  <Check className="h-2.5 w-2.5 text-primary" />
                 </div>
                 <span className="text-sm text-slate-400">{f}</span>
               </motion.div>
@@ -246,7 +246,7 @@ function LoginForm() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-8 lg:hidden">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl
-              bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/30">
+              bg-gradient-to-br bg-primary shadow-lg shadow-primary/30">
               <Building2 className="h-4 w-4 text-white" />
             </div>
             <span className="font-bold text-lg tracking-tight">PropManager</span>
@@ -332,11 +332,11 @@ function LoginForm() {
                 type="submit"
                 disabled={isLoggingIn}
                 className="group flex w-full items-center justify-center gap-2 h-11 rounded-lg
-                  bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold
-                  hover:from-blue-600 hover:to-blue-700
+                  bg-primary text-primary-foreground text-sm font-semibold
+                  hover:brightness-110
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                   disabled:opacity-60 disabled:pointer-events-none
-                  shadow-lg shadow-blue-500/30
+                  shadow-lg shadow-primary/30
                   transition-all duration-200 mt-2"
               >
                 {isLoggingIn ? (

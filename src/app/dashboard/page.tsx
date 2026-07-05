@@ -214,7 +214,7 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.08),transparent_60%)]" />
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{greeting} 👋</h1>
+            <h1 className="font-display text-[1.75rem] font-semibold tracking-tight">{greeting} 👋</h1>
             <p className="text-muted-foreground text-sm mt-1">
               Here&apos;s what&apos;s happening with your properties today.
             </p>

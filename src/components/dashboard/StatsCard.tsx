@@ -78,7 +78,7 @@ export function StatsCard({
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
               {title}
             </p>
-            <p className="mt-2 text-2xl font-bold tracking-tight">
+            <p className="font-display mt-2 text-2xl font-semibold tracking-tight">
               {isNumeric
                 ? <NumberTicker value={value as number} />
                 : value}
