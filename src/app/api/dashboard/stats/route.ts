@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
         by: ['platform'],
         _count: { id: true },
         _sum: { netAmount: true },
+        where: { status: { notIn: ['CANCELLED', 'NO_SHOW'] } },
       }),
       // Check-ins / check-outs happening today or tomorrow
       prisma.booking.findMany({
