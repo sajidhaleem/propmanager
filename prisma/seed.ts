@@ -4,8 +4,15 @@ import { addDays, subDays, startOfMonth, format } from 'date-fns'
 
 const prisma = new PrismaClient()
 
+// Demo properties/bookings/expenses/payouts are only planted when explicitly
+// requested — never against a real database (this polluted production charts once)
+const SEED_DEMO = process.env.SEED_DEMO_DATA === 'true'
+
 async function main() {
   console.log('🌱 Seeding database...')
+  if (!SEED_DEMO) {
+    console.log('   (users only — set SEED_DEMO_DATA=true for demo properties/bookings)')
+  }
 
   // Users
   const hashedPassword = await bcrypt.hash('admin123', 12)
@@ -41,6 +48,11 @@ async function main() {
       role: Role.STAFF,
     },
   })
+
+  if (!SEED_DEMO) {
+    console.log('✅ Users seeded. Skipping demo data.')
+    return
+  }
 
   // Properties (4 rooms from the spreadsheet)
   const properties = await Promise.all([
