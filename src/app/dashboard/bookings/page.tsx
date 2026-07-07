@@ -586,11 +586,13 @@ function BookingsInner() {
 
               {/* Booking cards */}
               <div className="space-y-2">
+                <AnimatePresence initial={true}>
                 {group.bookings.map((b, idx) => (
                   <motion.div
                     key={b.id}
                     initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 8 }}
                     animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: shouldReduceMotion ? 0.01 : 0.18 } }}
                     transition={{ duration: shouldReduceMotion ? 0.01 : 0.2, delay: shouldReduceMotion ? 0 : idx * 0.04 }}
                   >
                     <Card className="relative overflow-hidden hover:shadow-md transition-shadow group">
@@ -744,7 +746,7 @@ function BookingsInner() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-0.5 shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 group-focus-within:!opacity-100">
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
@@ -763,6 +765,7 @@ function BookingsInner() {
                     </Card>
                   </motion.div>
                 ))}
+                </AnimatePresence>
               </div>
             </div>
           ))
@@ -799,20 +802,22 @@ function BookingsInner() {
           <div className="flex flex-1 min-h-0 overflow-hidden">
 
           {/* Scrollable form */}
-          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-5 space-y-5 border-r">
+          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 border-r">
 
-            {/* CNIC Scanner */}
-            <CnicScanner onExtracted={applyScannedCnic} />
+            {/* CNIC Scanner — set apart as a quick-fill utility, not a form field */}
+            <div className="rounded-xl border border-dashed bg-muted/30 p-4">
+              <CnicScanner onExtracted={applyScannedCnic} />
+            </div>
 
             {/* ── Guest Details ─────────────────────── */}
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Guest Details</p>
-              <div className="space-y-3">
+            <div className="space-y-3.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-foreground/80">Guest Details</p>
+              <div className="space-y-3.5">
                 <div className="space-y-1.5">
                   <Label>Guest Name *</Label>
                   <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label>Email</Label>
                     <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} placeholder="guest@email.com" />
@@ -826,11 +831,11 @@ function BookingsInner() {
             </div>
 
             {/* ── Stay Details ──────────────────────── */}
-            <div className="border-t pt-4 space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Stay Details</p>
+            <div className="border-t pt-6 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-foreground/80">Stay Details</p>
 
               {/* Check-in / Check-out */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <Label>Check-in *</Label>
                   <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
@@ -842,7 +847,7 @@ function BookingsInner() {
               </div>
 
               {/* Property + Platform + Status in a row */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-5">
                 <div className="space-y-1.5">
                   <Label>Property *</Label>
                   <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
@@ -902,7 +907,7 @@ function BookingsInner() {
               </div>
 
               {/* Financial row: Rate / Cleaning / Platform fee */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-5">
                 <div className="space-y-1.5">
                   <Label>Rate / Night ({currencyInfo.symbol}) *</Label>
                   <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
@@ -918,7 +923,7 @@ function BookingsInner() {
               </div>
 
               {/* Paid + Outstanding */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <Label>Paid Amount ({currencyInfo.symbol})</Label>
                   <Input type="number" min="0" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
@@ -945,16 +950,16 @@ function BookingsInner() {
             </div>
 
             {/* ── Miscellaneous Charges (collapsible) ─── */}
-            <div className="border-t">
-              <button type="button" onClick={() => toggleSection('misc')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
-                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className={cn('rounded-xl border transition-colors', sectionOpen.misc ? 'bg-muted/20' : 'bg-transparent')}>
+              <button type="button" onClick={() => toggleSection('misc')} className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground/80">
                   Miscellaneous Charges
-                  {!sectionOpen.misc && (form.miscCharges || form.miscDescription) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                  {!sectionOpen.misc && (form.miscCharges || form.miscDescription) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                 </span>
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.misc && 'rotate-180')} />
               </button>
-              {sectionOpen.misc && (
-                <div className="grid grid-cols-2 gap-4 pb-4">
+              <SectionBody open={sectionOpen.misc}>
+                <div className="grid grid-cols-2 gap-5 px-4 pb-4">
                   <div className="space-y-1.5">
                     <Label>Misc Charges ({currencyInfo.symbol})</Label>
                     <Input type="number" min="0" value={form.miscCharges} onChange={(e) => setForm({ ...form, miscCharges: e.target.value })} placeholder="0" />
@@ -964,20 +969,20 @@ function BookingsInner() {
                     <Input value={form.miscDescription} onChange={(e) => setForm({ ...form, miscDescription: e.target.value })} placeholder="e.g. Late checkout fee…" />
                   </div>
                 </div>
-              )}
+              </SectionBody>
             </div>
 
             {/* ── Reminder (collapsible) ──────────────── */}
-            <div className="border-t">
-              <button type="button" onClick={() => toggleSection('reminder')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
-                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className={cn('rounded-xl border transition-colors', sectionOpen.reminder ? 'bg-muted/20' : 'bg-transparent')}>
+              <button type="button" onClick={() => toggleSection('reminder')} className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground/80">
                   <Bell className="h-3.5 w-3.5" /> Reminder
-                  {!sectionOpen.reminder && (form.reminderAt || form.reminderNote) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                  {!sectionOpen.reminder && (form.reminderAt || form.reminderNote) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                 </span>
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.reminder && 'rotate-180')} />
               </button>
-              {sectionOpen.reminder && (
-                <div className="grid grid-cols-2 gap-4 pb-4">
+              <SectionBody open={sectionOpen.reminder}>
+                <div className="grid grid-cols-2 gap-5 px-4 pb-4">
                   <div className="space-y-1.5">
                     <Label>Remind At</Label>
                     <Input type="datetime-local" value={form.reminderAt} onChange={(e) => setForm({ ...form, reminderAt: e.target.value })} />
@@ -987,21 +992,21 @@ function BookingsInner() {
                     <Input value={form.reminderNote} onChange={(e) => setForm({ ...form, reminderNote: e.target.value })} placeholder="e.g. Call guest before check-in" />
                   </div>
                 </div>
-              )}
+              </SectionBody>
             </div>
 
             {/* ── Hotel Eye / Guest Identity (collapsible) */}
-            <div className="border-t">
-              <button type="button" onClick={() => toggleSection('hotelEye')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
-                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className={cn('rounded-xl border transition-colors', sectionOpen.hotelEye ? 'bg-muted/20' : 'bg-transparent')}>
+              <button type="button" onClick={() => toggleSection('hotelEye')} className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground/80">
                   <ScanLine className="h-3.5 w-3.5" /> Hotel Eye / Guest Identity
-                  {!sectionOpen.hotelEye && (form.guestCnic || form.guestFatherName) && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                  {!sectionOpen.hotelEye && (form.guestCnic || form.guestFatherName) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                 </span>
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.hotelEye && 'rotate-180')} />
               </button>
-              {sectionOpen.hotelEye && (
-                <div className="space-y-4 pb-4">
-                  <div className="grid grid-cols-2 gap-4">
+              <SectionBody open={sectionOpen.hotelEye}>
+                <div className="space-y-4 px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>CNIC #</Label>
                       <Input value={form.guestCnic} onChange={(e) => setForm({ ...form, guestCnic: e.target.value })} placeholder="12345-1234567-1" />
@@ -1024,7 +1029,7 @@ function BookingsInner() {
                     <Label>Permanent Address</Label>
                     <Input value={form.guestAddress} onChange={(e) => setForm({ ...form, guestAddress: e.target.value })} placeholder="As on CNIC" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Province</Label>
                       <Input value={form.guestProvince} onChange={(e) => setForm({ ...form, guestProvince: e.target.value })} placeholder="e.g. Punjab" />
@@ -1038,7 +1043,7 @@ function BookingsInner() {
                     <Label>Temporary Address (at property)</Label>
                     <Input value={form.tempAddress} onChange={(e) => setForm({ ...form, tempAddress: e.target.value })} placeholder="Hotel / property address" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Temp Province</Label>
                       <Input value={form.tempProvince} onChange={(e) => setForm({ ...form, tempProvince: e.target.value })} placeholder="e.g. KPK" />
@@ -1048,7 +1053,7 @@ function BookingsInner() {
                       <Input value={form.tempDistrict} onChange={(e) => setForm({ ...form, tempDistrict: e.target.value })} placeholder="e.g. Peshawar" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-5">
                     <div className="space-y-1.5">
                       <Label>Room #</Label>
                       <Input value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} placeholder="101" />
@@ -1074,21 +1079,21 @@ function BookingsInner() {
                     </div>
                   </div>
                 </div>
-              )}
+              </SectionBody>
             </div>
 
             {/* ── Local Reference / Dealer (collapsible) */}
-            <div className="border-t">
-              <button type="button" onClick={() => toggleSection('reference')} className="w-full flex items-center justify-between py-3 rounded hover:bg-muted/30 transition-colors">
-                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className={cn('rounded-xl border transition-colors', sectionOpen.reference ? 'bg-muted/20' : 'bg-transparent')}>
+              <button type="button" onClick={() => toggleSection('reference')} className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted/30 transition-colors">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground/80">
                   Local Reference / Dealer
-                  {!sectionOpen.reference && form.refName && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                  {!sectionOpen.reference && form.refName && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                 </span>
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.reference && 'rotate-180')} />
               </button>
-              {sectionOpen.reference && (
-                <div className="space-y-3 pb-4">
-                  <div className="grid grid-cols-2 gap-4">
+              <SectionBody open={sectionOpen.reference}>
+                <div className="space-y-3 px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Name</Label>
                       <Input value={form.refName} onChange={(e) => setForm({ ...form, refName: e.target.value })} placeholder="Reference name" />
@@ -1115,18 +1120,18 @@ function BookingsInner() {
                     <label htmlFor="refVerified" className="text-sm cursor-pointer">Reference Verified</label>
                   </div>
                 </div>
-              )}
+              </SectionBody>
             </div>
 
             {/* ── Notes ─────────────────────────────── */}
-            <div className="border-t pt-4 space-y-1.5">
+            <div className="border-t pt-6 space-y-1.5">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes about this booking" />
             </div>
 
             {/* ── Documents ─────────────────────────── */}
-            <div className="border-t pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">Documents</p>
+            <div className="border-t pt-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-foreground/80 mb-3">Documents</p>
               {editBooking ? (
                 <div className="space-y-3">
                   <label className={`flex items-center gap-2 cursor-pointer w-fit rounded-lg border border-dashed px-4 py-2.5 text-sm transition-colors ${uploading ? 'opacity-50 pointer-events-none' : 'hover:bg-accent'}`}>
@@ -1292,6 +1297,25 @@ function SumSection({ title, children }: { title: string; children: React.ReactN
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{title}</p>
       <div className="rounded-lg border bg-background px-3 py-2 space-y-1">{children}</div>
     </div>
+  )
+}
+
+function SectionBody({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const shouldReduceMotion = useReducedMotion()
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0.01 : 0.2, ease: 'easeInOut' }}
+          className="overflow-hidden"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 

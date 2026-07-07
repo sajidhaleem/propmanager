@@ -184,7 +184,7 @@ function MiniCalendar({
                 setViewDate(day)
               }}
               className={cn(
-                'aspect-square flex items-center justify-center text-sm rounded-full relative transition-all duration-100 font-medium',
+                'aspect-square flex items-center justify-center text-sm rounded-full relative transition-[transform,color,background-color] duration-100 font-medium',
                 isToday
                   ? 'bg-primary text-primary-foreground font-bold'
                   : isSelected
@@ -383,7 +383,7 @@ function DayTimeline({
                         onClick={e => e.stopPropagation()}
                         className={cn(
                           'flex-1 min-w-[160px] rounded-lg px-3 py-2 border-l-[3px] border text-sm',
-                          'hover:brightness-95 hover:-translate-y-px transition-all cursor-pointer',
+                          'hover:brightness-95 hover:-translate-y-px transition-[transform,filter] cursor-pointer',
                           c.chip,
                         )}
                       >
@@ -724,7 +724,7 @@ export default function CalendarPage() {
                                     href="/dashboard/bookings"
                                     title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\nTotal: ${money(b.totalAmount)} · Paid: ${money(b.paidAmount ?? 0)}`}
                                     className={cn(
-                                      'block overflow-hidden px-1.5 py-1 text-xs leading-tight hover:brightness-110 transition-all cursor-pointer',
+                                      'block overflow-hidden px-1.5 py-1 text-xs leading-tight hover:brightness-110 transition-[filter] cursor-pointer',
                                       c.bg, c.text, radius,
                                     )}
                                   >

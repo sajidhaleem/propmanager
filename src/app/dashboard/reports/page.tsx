@@ -387,7 +387,7 @@ export default function ReportsPage() {
                         key={tile.id}
                         glowColor={s.glow}
                         className={cn(
-                          'rounded-xl border cursor-pointer transition-all duration-200',
+                          'rounded-xl border cursor-pointer transition-[border-color,background-color,box-shadow] duration-200',
                           isSelected
                             ? `ring-2 ${s.ring} bg-card`
                             : 'hover:border-muted-foreground/30 bg-card'

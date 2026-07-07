@@ -919,7 +919,7 @@ function FinanceTab() {
                 <button
                   key={code}
                   onClick={() => setCurrency(code)}
-                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                     currency === code
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border bg-background hover:border-primary/50 hover:bg-accent'

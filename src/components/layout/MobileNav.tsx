@@ -181,7 +181,7 @@ export function MobileNav() {
                             href={item.href}
                             onClick={handleNavClick}
                             className={cn(
-                              'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all',
+                              'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
                               active
                                 ? 'bg-sidebar-primary/15 text-sidebar-primary'
                                 : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'

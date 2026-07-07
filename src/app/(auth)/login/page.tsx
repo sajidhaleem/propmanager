@@ -157,7 +157,7 @@ function LoginForm() {
             className="inline-flex items-center gap-2 rounded-full border border-primary/20
               bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-5 w-fit"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse motion-reduce:animate-none" />
             Property Management Platform
           </motion.div>
 
@@ -263,7 +263,7 @@ function LoginForm() {
             ) : (
               <div className="inline-flex items-center gap-1.5 rounded-full border border-border
                 bg-muted/50 px-3 py-1 text-xs text-muted-foreground mb-4">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none" />
                 Secure · All data encrypted
               </div>
             )}
@@ -289,7 +289,7 @@ function LoginForm() {
                   className="flex h-10 w-full rounded-lg border border-input bg-background/80 px-3 py-2 text-sm
                     placeholder:text-muted-foreground
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                    transition-all duration-150"
+                    transition-colors duration-150"
                   {...register('email')}
                 />
                 {errors.email && (
@@ -309,7 +309,7 @@ function LoginForm() {
                     className="flex h-10 w-full rounded-lg border border-input bg-background/80 px-3 py-2 pr-10 text-sm
                       placeholder:text-muted-foreground
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                      transition-all duration-150"
+                      transition-colors duration-150"
                     {...register('password')}
                   />
                   <button
@@ -337,7 +337,7 @@ function LoginForm() {
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                   disabled:opacity-60 disabled:pointer-events-none
                   shadow-lg shadow-primary/30
-                  transition-all duration-200 mt-2"
+                  transition-colors duration-200 mt-2"
               >
                 {isLoggingIn ? (
                   <><Loader2 className="h-4 w-4 animate-spin" />Signing in…</>

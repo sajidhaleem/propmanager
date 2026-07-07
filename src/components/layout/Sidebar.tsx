@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   LayoutDashboard, CalendarDays, BookOpen, Building2, Banknote,
   Receipt, Users, BarChart3, Settings, LogOut, Home, ChevronLeft,
@@ -60,6 +60,7 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const shouldReduceMotion = useReducedMotion()
   const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore()
   const { user, logout } = useAuth()
   const [isOnline, setIsOnline] = useState(true)
@@ -100,11 +101,14 @@ export function Sidebar() {
       <motion.aside
         initial={false}
         animate={{ x: sidebarOpen ? 0 : -280 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { type: 'spring', stiffness: 300, damping: 30 }
+        }
         className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col
                    bg-sidebar border-r border-sidebar-border
-                   lg:relative lg:translate-x-0 lg:flex"
-        style={{ x: undefined }}
+                   lg:relative lg:!transform-none lg:flex"
       >
         {/* ── Logo ── */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-sidebar-border">
@@ -141,7 +145,7 @@ export function Sidebar() {
                       href={item.href}
                       onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false) }}
                       className={cn(
-                        'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150',
+                        'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors duration-150',
                         active
                           ? 'nav-active'
                           : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
