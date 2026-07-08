@@ -18,6 +18,7 @@ import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
+import { EmptyState } from '@/components/ui/empty-state'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { useSearchParams } from 'next/navigation'
@@ -559,7 +560,14 @@ function BookingsInner() {
             ))}
           </div>
         ) : bookings.length === 0 ? (
-          <Card className="py-16 text-center text-muted-foreground text-sm">No bookings found</Card>
+          <Card>
+            <EmptyState
+              icon={CalendarDays}
+              title={search || statusFilter !== 'all' || platformFilter !== 'all' ? 'No bookings match these filters' : 'No bookings yet'}
+              description={search || statusFilter !== 'all' || platformFilter !== 'all' ? 'Try clearing the search or filters.' : 'Log your first guest to see them here.'}
+              action={{ label: 'New Booking', onClick: openCreate }}
+            />
+          </Card>
         ) : (
           groupedBookings.map((group) => (
             <div key={group.dateKey} className="space-y-2">
@@ -731,7 +739,7 @@ function BookingsInner() {
                             <div className="flex flex-col items-end">
                               <button
                                 className="font-bold text-sm tabular-nums hover:text-primary hover:underline underline-offset-2 transition-colors"
-                                title="Click to edit paid amount"
+                                title="Click to edit paid amount" aria-label="Click to edit paid amount"
                                 onClick={() => { setEditingAmountId(b.id); setEditingAmountValue(String(b.paidAmount ?? 0)) }}
                               >
                                 {format(b.paidAmount ?? 0)}
@@ -747,16 +755,16 @@ function BookingsInner() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-0.5 shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 group-focus-within:!opacity-100">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" title="Edit" aria-label="Edit" onClick={() => openEdit(b)}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Duplicate" onClick={() => openCopy(b)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-muted-foreground hover:text-primary" title="Duplicate" aria-label="Duplicate" onClick={() => openCopy(b)}>
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600" title="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-blue-500 hover:text-blue-600" title="Push to Hotel Eye" aria-label="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
                             <Send className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete"
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-destructive hover:text-destructive" title="Delete" aria-label="Delete"
                             onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -799,10 +807,10 @@ function BookingsInner() {
           </DialogHeader>
 
           {/* Two-column body */}
-          <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
 
           {/* Scrollable form */}
-          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 border-r">
+          <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 md:border-r">
 
             {/* CNIC Scanner — set apart as a quick-fill utility, not a form field */}
             <div className="rounded-xl border border-dashed bg-muted/30 p-4">
@@ -817,7 +825,7 @@ function BookingsInner() {
                   <Label>Guest Name *</Label>
                   <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
                 </div>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label>Email</Label>
                     <Input type="email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} placeholder="guest@email.com" />
@@ -835,7 +843,7 @@ function BookingsInner() {
               <p className="text-xs font-semibold uppercase tracking-widest text-foreground/80">Stay Details</p>
 
               {/* Check-in / Check-out */}
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <Label>Check-in *</Label>
                   <Input type="datetime-local" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
@@ -847,7 +855,7 @@ function BookingsInner() {
               </div>
 
               {/* Property + Platform + Status in a row */}
-              <div className="grid grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div className="space-y-1.5">
                   <Label>Property *</Label>
                   <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v })}>
@@ -907,7 +915,7 @@ function BookingsInner() {
               </div>
 
               {/* Financial row: Rate / Cleaning / Platform fee */}
-              <div className="grid grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div className="space-y-1.5">
                   <Label>Rate / Night ({currencyInfo.symbol}) *</Label>
                   <Input type="number" min="0" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="0" />
@@ -923,7 +931,7 @@ function BookingsInner() {
               </div>
 
               {/* Paid + Outstanding */}
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <Label>Paid Amount ({currencyInfo.symbol})</Label>
                   <Input type="number" min="0" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
@@ -959,7 +967,7 @@ function BookingsInner() {
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.misc && 'rotate-180')} />
               </button>
               <SectionBody open={sectionOpen.misc}>
-                <div className="grid grid-cols-2 gap-5 px-4 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 px-4 pb-4">
                   <div className="space-y-1.5">
                     <Label>Misc Charges ({currencyInfo.symbol})</Label>
                     <Input type="number" min="0" value={form.miscCharges} onChange={(e) => setForm({ ...form, miscCharges: e.target.value })} placeholder="0" />
@@ -982,7 +990,7 @@ function BookingsInner() {
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-200', sectionOpen.reminder && 'rotate-180')} />
               </button>
               <SectionBody open={sectionOpen.reminder}>
-                <div className="grid grid-cols-2 gap-5 px-4 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 px-4 pb-4">
                   <div className="space-y-1.5">
                     <Label>Remind At</Label>
                     <Input type="datetime-local" value={form.reminderAt} onChange={(e) => setForm({ ...form, reminderAt: e.target.value })} />
@@ -1006,7 +1014,7 @@ function BookingsInner() {
               </button>
               <SectionBody open={sectionOpen.hotelEye}>
                 <div className="space-y-4 px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>CNIC #</Label>
                       <Input value={form.guestCnic} onChange={(e) => setForm({ ...form, guestCnic: e.target.value })} placeholder="12345-1234567-1" />
@@ -1029,7 +1037,7 @@ function BookingsInner() {
                     <Label>Permanent Address</Label>
                     <Input value={form.guestAddress} onChange={(e) => setForm({ ...form, guestAddress: e.target.value })} placeholder="As on CNIC" />
                   </div>
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Province</Label>
                       <Input value={form.guestProvince} onChange={(e) => setForm({ ...form, guestProvince: e.target.value })} placeholder="e.g. Punjab" />
@@ -1043,7 +1051,7 @@ function BookingsInner() {
                     <Label>Temporary Address (at property)</Label>
                     <Input value={form.tempAddress} onChange={(e) => setForm({ ...form, tempAddress: e.target.value })} placeholder="Hotel / property address" />
                   </div>
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Temp Province</Label>
                       <Input value={form.tempProvince} onChange={(e) => setForm({ ...form, tempProvince: e.target.value })} placeholder="e.g. KPK" />
@@ -1053,7 +1061,7 @@ function BookingsInner() {
                       <Input value={form.tempDistrict} onChange={(e) => setForm({ ...form, tempDistrict: e.target.value })} placeholder="e.g. Peshawar" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div className="space-y-1.5">
                       <Label>Room #</Label>
                       <Input value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} placeholder="101" />
@@ -1093,7 +1101,7 @@ function BookingsInner() {
               </button>
               <SectionBody open={sectionOpen.reference}>
                 <div className="space-y-3 px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <Label>Name</Label>
                       <Input value={form.refName} onChange={(e) => setForm({ ...form, refName: e.target.value })} placeholder="Reference name" />
@@ -1168,7 +1176,7 @@ function BookingsInner() {
           </div>{/* end scrollable form */}
 
           {/* ── Right summary panel ───────────────────── */}
-          <div className="w-[270px] shrink-0 overflow-y-auto bg-muted/20 px-4 py-5 space-y-4 text-sm">
+          <div className="w-full md:w-[270px] shrink-0 overflow-y-auto border-t md:border-t-0 bg-muted/20 px-4 py-5 space-y-4 text-sm max-h-48 md:max-h-none">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Summary</p>
 
             {/* Nights + totals - always visible */}
@@ -1191,14 +1199,14 @@ function BookingsInner() {
             })()}
 
             {/* Guest */}
-            <SumSection title="Guest">
+            <SumSection title="Guest" aria-label="Guest">
               <SumRow label="Name"    value={form.guestName} />
               <SumRow label="Email"   value={form.guestEmail} />
               <SumRow label="Phone"   value={form.guestPhone} />
             </SumSection>
 
             {/* Stay */}
-            <SumSection title="Stay">
+            <SumSection title="Stay" aria-label="Stay">
               <SumRow label="Check-in"  value={form.checkIn  ? fnsFormat(new Date(form.checkIn),  'MMM d yyyy, HH:mm') : ''} />
               <SumRow label="Check-out" value={form.checkOut ? fnsFormat(new Date(form.checkOut), 'MMM d yyyy, HH:mm') : ''} />
               <SumRow label="Property"  value={properties.find((p: any) => p.id === form.propertyId)?.name ?? ''} />
@@ -1207,7 +1215,7 @@ function BookingsInner() {
             </SumSection>
 
             {/* Financials */}
-            <SumSection title="Financials">
+            <SumSection title="Financials" aria-label="Financials">
               <SumRow label="Rate/night"    value={form.rate       ? `${currencyInfo.symbol} ${form.rate}`       : ''} />
               <SumRow label="Cleaning fee"  value={form.cleaningFee? `${currencyInfo.symbol} ${form.cleaningFee}`: ''} />
               <SumRow label="Platform fee"  value={form.platformFee? `${currencyInfo.symbol} ${form.platformFee}`: ''} />
@@ -1217,7 +1225,7 @@ function BookingsInner() {
 
             {/* Hotel Eye */}
             {(form.guestCnic || form.guestFatherName || form.guestAddress || form.purposeOfVisit) && (
-              <SumSection title="Hotel Eye / Identity">
+              <SumSection title="Hotel Eye / Identity" aria-label="Hotel Eye / Identity">
                 <SumRow label="CNIC"          value={form.guestCnic} />
                 <SumRow label="Father"        value={form.guestFatherName} />
                 <SumRow label="Gender"        value={form.guestGender} />
@@ -1237,7 +1245,7 @@ function BookingsInner() {
 
             {/* Reference */}
             {form.refName && (
-              <SumSection title="Reference / Dealer">
+              <SumSection title="Reference / Dealer" aria-label="Reference / Dealer">
                 <SumRow label="Name"     value={form.refName} />
                 <SumRow label="Father"   value={form.refFatherName} />
                 <SumRow label="Business" value={form.refBusiness} />
@@ -1249,12 +1257,12 @@ function BookingsInner() {
 
             {/* Notes & reminder */}
             {form.notes && (
-              <SumSection title="Notes">
+              <SumSection title="Notes" aria-label="Notes">
                 <p className="text-xs text-foreground break-words">{form.notes}</p>
               </SumSection>
             )}
             {form.reminderAt && (
-              <SumSection title="Reminder">
+              <SumSection title="Reminder" aria-label="Reminder">
                 <SumRow label="At"   value={fnsFormat(new Date(form.reminderAt), 'MMM d yyyy, HH:mm')} />
                 <SumRow label="Note" value={form.reminderNote} />
               </SumSection>

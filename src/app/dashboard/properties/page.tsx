@@ -192,7 +192,7 @@ export default function PropertiesPage() {
             <div className="col-span-full">
               <EmptyState
                 icon={Building2}
-                title="No properties yet"
+                title="No properties yet" aria-label="No properties yet"
                 description="Add your first property to start managing bookings, tracking revenue, and monitoring occupancy."
                 action={{ label: 'Add Property', onClick: openCreate }}
               />

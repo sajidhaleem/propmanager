@@ -329,14 +329,14 @@ export default function FinancialsPage() {
                     {isManager && (
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(i)}
-                            title="Edit income record">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" onClick={() => openEdit(i)}
+                            title="Edit income record" aria-label="Edit income record">
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
                           {isAdmin && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                            <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-destructive hover:text-destructive"
                               onClick={() => { if (confirm(`Delete income record for ${i.booking?.guestName}?`)) deleteMutation.mutate(i.id) }}
-                              title="Delete income record">
+                              title="Delete income record" aria-label="Delete income record">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -388,7 +388,7 @@ export default function FinancialsPage() {
           <div className="text-sm text-muted-foreground mb-2">
             {editIncome?.booking?.guestName} · {editIncome?.booking?.property?.name}
           </div>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="col-span-2 space-y-2">
               <Label>Date Received</Label>
               <Input type="date" value={editForm.receivedAt}

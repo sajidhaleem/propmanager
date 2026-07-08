@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Edit, Download } from 'lucide-react'
+import { Plus, Trash2, Edit, Download, Receipt } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -22,12 +23,12 @@ import * as XLSX from 'xlsx'
 
 const CATEGORIES = ['CLEANING','MAINTENANCE','UTILITIES','SUPPLIES','MARKETING','PLATFORM_FEES','INSURANCE','TAXES','SALARY','REPAIRS','OTHER']
 const CATEGORY_COLORS: Record<string, string> = {
-  CLEANING: 'bg-blue-100 text-blue-700', MAINTENANCE: 'bg-orange-100 text-orange-700',
-  UTILITIES: 'bg-yellow-100 text-yellow-700', SUPPLIES: 'bg-green-100 text-green-700',
-  SALARY: 'bg-purple-100 text-purple-700', TAXES: 'bg-red-100 text-red-700',
-  INSURANCE: 'bg-indigo-100 text-indigo-700', REPAIRS: 'bg-pink-100 text-pink-700',
-  MARKETING: 'bg-teal-100 text-teal-700', PLATFORM_FEES: 'bg-rose-100 text-rose-700',
-  OTHER: 'bg-gray-100 text-gray-700',
+  CLEANING: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300', MAINTENANCE: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+  UTILITIES: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300', SUPPLIES: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+  SALARY: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300', TAXES: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+  INSURANCE: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300', REPAIRS: 'bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300',
+  MARKETING: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300', PLATFORM_FEES: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+  OTHER: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
 }
 const currentYear = new Date().getFullYear()
 const EMPTY_FORM = { date: '', category: 'CLEANING', description: '', amount: '', vendor: '', notes: '' }
@@ -220,7 +221,7 @@ export default function ExpensesPage() {
                   </tr>
                 ))
               ) : expenses.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No expenses found</td></tr>
+                <tr><td colSpan={6}><EmptyState icon={Receipt} title="No expenses recorded" description="Track utilities, cleaning, and repairs to see accurate monthly profit." action={{ label: 'Add Expense', onClick: openCreate }} /></td></tr>
               ) : (
                 expenses.map((e) => (
                   <tr key={e.id} className="border-b hover:bg-muted/50 transition-colors">
@@ -235,10 +236,10 @@ export default function ExpensesPage() {
                     <td className="px-4 py-3 text-right font-semibold text-red-500">{format(e.amount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(e)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" onClick={() => openEdit(e)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                        <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-destructive hover:text-destructive"
                           onClick={() => { if (confirm('Delete expense?')) deleteMutation.mutate(e.id) }}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -264,7 +265,7 @@ export default function ExpensesPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
               <Label>Date *</Label>
               <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />

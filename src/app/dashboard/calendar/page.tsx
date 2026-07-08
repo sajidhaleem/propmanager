@@ -37,12 +37,12 @@ async function fetchProperties() {
 // ── Status colours ──────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; chip: string; dot: string }> = {
-  PENDING:     { bg: 'bg-yellow-400',   text: 'text-yellow-950', chip: 'bg-amber-50 border-amber-300 text-amber-800',   dot: 'bg-amber-500' },
-  CONFIRMED:   { bg: 'bg-blue-500',     text: 'text-white',      chip: 'bg-blue-50 border-blue-300 text-blue-800',       dot: 'bg-blue-500' },
-  CHECKED_IN:  { bg: 'bg-green-500',    text: 'text-white',      chip: 'bg-teal-50 border-teal-300 text-teal-800',       dot: 'bg-teal-500' },
-  CHECKED_OUT: { bg: 'bg-purple-500',   text: 'text-white',      chip: 'bg-purple-50 border-purple-300 text-purple-800', dot: 'bg-purple-500' },
-  CANCELLED:   { bg: 'bg-red-400/60',   text: 'text-white',      chip: 'bg-red-50 border-red-200 text-red-700',          dot: 'bg-red-400' },
-  NO_SHOW:     { bg: 'bg-zinc-500/60',  text: 'text-white',      chip: 'bg-zinc-100 border-zinc-300 text-zinc-600',      dot: 'bg-zinc-400' },
+  PENDING:     { bg: 'bg-yellow-400',   text: 'text-yellow-950', chip: 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/40 dark:text-amber-300',    dot: 'bg-amber-500' },
+  CONFIRMED:   { bg: 'bg-blue-500',     text: 'text-white',      chip: 'bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-500/10 dark:border-blue-500/40 dark:text-blue-300',           dot: 'bg-blue-500' },
+  CHECKED_IN:  { bg: 'bg-green-500',    text: 'text-white',      chip: 'bg-teal-50 border-teal-300 text-teal-800 dark:bg-teal-500/10 dark:border-teal-500/40 dark:text-teal-300',           dot: 'bg-teal-500' },
+  CHECKED_OUT: { bg: 'bg-purple-500',   text: 'text-white',      chip: 'bg-purple-50 border-purple-300 text-purple-800 dark:bg-purple-500/10 dark:border-purple-500/40 dark:text-purple-300', dot: 'bg-purple-500' },
+  CANCELLED:   { bg: 'bg-red-400/60',   text: 'text-white',      chip: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/40 dark:text-red-300',                 dot: 'bg-red-400' },
+  NO_SHOW:     { bg: 'bg-zinc-500/60',  text: 'text-white',      chip: 'bg-zinc-100 border-zinc-300 text-zinc-600 dark:bg-zinc-500/10 dark:border-zinc-500/40 dark:text-zinc-400',          dot: 'bg-zinc-400' },
 }
 
 // ── Month-grid helpers ──────────────────────────────────────────────────────
@@ -146,13 +146,15 @@ function MiniCalendar({
         <div className="flex gap-1">
           <button
             onClick={() => setViewDate(d => subMonths(d, 1))}
-            className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Previous month"
+            className="w-7 h-7 [@media(pointer:coarse)]:w-10 [@media(pointer:coarse)]:h-10 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setViewDate(d => addMonths(d, 1))}
-            className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Next month"
+            className="w-7 h-7 [@media(pointer:coarse)]:w-10 [@media(pointer:coarse)]:h-10 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -353,8 +355,13 @@ function DayTimeline({
                 {/* Content area */}
                 <div
                   className="flex-1 border-t border-border/60 min-h-[76px] px-4 py-1.5 flex flex-wrap gap-2 content-start
-                    hover:bg-muted/30 cursor-pointer transition-colors group relative"
+                    hover:bg-muted/30 cursor-pointer transition-colors group relative
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  role="button"
+                  tabIndex={bksThisHour.length === 0 ? 0 : -1}
+                  aria-label={`Book ${formatHour(hour)} slot`}
                   onClick={() => bksThisHour.length === 0 && handleNewBooking(hour)}
+                  onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && bksThisHour.length === 0) { e.preventDefault(); handleNewBooking(hour) } }}
                 >
                   {/* Now line */}
                   {showNowLine && (
@@ -537,9 +544,9 @@ export default function CalendarPage() {
       {/* ── DAY VIEW ── */}
       {view === 'day' && (
         <Card className="overflow-hidden">
-          <div className="flex h-[calc(100vh-220px)] min-h-[600px]">
+          <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-220px)] lg:min-h-[600px]">
             {/* Left panel */}
-            <div className="w-[300px] flex-shrink-0 border-r flex flex-col p-5 overflow-y-auto">
+            <div className="w-full lg:w-[300px] flex-shrink-0 border-b lg:border-b-0 lg:border-r flex flex-col p-5 overflow-y-auto max-h-[360px] lg:max-h-none">
               {/* Mini calendar */}
               <MiniCalendar
                 selectedDay={selectedDay}
@@ -563,7 +570,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Right panel: day timeline */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 h-[60vh] lg:h-auto">
               <DayTimeline
                 selectedDay={selectedDay}
                 bookings={dayBookings}
@@ -621,11 +628,16 @@ export default function CalendarPage() {
                         key={day.toISOString()}
                         className={cn(
                           'border-r px-1 py-2 text-center cursor-pointer hover:bg-primary/5 transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                           isToday   ? 'bg-primary/15' :
                           isWeekend ? 'bg-muted/30'   : '',
                         )}
                         style={{ width: DAY_W, minWidth: DAY_W }}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => { handleSelectDay(day); setView('day') }}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectDay(day); setView('day') } }}
+                        aria-label={`Switch to day view: ${format(day, 'MMMM d')}`}
                         title={`Switch to day view: ${format(day, 'MMMM d')}`}
                       >
                         <div className={cn(

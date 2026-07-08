@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Edit, Download, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Edit, Download, CheckCircle, Banknote } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -191,7 +192,7 @@ export default function PayoutsPage() {
                   </tr>
                 ))
               ) : payouts.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No payouts found</td></tr>
+                <tr><td colSpan={7}><EmptyState icon={Banknote} title="No payouts recorded" description="Log salaries, bonuses, and reimbursements — paid payouts count toward monthly expenses." action={{ label: 'Add Payout', onClick: openCreate }} /></td></tr>
               ) : (
                 payouts.map((p) => (
                   <tr key={p.id} className="border-b hover:bg-muted/50 transition-colors">
@@ -208,16 +209,16 @@ export default function PayoutsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {p.status === 'PENDING' && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-green-600"
                             onClick={() => markPaidMutation.mutate(p.id)}
-                            title="Mark as paid">
+                            title="Mark as paid" aria-label="Mark as paid">
                             <CheckCircle className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" onClick={() => openEdit(p)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                        <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-destructive hover:text-destructive"
                           onClick={() => { if (confirm('Delete payout?')) deleteMutation.mutate(p.id) }}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -243,7 +244,7 @@ export default function PayoutsPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editPayout ? 'Edit Payout' : 'New Payout'}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="col-span-2 space-y-2">
               <Label>Recipient Name *</Label>
               <Input value={form.recipientName} onChange={(e) => setForm({ ...form, recipientName: e.target.value })} />

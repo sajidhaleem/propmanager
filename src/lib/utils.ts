@@ -43,30 +43,30 @@ export function getOccupancyRate(bookedNights: number, totalNights: number): num
 
 export function getPlatformColor(platform: string): string {
   const colors: Record<string, string> = {
-    AIRBNB: 'bg-rose-100 text-rose-700',
-    DIRECT: 'bg-blue-100 text-blue-700',
-    BOOKING_COM: 'bg-indigo-100 text-indigo-700',
-    VRBO: 'bg-orange-100 text-orange-700',
-    OTHER: 'bg-gray-100 text-gray-700',
+    AIRBNB: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+    DIRECT: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+    BOOKING_COM: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+    VRBO: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+    OTHER: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
   }
   return colors[platform] || colors.OTHER
 }
 
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    CONFIRMED: 'bg-green-100 text-green-700',
-    PENDING: 'bg-yellow-100 text-yellow-700',
-    CHECKED_IN: 'bg-blue-100 text-blue-700',
-    CHECKED_OUT: 'bg-gray-100 text-gray-700',
-    CANCELLED: 'bg-red-100 text-red-700',
-    NO_SHOW: 'bg-orange-100 text-orange-700',
-    ACTIVE: 'bg-green-100 text-green-700',
-    INACTIVE: 'bg-gray-100 text-gray-700',
-    MAINTENANCE: 'bg-yellow-100 text-yellow-700',
-    PAID: 'bg-green-100 text-green-700',
-    UNPAID: 'bg-red-100 text-red-700',
+    CONFIRMED: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+    PENDING: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300',
+    CHECKED_IN: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+    CHECKED_OUT: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
+    CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+    NO_SHOW: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+    ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+    INACTIVE: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
+    MAINTENANCE: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300',
+    PAID: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+    UNPAID: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
   }
-  return colors[status] || 'bg-gray-100 text-gray-700'
+  return colors[status] || 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300'
 }
 
 export function slugify(text: string): string {

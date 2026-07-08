@@ -36,15 +36,15 @@ type UserRow = { id: string; name: string; email: string; role: string; isActive
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
-  ADMIN:   'bg-red-100 text-red-700',
-  MANAGER: 'bg-blue-100 text-blue-700',
-  STAFF:   'bg-green-100 text-green-700',
+  ADMIN:   'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+  MANAGER: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  STAFF:   'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
 }
 
 const ROLE_PERMS = [
   {
     role: 'ADMIN',
-    badge: 'bg-red-100 text-red-700',
+    badge: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
     description: 'Full system access',
     can: [
       'All Bookings — create, edit, delete',
@@ -58,7 +58,7 @@ const ROLE_PERMS = [
   },
   {
     role: 'MANAGER',
-    badge: 'bg-blue-100 text-blue-700',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
     description: 'Operational access',
     can: [
       'All Bookings — create, edit, delete',
@@ -74,7 +74,7 @@ const ROLE_PERMS = [
   },
   {
     role: 'STAFF',
-    badge: 'bg-green-100 text-green-700',
+    badge: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
     description: 'Basic operations',
     can: [
       'Create & edit bookings',
@@ -333,12 +333,12 @@ export default function SettingsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700'} variant="outline">
+                        <Badge className={ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300'} variant="outline">
                           {u.role}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
+                        <Badge variant="outline" className={u.isActive ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300'}>
                           {u.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
                       {isAdmin && (
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" title="Edit user" onClick={() => openEditUser(u)}>
+                            <Button variant="ghost" size="sm" title="Edit user" aria-label="Edit user" onClick={() => openEditUser(u)}>
                               <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
                             {u.id !== user?.userId && (
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                                     : <UserCheck className="h-3.5 w-3.5 text-green-500" />
                                   }
                                 </Button>
-                                <Button variant="ghost" size="sm" title="Delete user" onClick={() => setDeletingUser(u)}>
+                                <Button variant="ghost" size="sm" title="Delete user" aria-label="Delete user" onClick={() => setDeletingUser(u)}>
                                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                 </Button>
                               </>
@@ -750,11 +750,11 @@ function BackupsTab() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" title="Restore this backup" onClick={() => setRestoring(b)}>
+                          <Button variant="ghost" size="sm" title="Restore this backup" aria-label="Restore this backup" onClick={() => setRestoring(b)}>
                             <RotateCcw className="h-3.5 w-3.5 text-blue-500" />
                           </Button>
                           <Button
-                            variant="ghost" size="sm" title="Delete backup"
+                            variant="ghost" size="sm" title="Delete backup" aria-label="Delete backup"
                             onClick={() => { if (confirm('Delete this backup?')) deleteMutation.mutate(b.id) }}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -1001,7 +1001,7 @@ function FinanceTab() {
                           <>
                             <Button
                               variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary"
-                              title="Save"
+                              title="Save" aria-label="Save"
                               onClick={() => {
                                 if (editDraft) updateItem(idx, editDraft)
                                 setEditingIdx(null); setEditDraft(null)
@@ -1011,7 +1011,7 @@ function FinanceTab() {
                             </Button>
                             <Button
                               variant="ghost" size="icon" className="h-7 w-7"
-                              title="Cancel"
+                              title="Cancel" aria-label="Cancel"
                               onClick={() => { setEditingIdx(null); setEditDraft(null) }}
                             >
                               <X className="h-3.5 w-3.5" />
@@ -1021,14 +1021,14 @@ function FinanceTab() {
                           <>
                             <Button
                               variant="ghost" size="icon" className="h-7 w-7"
-                              title="Edit"
+                              title="Edit" aria-label="Edit"
                               onClick={() => { setEditingIdx(idx); setEditDraft({ ...item }) }}
                             >
                               <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
                             <Button
                               variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                              title="Delete"
+                              title="Delete" aria-label="Delete"
                               onClick={() => {
                                 if (confirm(`Delete "${item.label}"?`)) removeItem(idx)
                               }}
