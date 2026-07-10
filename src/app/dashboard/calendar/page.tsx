@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, ChevronRight, Plus, CalendarDays, Bell,
   LayoutGrid, Clock,
@@ -11,7 +11,12 @@ import {
   isSameDay, parseISO, addMonths, subMonths, addDays,
   startOfDay, endOfDay,
 } from 'date-fns'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -254,12 +259,13 @@ function DayTimeline({
   selectedDay,
   bookings,
   isLoading,
+  onNewBooking,
 }: {
   selectedDay: Date
   bookings: Booking[]
   isLoading: boolean
+  onNewBooking: (dtLocal: string) => void
 }) {
-  const router = useRouter()
   const today = new Date()
   const [nowMinute, setNowMinute] = useState<number | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -294,7 +300,7 @@ function DayTimeline({
     const d = format(selectedDay, 'yyyy-MM-dd')
     const h = hour ?? 10
     const pad = (n: number) => String(n).padStart(2, '0')
-    router.push(`/dashboard/bookings?checkIn=${d}T${pad(h)}:00`)
+    onNewBooking(`${d}T${pad(h)}:00`)
   }
 
   return (
@@ -421,14 +427,174 @@ function DayTimeline({
   )
 }
 
+// ── Quick booking dialog ───────────────────────────────────────────────────
+
+const PLATFORM_OPTIONS = [
+  { value: 'DIRECT',      label: 'Direct' },
+  { value: 'AIRBNB',      label: 'Airbnb' },
+  { value: 'BOOKING_COM', label: 'Booking.com' },
+  { value: 'VRBO',        label: 'VRBO' },
+  { value: 'OTHER',       label: 'Other' },
+]
+
+const QUICK_EMPTY = { guestName: '', propertyId: '', checkIn: '', checkOut: '', rate: '', platform: 'DIRECT', paidAmount: '' }
+
+function QuickBookingDialog({
+  open, onOpenChange, initial, properties,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  initial: typeof QUICK_EMPTY
+  properties: Property[]
+}) {
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  const [form, setForm] = useState(initial)
+
+  // Re-seed the form each time the dialog opens with a new slot
+  useEffect(() => { if (open) setForm(initial) }, [open, initial])
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guestName:  form.guestName,
+          propertyId: form.propertyId,
+          checkIn:    new Date(form.checkIn).toISOString(),
+          checkOut:   new Date(form.checkOut).toISOString(),
+          rate:       Number(form.rate) || 0,
+          platform:   form.platform,
+          paidAmount: Number(form.paidAmount) || 0,
+          status:     'CONFIRMED',
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create booking')
+      return json
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar-day'] })
+      queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      onOpenChange(false)
+      toast.success('Booking created')
+    },
+    onError: (e: Error) => toast.error(e.message, { duration: 5000 }),
+  })
+
+  function submit() {
+    if (!form.guestName.trim()) { toast.error('Guest name is required'); return }
+    if (!form.propertyId)       { toast.error('Pick a room'); return }
+    if (!form.checkIn || !form.checkOut) { toast.error('Set check-in and check-out'); return }
+    createMutation.mutate()
+  }
+
+  const selectedProperty = properties.find(p => p.id === form.propertyId)
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>New Booking</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="qb-guest">Guest Name *</Label>
+            <Input id="qb-guest" autoFocus value={form.guestName}
+              onChange={e => setForm({ ...form, guestName: e.target.value })}
+              placeholder="e.g. Ahmed Khan" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Room *</Label>
+              <Select value={form.propertyId}
+                onValueChange={v => {
+                  const prop = properties.find(p => p.id === v)
+                  setForm(f => ({ ...f, propertyId: v, rate: f.rate || String(prop?.baseRate ?? '') }))
+                }}>
+                <SelectTrigger><SelectValue placeholder="Pick a room" /></SelectTrigger>
+                <SelectContent>
+                  {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Platform</Label>
+              <Select value={form.platform} onValueChange={v => setForm({ ...form, platform: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLATFORM_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="qb-ci">Check-in *</Label>
+              <Input id="qb-ci" type="datetime-local" value={form.checkIn}
+                onChange={e => setForm({ ...form, checkIn: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="qb-co">Check-out *</Label>
+              <Input id="qb-co" type="datetime-local" value={form.checkOut}
+                onChange={e => setForm({ ...form, checkOut: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="qb-rate">Rate / Night (Rs)</Label>
+              <Input id="qb-rate" type="number" min="0" value={form.rate}
+                onChange={e => setForm({ ...form, rate: e.target.value })}
+                placeholder={selectedProperty ? String(selectedProperty.baseRate) : '0'} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="qb-paid">Paid (Rs)</Label>
+              <Input id="qb-paid" type="number" min="0" value={form.paidAmount}
+                onChange={e => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between">
+          <Button variant="ghost" size="sm" className="text-muted-foreground"
+            onClick={() => router.push(`/dashboard/bookings?checkIn=${form.checkIn || format(new Date(), "yyyy-MM-dd'T'10:00")}`)}>
+            Full form (CNIC, misc…)
+          </Button>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={submit} disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Saving…' : 'Create Booking'}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
   const [view, setView] = useState<'month' | 'day'>('month')
   const [current, setCurrent] = useState(new Date())  // month-view month
   const [selectedDay, setSelectedDay] = useState(new Date())
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickInitial, setQuickInitial] = useState(QUICK_EMPTY)
   const { format: money } = useCurrency()
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Open the quick-booking dialog prefilled from a date/time
+  const openQuickBooking = useCallback((dtLocal?: string) => {
+    const ci = dtLocal ?? format(new Date(), "yyyy-MM-dd'T'14:00")
+    const ciDate = new Date(ci)
+    const coDate = new Date(ciDate); coDate.setDate(coDate.getDate() + 1)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const co = `${coDate.getFullYear()}-${pad(coDate.getMonth() + 1)}-${pad(coDate.getDate())}T12:00`
+    setQuickInitial({ ...QUICK_EMPTY, checkIn: ci, checkOut: co })
+    setQuickOpen(true)
+  }, [])
 
   const mStart = startOfMonth(current)
   const mEnd   = endOfMonth(current)
@@ -536,10 +702,17 @@ export default function CalendarPage() {
           </button>
         </div>
 
-        <Button size="sm" asChild>
-          <Link href="/dashboard/bookings"><Plus className="h-4 w-4" />New Booking</Link>
+        <Button size="sm" onClick={() => openQuickBooking(format(view === 'day' ? selectedDay : new Date(), "yyyy-MM-dd'T'14:00"))}>
+          <Plus className="h-4 w-4" />New Booking
         </Button>
       </PageHeader>
+
+      <QuickBookingDialog
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
+        initial={quickInitial}
+        properties={properties}
+      />
 
       {/* ── DAY VIEW ── */}
       {view === 'day' && (
@@ -575,6 +748,7 @@ export default function CalendarPage() {
                 selectedDay={selectedDay}
                 bookings={dayBookings}
                 isLoading={dayLoading}
+                onNewBooking={openQuickBooking}
               />
             </div>
           </div>
