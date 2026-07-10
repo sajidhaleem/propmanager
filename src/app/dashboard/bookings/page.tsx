@@ -294,10 +294,22 @@ function BookingsInner() {
   }
 
   async function pushToHotelEye(b: Booking) {
-    if (!(b as any).guestCnic) {
-      toast.error('Add the guest CNIC before pushing to Hotel Eye')
-      return
+    // Open the portal immediately (must be synchronous with the click for popup blockers)
+    window.open('https://hoteleye.punjab.gov.pk/hotel/addwatchentries', '_blank', 'noopener')
+
+    // Copy the CNIC so it can be pasted straight into the portal form
+    if (b.guestCnic) {
+      try {
+        await navigator.clipboard.writeText(b.guestCnic)
+        toast.success(`Hotel Eye opened — CNIC ${b.guestCnic} copied to clipboard`, { duration: 5000 })
+      } catch {
+        toast.success('Hotel Eye opened in a new tab')
+      }
+    } else {
+      toast('Hotel Eye opened — this booking has no CNIC saved yet', { icon: 'ℹ️', duration: 5000 })
     }
+
+    // Also hand the job to the local auto-fill tool if it happens to be running (best effort)
     const payload = {
       bookingId:        b.id,
       cnic:             (b as any).guestCnic             || '',
@@ -325,37 +337,17 @@ function BookingsInner() {
       ref_cell:         (b as any).refCell               || '',
       ref_verified:     (b as any).refVerified ? 'Yes' : '',
     }
-    // 1) Direct: the Hotel Eye tool running on THIS PC — opens the browser instantly
+    // Best-effort: if the local auto-fill tool is running it will also open a
+    // prefilled window; silent either way — the new tab above is the primary flow.
     try {
-      const direct = await fetch('http://localhost:5000/fill', {
+      await fetch('http://localhost:5000/fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(2000),
       })
-      if (direct.ok) {
-        toast.success('Hotel Eye browser opening now…')
-        return
-      }
     } catch {
-      // Local tool not running on this device — fall through to the queue
-    }
-
-    // 2) Fallback: queue on the server; the poller picks it up when the tool is online
-    try {
-      const res = await fetch('/api/hotel-eye/fill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to queue job')
-      toast('Hotel Eye tool is offline on this PC — job queued. Start it with run.bat (or reboot) to process.', {
-        icon: '⏳',
-        duration: 7000,
-      })
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to queue Hotel Eye job', { duration: 5000 })
+      // Tool not running — fine, the portal tab is already open
     }
   }
 
