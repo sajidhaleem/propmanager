@@ -325,6 +325,23 @@ function BookingsInner() {
       ref_cell:         (b as any).refCell               || '',
       ref_verified:     (b as any).refVerified ? 'Yes' : '',
     }
+    // 1) Direct: the Hotel Eye tool running on THIS PC — opens the browser instantly
+    try {
+      const direct = await fetch('http://localhost:5000/fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(3000),
+      })
+      if (direct.ok) {
+        toast.success('Hotel Eye browser opening now…')
+        return
+      }
+    } catch {
+      // Local tool not running on this device — fall through to the queue
+    }
+
+    // 2) Fallback: queue on the server; the poller picks it up when the tool is online
     try {
       const res = await fetch('/api/hotel-eye/fill', {
         method: 'POST',
@@ -333,7 +350,10 @@ function BookingsInner() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to queue job')
-      toast.success('Queued — Hotel Eye tool on your PC will open the browser shortly')
+      toast('Hotel Eye tool is offline on this PC — job queued. Start it with run.bat (or reboot) to process.', {
+        icon: '⏳',
+        duration: 7000,
+      })
     } catch (e: any) {
       toast.error(e.message || 'Failed to queue Hotel Eye job', { duration: 5000 })
     }

@@ -11,6 +11,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@anthropic-ai/sdk@0.105",
         "npm:@auth/prisma-adapter@^2.7.2",
         "npm:@ducanh2912/next-pwa@^10.2.9",
         "npm:@hookform/resolvers@^3.9.1",
