@@ -114,6 +114,23 @@ export async function POST(req: NextRequest) {
       include: { property: { select: { id: true, name: true } } },
     })
 
+    // Bookings logged retroactively as already checked out need their income
+    // record too (normally created on the CHECKED_OUT status transition)
+    if (booking.status === 'CHECKED_OUT') {
+      await prisma.income.create({
+        data: {
+          bookingId: booking.id,
+          grossAmount: booking.totalAmount,
+          platformFee: booking.platformFee,
+          cleaningFee: booking.cleaningFee,
+          netAmount: booking.netAmount,
+          receivedAt: booking.checkOut,
+          month: booking.checkOut.getMonth() + 1,
+          year: booking.checkOut.getFullYear(),
+        },
+      })
+    }
+
     return apiResponse(booking, 201)
   } catch (error: any) {
     if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
