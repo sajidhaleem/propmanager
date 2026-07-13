@@ -3,14 +3,15 @@ import { getSession } from '@/lib/auth'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { MobileNav } from '@/components/layout/MobileNav'
-import { InactivityProvider } from '@/components/auth/InactivityProvider'
+import { InactivityGuard } from '@/components/auth/InactivityGuard'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect('/login')
 
   return (
-    <InactivityProvider>
+    <>
+      <InactivityGuard />
       <div className="flex h-[100dvh] overflow-hidden bg-background">
         {/* Desktop sidebar — hidden on mobile */}
         <div className="hidden lg:flex lg:w-[260px] lg:shrink-0">
@@ -30,6 +31,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Mobile bottom navigation */}
         <MobileNav />
       </div>
-    </InactivityProvider>
+    </>
   )
 }

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { propertySchema } from '@/lib/validations'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,8 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!property) return apiError('Property not found', 404)
     return apiResponse(property)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -37,9 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const property = await prisma.property.update({ where: { id }, data: result.data })
     return apiResponse(property)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -50,8 +47,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.property.delete({ where: { id } })
     return apiResponse({ message: 'Property deleted' })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

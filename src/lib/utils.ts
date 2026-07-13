@@ -6,20 +6,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency = 'PKR'): string {
-  try {
-    const { getCurrency, formatAmount } = require('./currencies')
-    return formatAmount(amount, currency)
-  } catch {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency === 'PKR' ? 'USD' : currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount)
-  }
-}
-
 export function formatDate(date: Date | string, fmt = 'MMM dd, yyyy'): string {
   return format(new Date(date), fmt)
 }
@@ -98,4 +84,31 @@ export function apiResponse<T>(data: T, status = 200) {
 
 export function apiError(message: string, status = 400) {
   return Response.json({ success: false, error: message }, { status })
+}
+
+export function handleApiError(error: unknown, fallbackMessage = 'Internal server error') {
+  const message = error instanceof Error ? error.message : ''
+  if (message === 'Unauthorized') return apiError('Unauthorized', 401)
+  if (message === 'Forbidden') return apiError('Forbidden', 403)
+  return apiError(fallbackMessage, 500)
+}
+
+type MonthlyAmountGroup = { year: number; month: number; _sum: { amount: number | null } }
+
+/**
+ * Combines an expense groupBy and a payout groupBy (same shape: year/month/_sum.amount)
+ * into the totals for one year/month, matching the merge logic previously
+ * duplicated in the dashboard stats and reports routes.
+ */
+export function getMonthlyExpenseTotal(
+  expensesByMonth: MonthlyAmountGroup[],
+  payoutsByMonth: MonthlyAmountGroup[],
+  year: number,
+  month: number
+) {
+  const exp = expensesByMonth.find((e) => e.year === year && e.month === month)
+  const pay = payoutsByMonth.find((p) => p.year === year && p.month === month)
+  const expenses = exp?._sum.amount || 0
+  const payouts = pay?._sum.amount || 0
+  return { expenses, payouts, total: expenses + payouts }
 }

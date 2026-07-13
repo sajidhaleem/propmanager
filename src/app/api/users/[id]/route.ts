@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { z } from 'zod'
 import { emailField } from '@/lib/validations'
 
@@ -35,9 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
     return apiResponse(user)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -52,8 +50,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.user.delete({ where: { id } })
     return apiResponse({ message: 'User deleted' })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

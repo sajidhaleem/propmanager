@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiResponse, handleApiError, getMonthlyExpenseTotal } from '@/lib/utils'
 import { startOfMonth, endOfMonth, subMonths, getDaysInMonth, startOfDay, addDays } from 'date-fns'
 
 export async function GET(req: NextRequest) {
@@ -155,11 +155,10 @@ export async function GET(req: NextRequest) {
     ])
     const expensesByMonth = Array.from(allMonthKeys).sort().map(key => {
       const [y, m] = key.split('-').map(Number)
-      const exp = expensesByMonthRaw.find(e => e.year === y && e.month === m)
-      const pay = payoutsByMonthRaw.find(p => p.year === y && p.month === m)
+      const { total } = getMonthlyExpenseTotal(expensesByMonthRaw, payoutsByMonthRaw, y, m)
       return {
         month: `${y}-${String(m).padStart(2, '0')}`,
-        expenses: (exp?._sum.amount || 0) + (pay?._sum.amount || 0),
+        expenses: total,
       }
     })
 
@@ -192,8 +191,7 @@ export async function GET(req: NextRequest) {
       upcomingBookings,
     })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
     console.error('Dashboard stats error:', error)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
@@ -60,7 +60,6 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

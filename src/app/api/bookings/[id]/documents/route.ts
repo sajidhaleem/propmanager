@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = [
@@ -26,8 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     })
     return apiResponse(documents)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -63,8 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return apiResponse(document, 201)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
     console.error('Document upload error:', error)
-    return apiError('Upload failed', 500)
+    return handleApiError(error, 'Upload failed')
   }
 }

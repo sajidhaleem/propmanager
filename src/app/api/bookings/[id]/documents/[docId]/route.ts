@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 // GET /api/bookings/[id]/documents/[docId] — download file
 export async function GET(
@@ -24,8 +24,7 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -42,7 +41,6 @@ export async function DELETE(
     await prisma.document.delete({ where: { id: docId } })
     return apiResponse({ message: 'Document deleted' })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

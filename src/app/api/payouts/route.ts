@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { payoutSchema } from '@/lib/validations'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,8 +50,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
 
@@ -74,8 +73,6 @@ export async function POST(req: NextRequest) {
     })
     return apiResponse(payout, 201)
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
-    if (error.message === 'Forbidden') return apiError('Forbidden', 403)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }

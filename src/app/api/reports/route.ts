@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { apiError, apiResponse } from '@/lib/utils'
+import { apiError, apiResponse, handleApiError, getMonthlyExpenseTotal } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
@@ -43,10 +43,13 @@ export async function GET(req: NextRequest) {
 
       const months = Array.from({ length: 12 }, (_, i) => i + 1)
       const merged = months.map((month) => {
-        const income   = incomeByMonth.find((m) => m.month === month)
-        const expenses = expensesByMonth.find((m) => m.month === month)
-        const payouts  = payoutsByMonth.find((m) => m.month === month)
-        const totalExpenses = (expenses?._sum.amount || 0) + (payouts?._sum.amount || 0)
+        const income = incomeByMonth.find((m) => m.month === month)
+        const { expenses, payouts, total: totalExpenses } = getMonthlyExpenseTotal(
+          expensesByMonth,
+          payoutsByMonth,
+          year,
+          month
+        )
         const revenue = income?._sum.netAmount || 0
         return {
           month,
@@ -54,8 +57,8 @@ export async function GET(req: NextRequest) {
           revenue,
           grossRevenue:  income?._sum.grossAmount || 0,
           platformFees:  income?._sum.platformFee || 0,
-          expenses:      expenses?._sum.amount    || 0,
-          payouts:       payouts?._sum.amount     || 0,
+          expenses,
+          payouts,
           totalExpenses,
           net: revenue - totalExpenses,
         }
@@ -199,8 +202,7 @@ export async function GET(req: NextRequest) {
 
     return apiError('Invalid report type')
   } catch (error: any) {
-    if (error.message === 'Unauthorized') return apiError('Unauthorized', 401)
     console.error('Reports error:', error)
-    return apiError('Internal server error', 500)
+    return handleApiError(error)
   }
 }
