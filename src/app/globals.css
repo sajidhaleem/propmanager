@@ -8,50 +8,50 @@
 
 @layer base {
   :root {
-    /* — Background */
-    --background: 0 0% 100%;
-    --foreground: 224 71% 4%;
+    /* — Background (green-tinted off-white, same family as dark theme) */
+    --background: 160 20% 97%;
+    --foreground: 160 25% 8%;
 
     /* — Surface */
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 160 25% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 160 25% 8%;
 
-    /* — Brand (warm terracotta/clay — hospitality-coded, replaces generic SaaS blue) */
-    --primary: 14 62% 42%;
+    /* — Brand (vivid orange on deep-green ground — Velox-style) */
+    --primary: 25 85% 45%;
     --primary-foreground: 0 0% 100%;
 
-    /* — Neutral (tinted warm toward the brand hue, not cool gray-blue) */
-    --secondary: 24 20% 95%;
-    --secondary-foreground: 20 12% 32%;
-    --muted: 24 20% 95%;
-    --muted-foreground: 20 10% 42%;
-    --accent: 24 24% 93%;
-    --accent-foreground: 18 14% 18%;
+    /* — Neutral (tinted toward the green ground, not warm gray) */
+    --secondary: 160 16% 93%;
+    --secondary-foreground: 160 14% 28%;
+    --muted: 160 16% 93%;
+    --muted-foreground: 160 10% 38%;
+    --accent: 165 18% 91%;
+    --accent-foreground: 160 20% 15%;
 
     /* — Status */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
+    --success: 168 70% 34%;
     --warning: 38 92% 50%;
 
     /* — Structure */
-    --border: 24 16% 89%;
-    --input: 24 16% 89%;
-    --ring: 14 62% 42%;
+    --border: 160 14% 87%;
+    --input: 160 14% 87%;
+    --ring: 25 85% 45%;
     --radius: 0.625rem;
 
-    /* — Sidebar (warm near-black instead of cool navy) */
-    --sidebar-background: 20 28% 10%;
-    --sidebar-foreground: 30 20% 96%;
-    --sidebar-primary: 16 72% 42%;
+    /* — Sidebar (deep green-black, matches dark theme ground) */
+    --sidebar-background: 160 22% 6%;
+    --sidebar-foreground: 160 15% 96%;
+    --sidebar-primary: 26 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 18% 17%;
-    --sidebar-accent-foreground: 30 20% 96%;
-    --sidebar-border: 20 18% 17%;
-    --sidebar-ring: 16 72% 42%;
-    --sidebar-muted: 22 12% 52%;
+    --sidebar-accent: 160 14% 13%;
+    --sidebar-accent-foreground: 160 15% 96%;
+    --sidebar-border: 160 14% 13%;
+    --sidebar-ring: 26 95% 53%;
+    --sidebar-muted: 160 8% 55%;
 
     /* — Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -62,39 +62,41 @@
   }
 
   .dark {
-    --background: 20 24% 5%;
-    --foreground: 30 20% 96%;
+    /* Deep green-black glassmorphic ground (Velox reference) */
+    --background: 160 20% 5%;
+    --foreground: 160 15% 96%;
 
-    --card: 20 20% 8%;
-    --card-foreground: 30 20% 96%;
-    --popover: 20 20% 8%;
-    --popover-foreground: 30 20% 96%;
+    --card: 160 16% 9%;
+    --card-foreground: 160 15% 96%;
+    --popover: 160 16% 9%;
+    --popover-foreground: 160 15% 96%;
 
-    --primary: 16 72% 46%;
+    --primary: 26 95% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 20 16% 16%;
-    --secondary-foreground: 24 12% 68%;
-    --muted: 20 16% 16%;
-    --muted-foreground: 24 12% 68%;
-    --accent: 20 16% 16%;
-    --accent-foreground: 30 20% 96%;
+    --secondary: 160 14% 14%;
+    --secondary-foreground: 160 10% 72%;
+    --muted: 160 14% 14%;
+    --muted-foreground: 160 8% 68%;
+    --accent: 160 14% 14%;
+    --accent-foreground: 160 15% 96%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
+    --success: 168 60% 45%;
 
-    --border: 20 16% 16%;
-    --input: 20 16% 16%;
-    --ring: 16 72% 46%;
+    --border: 160 12% 16%;
+    --input: 160 12% 16%;
+    --ring: 26 95% 53%;
 
-    --sidebar-background: 20 26% 4%;
-    --sidebar-foreground: 30 20% 96%;
-    --sidebar-primary: 16 72% 46%;
+    --sidebar-background: 160 22% 4%;
+    --sidebar-foreground: 160 15% 96%;
+    --sidebar-primary: 26 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 16% 11%;
-    --sidebar-accent-foreground: 30 20% 96%;
-    --sidebar-border: 20 16% 11%;
-    --sidebar-muted: 22 12% 50%;
+    --sidebar-accent: 160 14% 11%;
+    --sidebar-accent-foreground: 160 15% 96%;
+    --sidebar-border: 160 14% 11%;
+    --sidebar-muted: 160 8% 55%;
   }
 }
 
@@ -170,9 +172,9 @@
   .bg-gradient-premium {
     background: linear-gradient(
       135deg,
-      hsl(16 55% 12%) 0%,
-      hsl(20 24% 5%) 50%,
-      hsl(30 40% 10%) 100%
+      hsl(165 30% 8%) 0%,
+      hsl(160 20% 4%) 50%,
+      hsl(170 25% 7%) 100%
     );
   }
 
@@ -368,13 +370,8 @@
 
 @layer components {
   .nav-active {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--sidebar-primary) / 0.2) 0%,
-      hsl(var(--sidebar-primary) / 0.05) 100%
-    );
+    background: hsl(var(--sidebar-primary) / 0.14);
     @apply text-sidebar-primary font-medium;
-    border-left: 2px solid hsl(var(--sidebar-primary));
   }
 }
 

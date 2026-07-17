@@ -173,7 +173,7 @@ export default function ExpensesPage() {
                   width={40}
                 />
                 <Tooltip formatter={(v: number) => [format(v), 'Amount']} />
-                <Bar dataKey="amount" fill="#ef4444" radius={[4,4,0,0]} />
+                <Bar dataKey="amount" fill="#e5484d" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

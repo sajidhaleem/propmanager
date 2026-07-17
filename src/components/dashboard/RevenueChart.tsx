@@ -152,9 +152,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   <span className="text-muted-foreground capitalize">{value}</span>
                 )}
               />
-              <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="revenue" name="Revenue" fill="#d96708" radius={[4, 4, 0, 0]} maxBarSize={40} />
               {hasExpenses && (
-                <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="expenses" name="Expenses" fill="#e5484d" radius={[4, 4, 0, 0]} maxBarSize={40} />
               )}
             </BarChart>
           </ResponsiveContainer>

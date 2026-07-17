@@ -25,7 +25,7 @@ import {
 } from 'recharts'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const PLATFORM_COLORS = ['#FF5A5F','#3b82f6','#6366f1','#f59e0b','#6b7280']
+const PLATFORM_COLORS = ['#e5484d','#8b6ce8','#1ba58e','#d96708','#4d82d6']
 const currentYear = new Date().getFullYear()
 
 async function fetchReports(year: string, type: string) {
@@ -624,9 +624,9 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(v)} />
                     <Tooltip formatter={(v: number) => format(v)} />
                     <Legend />
-                    <Bar dataKey="Revenue" fill="#3b82f6" radius={[3,3,0,0]} />
-                    <Bar dataKey="Expenses" fill="#ef4444" radius={[3,3,0,0]} />
-                    <Bar dataKey="Net Income" fill="#10b981" radius={[3,3,0,0]} />
+                    <Bar dataKey="Revenue" fill="#d96708" radius={[3,3,0,0]} />
+                    <Bar dataKey="Expenses" fill="#e5484d" radius={[3,3,0,0]} />
+                    <Bar dataKey="Net Income" fill="#1ba58e" radius={[3,3,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -686,9 +686,9 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(v)} />
                     <Tooltip formatter={(v: number, name: string) => name === 'Revenue' ? [format(v), 'Revenue'] : [v, name]} />
                     <Legend />
-                    <Bar dataKey="Revenue" fill="#3b82f6" radius={[4,4,0,0]} />
-                    <Bar dataKey="Bookings" fill="#10b981" radius={[4,4,0,0]} />
-                    <Bar dataKey="Nights" fill="#f59e0b" radius={[4,4,0,0]} />
+                    <Bar dataKey="Revenue" fill="#d96708" radius={[4,4,0,0]} />
+                    <Bar dataKey="Bookings" fill="#1ba58e" radius={[4,4,0,0]} />
+                    <Bar dataKey="Nights" fill="#8b6ce8" radius={[4,4,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>

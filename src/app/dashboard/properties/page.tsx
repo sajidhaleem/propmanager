@@ -105,7 +105,7 @@ export default function PropertiesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((p, i) => {
             const COLORS = [
-              { bar: 'from-blue-400 to-blue-600',   glow: 'rgba(59,130,246,0.10)',  icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+              { bar: 'from-teal-400 to-teal-600',   glow: 'rgba(27,165,142,0.10)',  icon: 'bg-teal-500/15 text-teal-600 dark:text-teal-400' },
               { bar: 'from-green-400 to-green-600',  glow: 'rgba(34,197,94,0.10)',   icon: 'bg-green-500/15 text-green-600 dark:text-green-400' },
               { bar: 'from-purple-400 to-violet-600',glow: 'rgba(168,85,247,0.10)',  icon: 'bg-purple-500/15 text-purple-600 dark:text-purple-400' },
               { bar: 'from-orange-400 to-orange-600',glow: 'rgba(249,115,22,0.10)',  icon: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
