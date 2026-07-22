@@ -60,6 +60,9 @@ export default function PropertiesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       setModalOpen(false)
       toast.success(editProperty ? 'Property updated' : 'Property created')
     },
@@ -73,6 +76,9 @@ export default function PropertiesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Property deleted')
     },
     onError: () => toast.error('Delete failed'),

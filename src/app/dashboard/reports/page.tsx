@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useCurrency } from '@/hooks/useCurrency'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useIsFetching } from '@tanstack/react-query'
 import {
   Download, TrendingUp, Lightbulb, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, Banknote, CalendarCheck, Building2, BookOpen, CreditCard,
-  Zap, Home,
+  Zap, Home, RefreshCw,
 } from 'lucide-react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -90,6 +90,15 @@ export default function ReportsPage() {
   const shouldReduceMotion            = useReducedMotion()
   const [tab, setTab]                 = useState('insights')
   const [selectedTile, setSelectedTile] = useState<string | null>('revenue')
+  const queryClient                   = useQueryClient()
+  const reportsFetching                = useIsFetching({ queryKey: ['reports'] })
+  const insightsFetching               = useIsFetching({ queryKey: ['insights'] })
+  const isRefreshing                  = reportsFetching > 0 || insightsFetching > 0
+
+  function handleRefresh() {
+    queryClient.invalidateQueries({ queryKey: ['reports'] })
+    queryClient.invalidateQueries({ queryKey: ['insights'] })
+  }
 
   // ── Existing report queries ────────────────────────────────────
   const { data: monthlyData,  isLoading: monthlyLoading }  = useQuery({ queryKey: ['reports','monthly',year],  queryFn: () => fetchReports(year,'monthly'),  enabled: tab==='monthly' })
@@ -313,6 +322,9 @@ export default function ReportsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+          <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />Refresh
+        </Button>
         <Button variant="outline" size="sm" onClick={tab === 'pnl' ? exportPnL : exportMonthly} disabled={tab === 'insights'}>
           <Download className="h-4 w-4" />Export
         </Button>

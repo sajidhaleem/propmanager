@@ -479,6 +479,8 @@ function QuickBookingDialog({
       queryClient.invalidateQueries({ queryKey: ['calendar-day'] })
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       onOpenChange(false)
       toast.success('Booking created')
     },

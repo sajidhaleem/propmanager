@@ -120,6 +120,8 @@ export default function FinancialsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['income'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       setEditOpen(false)
       toast.success('Income record updated')
     },
@@ -134,6 +136,8 @@ export default function FinancialsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['income'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Income record deleted')
     },
     onError: () => toast.error('Delete failed'),

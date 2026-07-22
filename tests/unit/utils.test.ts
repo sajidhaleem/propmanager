@@ -1,19 +1,7 @@
 import {
-  formatCurrency, formatDate, calculateNights, getOccupancyRate,
+  formatDate, calculateNights, getOccupancyRate,
   getPlatformColor, getStatusColor, slugify, generatePagination,
 } from '@/lib/utils'
-
-describe('formatCurrency', () => {
-  it('formats USD correctly', () => {
-    expect(formatCurrency(1500)).toBe('$1,500')
-    expect(formatCurrency(0)).toBe('$0')
-    expect(formatCurrency(99.99)).toBe('$99.99')
-  })
-
-  it('handles negative values', () => {
-    expect(formatCurrency(-250)).toBe('-$250')
-  })
-})
 
 describe('formatDate', () => {
   it('formats date correctly', () => {

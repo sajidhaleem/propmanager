@@ -97,10 +97,10 @@ export function formatAmount(
     return formatted
   } catch {
     // Fallback for unsupported locale/currency combos
-    return `${currency.symbol}${Math.abs(amount).toLocaleString('en-US', {
+    return `${amount < 0 ? '-' : ''}${currency.symbol}${Math.abs(amount).toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    })}${amount < 0 ? '-' : ''}`
+    })}`
   }
 }
 

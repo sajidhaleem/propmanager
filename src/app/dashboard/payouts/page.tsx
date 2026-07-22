@@ -72,6 +72,8 @@ export default function PayoutsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payouts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       setModalOpen(false)
       toast.success(editPayout ? 'Payout updated' : 'Payout created')
     },
@@ -89,6 +91,9 @@ export default function PayoutsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payouts'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Marked as paid')
     },
   })
@@ -100,6 +105,9 @@ export default function PayoutsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payouts'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Payout deleted')
     },
   })

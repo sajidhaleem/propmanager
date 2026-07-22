@@ -204,6 +204,8 @@ function BookingsInner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       setModalOpen(false)
       toast.success(editBooking ? 'Booking updated' : 'Booking created')
     },
@@ -217,6 +219,9 @@ function BookingsInner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Booking deleted')
     },
     onError: () => toast.error('Delete failed'),
@@ -252,6 +257,8 @@ function BookingsInner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       toast.success('Status updated')
     },
     onError: (e: Error) => toast.error(e.message),
@@ -270,6 +277,8 @@ function BookingsInner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
       setEditingAmountId(null)
       toast.success('Paid amount updated')
     },
@@ -337,17 +346,33 @@ function BookingsInner() {
       ref_cell:         (b as any).refCell               || '',
       ref_verified:     (b as any).refVerified ? 'Yes' : '',
     }
-    // Best-effort: if the local auto-fill tool is running it will also open a
-    // prefilled window; silent either way — the new tab above is the primary flow.
+    // If the local auto-fill tool is running on this PC it opens its own info
+    // window immediately. If not reachable, queue the job server-side so the
+    // tool's poller picks it up (and opens the window) once it's back online —
+    // otherwise the info window silently never appears with no way to retry.
     try {
-      await fetch('http://localhost:5000/fill', {
+      const direct = await fetch('http://localhost:5000/fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(2000),
       })
+      if (!direct.ok) throw new Error('tool responded with an error')
     } catch {
-      // Tool not running — fine, the portal tab is already open
+      try {
+        const res = await fetch('/api/hotel-eye/fill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error()
+        toast('Hotel Eye tool is offline on this PC — info window queued, it will open once the tool is running (start it with run.bat).', {
+          icon: '⏳',
+          duration: 7000,
+        })
+      } catch {
+        // Queueing also failed — the portal tab is still open as the primary flow
+      }
     }
   }
 
