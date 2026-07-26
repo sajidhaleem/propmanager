@@ -32,16 +32,25 @@ export async function GET(req: NextRequest) {
     if (platform) where.platform = platform
     if (hotelEyeStatus) where.hotelEyeStatus = hotelEyeStatus
     if (propertyId) where.propertyId = propertyId
+    // Bare "YYYY-MM-DD" strings parse as UTC midnight, which truncates the
+    // end boundary to the start of its day and silently drops same-day
+    // bookings with a later check-in time. Treat endDate as inclusive of
+    // the whole day.
+    const endOfDayUTC = (s: string) => {
+      const d = new Date(s)
+      d.setUTCHours(23, 59, 59, 999)
+      return d
+    }
     if (startDate && endDate) {
       // Overlap: booking overlaps with [startDate, endDate] window
       where.AND = [
-        { checkIn:  { lte: new Date(endDate) } },
+        { checkIn:  { lte: endOfDayUTC(endDate) } },
         { checkOut: { gte: new Date(startDate) } },
       ]
     } else if (startDate) {
       where.checkIn = { gte: new Date(startDate) }
     } else if (endDate) {
-      where.checkIn = { lte: new Date(endDate) }
+      where.checkIn = { lte: endOfDayUTC(endDate) }
     }
 
     const [bookings, total] = await Promise.all([
