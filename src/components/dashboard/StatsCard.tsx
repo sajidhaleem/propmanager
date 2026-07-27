@@ -8,10 +8,10 @@ import { NumberTicker } from '@/components/ui/number-ticker'
 
 const configs = {
   blue:   {
-    icon:   'bg-teal-500/15 text-teal-600 dark:text-teal-400',
-    bar:    'from-teal-400 via-teal-500 to-teal-600',
-    glow:   'rgba(27,165,142,0.10)',
-    border: 'border-teal-100 dark:border-teal-900/40',
+    icon:   'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
+    bar:    'from-cyan-400 via-cyan-500 to-cyan-600',
+    glow:   'rgba(6,182,212,0.16)',
+    border: 'border-cyan-100 dark:border-cyan-400/20',
   },
   green:  {
     icon:   'bg-green-500/15 text-green-600 dark:text-green-400',
@@ -32,10 +32,10 @@ const configs = {
     border: 'border-red-100 dark:border-red-900/40',
   },
   purple: {
-    icon:   'bg-orange-500/15 text-orange-600 dark:text-orange-400',
-    bar:    'from-orange-400 via-orange-500 to-orange-600',
-    glow:   'rgba(232,114,12,0.10)',
-    border: 'border-orange-100 dark:border-orange-900/40',
+    icon:   'bg-violet-500/15 text-violet-600 dark:text-violet-300',
+    bar:    'from-violet-400 via-violet-500 to-violet-600',
+    glow:   'rgba(139,92,246,0.16)',
+    border: 'border-violet-100 dark:border-violet-400/20',
   },
 }
 

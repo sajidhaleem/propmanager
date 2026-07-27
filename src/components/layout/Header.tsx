@@ -102,7 +102,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4 safe-top">
+      <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b dark:border-white/10 bg-background/95 dark:glass-header px-4 safe-top">
         {/* Menu toggle — desktop only */}
         <button
           onClick={toggleSidebar}
@@ -182,7 +182,7 @@ export function Header() {
                 exit={{ opacity: 0, y: 6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 style={{ top: dropdownPos.top, right: dropdownPos.right }}
-                className="fixed z-[200] w-72 rounded-xl border bg-card shadow-xl overflow-hidden"
+                className="fixed z-[200] w-72 glass-panel depth-2 rounded-xl overflow-hidden"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -267,7 +267,7 @@ export function Header() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: -8 }}
               transition={{ duration: 0.15 }}
-              className="fixed left-1/2 top-[15%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-card shadow-xl overflow-hidden"
+              className="fixed left-1/2 top-[15%] z-50 w-full max-w-lg -translate-x-1/2 glass-panel depth-2 rounded-xl overflow-hidden"
             >
               <div className="flex items-center gap-3 px-4 py-3 border-b">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />

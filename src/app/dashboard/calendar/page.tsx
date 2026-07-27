@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  ChevronLeft, ChevronRight, Plus, CalendarDays, Bell,
+  ChevronLeft, ChevronRight, Plus, CalendarDays,
   LayoutGrid, Clock,
 } from 'lucide-react'
 import {
@@ -68,10 +69,6 @@ function slotType(b: Booking, day: Date): Slot | null {
   if (atCO) return 'checkout'
   return 'middle'
 }
-
-const ROOM_W = 130
-const DAY_W  = 132
-const ROW_H  = 88
 
 // ── Day-view constants ─────────────────────────────────────────────────────
 
@@ -427,6 +424,200 @@ function DayTimeline({
   )
 }
 
+// ── Status accent bars (Scheduled rail + month grid) ───────────────────────
+
+const STATUS_BAR: Record<string, string> = {
+  PENDING:     'bg-amber-400',
+  CONFIRMED:   'bg-cyan-400',
+  CHECKED_IN:  'bg-emerald-400',
+  CHECKED_OUT: 'bg-violet-400',
+  CANCELLED:   'bg-red-400',
+  NO_SHOW:     'bg-zinc-400',
+}
+
+// ── Month grid (spatial glass day cells) ────────────────────────────────────
+
+function MonthGrid({
+  current, days, bookings, selectedDay, today, onSelectDay,
+}: {
+  current: Date
+  days: Date[]
+  bookings: Booking[]
+  selectedDay: Date
+  today: Date
+  onSelectDay: (d: Date) => void
+}) {
+  const mStart = startOfMonth(current)
+  const startPad = mStart.getDay()
+  const cells: (Date | null)[] = [...Array(startPad).fill(null), ...days]
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  function dayBookingsList(day: Date) {
+    return bookings
+      .filter(b => slotType(b, day) !== null)
+      .sort((a, b) => parseISO(a.checkIn).getTime() - parseISO(b.checkIn).getTime())
+  }
+
+  return (
+    <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
+      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+        <div key={d} className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground pb-1">
+          {d}
+        </div>
+      ))}
+      <AnimatePresence mode="popLayout">
+        {cells.map((day, i) => {
+          if (!day) return <div key={`pad-${current.getMonth()}-${i}`} />
+          const isToday    = isSameDay(day, today)
+          const isSelected = isSameDay(day, selectedDay)
+          const dayBks     = dayBookingsList(day)
+          return (
+            <motion.button
+              key={day.toISOString()}
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.32, delay: Math.min(i * 0.012, 0.28), ease: [0.16, 1, 0.3, 1] }}
+              onClick={() => onSelectDay(day)}
+              className={cn(
+                'group relative aspect-square sm:aspect-[5/4] rounded-xl border p-2 text-left overflow-hidden',
+                'transition-[transform,box-shadow,border-color,background-color] duration-200',
+                'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isSelected
+                  ? 'border-primary/50 bg-primary/10 dark:glow-cyan'
+                  : 'border-border/60 bg-card/40 hover:border-primary/30 hover:bg-card/70',
+              )}
+            >
+              <span className={cn(
+                'inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold',
+                isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'
+              )}>
+                {format(day, 'd')}
+              </span>
+              <div className="mt-1.5 space-y-1">
+                {dayBks.slice(0, 2).map(b => {
+                  const c = STATUS_COLORS[b.status] || STATUS_COLORS.CONFIRMED
+                  return (
+                    <div key={b.id} className={cn('truncate rounded px-1 py-0.5 text-[10px] font-medium border', c.chip)}>
+                      {b.guestName}
+                    </div>
+                  )
+                })}
+                {dayBks.length > 2 && (
+                  <div className="text-[10px] text-muted-foreground font-semibold pl-1">+{dayBks.length - 2} more</div>
+                )}
+              </div>
+            </motion.button>
+          )
+        })}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ── Scheduled rail (right panel) ────────────────────────────────────────────
+
+function ScheduledRail({
+  day, bookings, isLoading, onPrevDay, onNextDay, onOpenDayView, onNewBooking,
+}: {
+  day: Date
+  bookings: Booking[]
+  isLoading: boolean
+  onPrevDay: () => void
+  onNextDay: () => void
+  onOpenDayView: () => void
+  onNewBooking: () => void
+}) {
+  const { format: money } = useCurrency()
+  const dayBookings = bookingsForDay(bookings, day)
+    .sort((a, b) => bookingSlotForDay(a, day).hour - bookingSlotForDay(b, day).hour)
+
+  return (
+    <div className="glass-panel depth-1 rounded-2xl p-5 w-full lg:w-[300px] shrink-0 flex flex-col lg:max-h-[calc(100vh-220px)]">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Scheduled</h3>
+        <div className="flex items-center gap-1">
+          <button onClick={onPrevDay} aria-label="Previous day"
+            className="h-7 w-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onNextDay} aria-label="Next day"
+            className="h-7 w-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <button onClick={onOpenDayView} className="text-left group mb-4">
+        <p className="text-lg font-display font-semibold group-hover:text-primary transition-colors">
+          {format(day, 'd MMMM, yyyy')}
+        </p>
+        <p className="text-xs text-muted-foreground group-hover:text-primary/80 transition-colors">
+          {format(day, 'EEEE')} · Open hourly view →
+        </p>
+      </button>
+
+      <Button size="sm" className="mb-4 gap-1.5 w-full" onClick={onNewBooking}>
+        <Plus className="h-3.5 w-3.5" /> New Booking
+      </Button>
+
+      <div className="flex-1 overflow-y-auto scrollbar-thin -mx-1 px-1 space-y-2.5">
+        {isLoading ? (
+          [...Array(3)].map((_, i) => <Skeleton key={i} className="h-[72px] w-full rounded-xl" />)
+        ) : (
+          <AnimatePresence mode="popLayout" initial={false}>
+            {dayBookings.length === 0 ? (
+              <motion.p
+                key="empty"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="text-xs text-muted-foreground py-6 text-center"
+              >
+                Nothing scheduled this day.
+              </motion.p>
+            ) : (
+              dayBookings.map((b, i) => {
+                const bar = STATUS_BAR[b.status] || STATUS_BAR.CONFIRMED
+                const kind = bookingSlotForDay(b, day).kind
+                const ci = parseISO(b.checkIn)
+                const co = parseISO(b.checkOut)
+                return (
+                  <motion.div
+                    key={b.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <Link
+                      href="/dashboard/bookings"
+                      className="block rounded-xl border border-border/60 bg-card/60 overflow-hidden hover:border-primary/40 hover:-translate-y-0.5 transition-[transform,border-color] group"
+                    >
+                      <div className={cn('h-[3px] w-full', bar)} />
+                      <div className="p-3">
+                        <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{b.guestName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{b.property?.name}</p>
+                        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                          <span>
+                            {kind === 'checkin'  && `In ${format(ci, 'h:mm a')}`}
+                            {kind === 'checkout' && `Out ${format(co, 'h:mm a')}`}
+                            {kind === 'stay'     && 'In residence'}
+                          </span>
+                          <span className="font-semibold text-foreground">{money(b.totalAmount)}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                )
+              })
+            )}
+          </AnimatePresence>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Quick booking dialog ───────────────────────────────────────────────────
 
 const PLATFORM_OPTIONS = [
@@ -584,8 +775,6 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickInitial, setQuickInitial] = useState(QUICK_EMPTY)
-  const { format: money } = useCurrency()
-  const scrollRef = useRef<HTMLDivElement>(null)
 
   // Open the quick-booking dialog prefilled from a date/time
   const openQuickBooking = useCallback((dtLocal?: string) => {
@@ -639,33 +828,6 @@ export default function CalendarPage() {
     setCurrent(d)
   }, [])
 
-  // Scroll month grid to today
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el || isLoading || view !== 'month') return
-    const frame = requestAnimationFrame(() => {
-      if (isCurrentMonth) {
-        const todayIndex = days.findIndex(d => isSameDay(d, today))
-        el.scrollLeft = todayIndex > 0 ? Math.max(0, (todayIndex - 1) * DAY_W) : 0
-      } else {
-        el.scrollLeft = 0
-      }
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [current, isCurrentMonth, isLoading, view])
-
-  function cellBookings(propId: string, day: Date): Booking[] {
-    return bookings
-      .filter(b => b.propertyId === propId && slotType(b, day) !== null)
-      .sort((a, b) => parseISO(a.checkIn).getTime() - parseISO(b.checkIn).getTime())
-  }
-
-  function dayCount(day: Date) {
-    return bookings.filter(b => slotType(b, day) !== null).length
-  }
-
-  const totalW = ROOM_W + days.length * DAY_W
-
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
@@ -683,7 +845,7 @@ export default function CalendarPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors',
               view === 'month'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-card text-foreground shadow-sm dark:glow-cyan'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -695,7 +857,7 @@ export default function CalendarPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors',
               view === 'day'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-card text-foreground shadow-sm dark:glow-cyan'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -757,228 +919,83 @@ export default function CalendarPage() {
         </Card>
       )}
 
-      {/* ── MONTH VIEW (Gantt grid) ── */}
+      {/* ── MONTH VIEW (spatial glass grid + scheduled rail) ── */}
       {view === 'month' && (
-        <Card className="overflow-hidden">
-          {/* Month navigation */}
-          <div className="flex items-center justify-between px-6 py-4 border-b">
-            <Button variant="outline" size="sm" className="gap-1.5"
-              onClick={() => setCurrent(d => subMonths(d, 1))}>
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{format(subMonths(current, 1), 'MMM')}</span>
-            </Button>
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-xl font-bold tracking-tight">{format(current, 'MMMM yyyy')}</h2>
-              {!isCurrentMonth && (
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary"
-                  onClick={() => setCurrent(new Date())}>
-                  Today
-                </Button>
-              )}
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5"
-              onClick={() => setCurrent(d => addMonths(d, 1))}>
-              <span className="hidden sm:inline">{format(addMonths(current, 1), 'MMM')}</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Scrollable Gantt grid */}
-          <div ref={scrollRef} className="overflow-x-auto">
-            <table className="border-collapse table-fixed" style={{ width: totalW, minWidth: totalW }}>
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th
-                    className="sticky left-0 z-20 border-r bg-muted text-left px-3 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]"
-                    style={{ width: ROOM_W, minWidth: ROOM_W }}
-                  >
-                    Room
-                  </th>
-                  {days.map(day => {
-                    const isToday   = isSameDay(day, today)
-                    const isWeekend = day.getDay() === 0 || day.getDay() === 6
-                    const count     = dayCount(day)
-                    return (
-                      <th
-                        key={day.toISOString()}
-                        className={cn(
-                          'border-r px-1 py-2 text-center cursor-pointer hover:bg-primary/5 transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                          isToday   ? 'bg-primary/15' :
-                          isWeekend ? 'bg-muted/30'   : '',
-                        )}
-                        style={{ width: DAY_W, minWidth: DAY_W }}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => { handleSelectDay(day); setView('day') }}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectDay(day); setView('day') } }}
-                        aria-label={`Switch to day view: ${format(day, 'MMMM d')}`}
-                        title={`Switch to day view: ${format(day, 'MMMM d')}`}
-                      >
-                        <div className={cn(
-                          'text-[10px] font-semibold uppercase tracking-wide',
-                          isToday ? 'text-primary' : 'text-muted-foreground'
-                        )}>
-                          {format(day, 'EEE')}
-                        </div>
-                        <div className={cn(
-                          'text-lg font-bold leading-none mt-0.5',
-                          isToday ? 'text-primary' : ''
-                        )}>
-                          {format(day, 'd')}
-                        </div>
-                        {count > 0 && (
-                          <span className={cn(
-                            'mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                            isToday ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                          )}>
-                            {count}
-                          </span>
-                        )}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-
-              <tbody>
-                {isLoading ? (
-                  [...Array(4)].map((_, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="sticky left-0 z-10 bg-card border-r px-3 py-3 shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]">
-                        <Skeleton className="h-4 w-20" />
-                      </td>
-                      {days.map((_, j) => (
-                        <td key={j} className="border-r px-1 py-1">
-                          <Skeleton className="h-14 w-full rounded" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : properties.length === 0 ? (
-                  <tr>
-                    <td colSpan={days.length + 1} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                      No properties found.{' '}
-                      <Link href="/dashboard/properties" className="text-primary hover:underline">Add a property</Link>
-                    </td>
-                  </tr>
-                ) : (
-                  properties.map((prop, ri) => (
-                    <tr
-                      key={prop.id}
-                      className={cn('border-b', ri % 2 === 1 ? 'bg-muted/5' : '')}
-                      style={{ height: ROW_H }}
-                    >
-                      <td
-                        className="sticky left-0 z-10 border-r px-3 py-2 align-middle bg-card shadow-[4px_0_6px_-4px_rgb(0_0_0_/_0.12)]"
-                        style={{ width: ROOM_W, minWidth: ROOM_W }}
-                      >
-                        <div className="font-semibold text-sm leading-tight">{prop.name}</div>
-                        <div className="text-[10px] text-muted-foreground capitalize mt-0.5">{prop.type}</div>
-                      </td>
-
-                      {days.map(day => {
-                        const bks       = cellBookings(prop.id, day)
-                        const isToday   = isSameDay(day, today)
-                        const isWeekend = day.getDay() === 0 || day.getDay() === 6
-                        return (
-                          <td
-                            key={day.toISOString()}
-                            className={cn(
-                              'border-r px-0.5 py-0.5 align-top',
-                              isToday   ? 'bg-primary/5'  :
-                              isWeekend ? 'bg-muted/10'   : '',
-                            )}
-                            style={{ width: DAY_W, minWidth: DAY_W }}
-                          >
-                            <div className="flex flex-col gap-0.5">
-                              {bks.map(b => {
-                                const slot = slotType(b, day)!
-                                const c    = STATUS_COLORS[b.status] || STATUS_COLORS.CONFIRMED
-                                const ci   = parseISO(b.checkIn)
-                                const co   = parseISO(b.checkOut)
-                                const radius =
-                                  slot === 'single'   ? 'rounded mx-0.5' :
-                                  slot === 'checkin'  ? 'rounded-l ml-0.5' :
-                                  slot === 'checkout' ? 'rounded-r mr-0.5' :
-                                                        ''
-                                const reminderDay = (b as any).reminderAt
-                                  ? isSameDay(parseISO((b as any).reminderAt), day)
-                                  : false
-                                return (
-                                  <Link
-                                    key={b.id}
-                                    href="/dashboard/bookings"
-                                    title={`${b.guestName} · ${prop.name}\n${format(ci, 'MMM d, h:mm a')} → ${format(co, 'MMM d, h:mm a')}\nTotal: ${money(b.totalAmount)} · Paid: ${money(b.paidAmount ?? 0)}`}
-                                    className={cn(
-                                      'block overflow-hidden px-1.5 py-1 text-xs leading-tight hover:brightness-110 transition-[filter] cursor-pointer',
-                                      c.bg, c.text, radius,
-                                    )}
-                                  >
-                                    {(slot === 'checkin' || slot === 'single') && (
-                                      <>
-                                        <div className="font-bold truncate flex items-center gap-0.5">
-                                          {reminderDay && <Bell className="h-3 w-3 shrink-0 opacity-90" />}
-                                          <span className="truncate">{b.guestName}</span>
-                                        </div>
-                                        <div className="opacity-90 mt-0.5">
-                                          {format(ci, 'h:mm a')} – {format(co, 'h:mm a')}
-                                        </div>
-                                        <div className="font-semibold opacity-90">{money(b.totalAmount)}</div>
-                                      </>
-                                    )}
-                                    {slot === 'middle' && (
-                                      <div className="font-semibold truncate opacity-80 py-0.5 flex items-center gap-0.5">
-                                        {reminderDay && <Bell className="h-3 w-3 shrink-0" />}
-                                        <span className="truncate">{b.guestName}</span>
-                                      </div>
-                                    )}
-                                    {slot === 'checkout' && (
-                                      <>
-                                        <div className="font-semibold truncate opacity-80 flex items-center gap-0.5">
-                                          {reminderDay && <Bell className="h-3 w-3 shrink-0" />}
-                                          <span className="truncate">{b.guestName}</span>
-                                        </div>
-                                        <div className="opacity-70">out {format(co, 'h:mm a')}</div>
-                                      </>
-                                    )}
-                                  </Link>
-                                )
-                              })}
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <div className="glass-panel depth-1 rounded-2xl p-5 flex-1 min-w-0 w-full">
+            {/* Month navigation */}
+            <div className="flex items-center justify-between pb-4 mb-1">
+              <Button variant="outline" size="sm" className="gap-1.5"
+                onClick={() => setCurrent(d => subMonths(d, 1))}>
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">{format(subMonths(current, 1), 'MMM')}</span>
+              </Button>
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-display font-bold tracking-tight">{format(current, 'MMMM yyyy')}</h2>
+                {!isCurrentMonth && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary"
+                    onClick={() => { setCurrent(new Date()); setSelectedDay(new Date()) }}>
+                    Today
+                  </Button>
                 )}
-              </tbody>
-            </table>
+              </div>
+              <Button variant="outline" size="sm" className="gap-1.5"
+                onClick={() => setCurrent(d => addMonths(d, 1))}>
+                <span className="hidden sm:inline">{format(addMonths(current, 1), 'MMM')}</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {isLoading ? (
+              <div className="grid grid-cols-7 gap-2">
+                {[...Array(35)].map((_, i) => <Skeleton key={i} className="aspect-square sm:aspect-[5/4] rounded-xl" />)}
+              </div>
+            ) : properties.length === 0 ? (
+              <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+                No properties found.{' '}
+                <Link href="/dashboard/properties" className="text-primary hover:underline">Add a property</Link>
+              </div>
+            ) : (
+              <MonthGrid
+                current={current}
+                days={days}
+                bookings={bookings}
+                selectedDay={selectedDay}
+                today={today}
+                onSelectDay={handleSelectDay}
+              />
+            )}
+
+            {/* Legend */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-5 mt-4 border-t border-border/60">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Status</span>
+              {[
+                { label: 'Pending',     color: STATUS_BAR.PENDING },
+                { label: 'Confirmed',   color: STATUS_BAR.CONFIRMED },
+                { label: 'Checked in',  color: STATUS_BAR.CHECKED_IN },
+                { label: 'Checked out', color: STATUS_BAR.CHECKED_OUT },
+                { label: 'Cancelled',   color: STATUS_BAR.CANCELLED },
+              ].map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <div className={cn('h-2.5 w-2.5 rounded-full', color)} />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-t bg-muted/10">
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</span>
-            {[
-              { label: 'Pending',     color: 'bg-yellow-400' },
-              { label: 'Confirmed',   color: 'bg-blue-500' },
-              { label: 'Checked in',  color: 'bg-green-500' },
-              { label: 'Checked out', color: 'bg-purple-500' },
-              { label: 'Cancelled',   color: 'bg-red-400/60' },
-            ].map(({ label, color }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <div className={cn('h-3 w-3 rounded-sm', color)} />
-                <span className="text-sm text-muted-foreground">{label}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-1.5 ml-4">
-              <Bell className="h-3 w-3 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Reminder set</span>
-            </div>
-            <span className="ml-auto text-xs text-muted-foreground">Click a date header to switch to day view →</span>
-          </div>
-        </Card>
+          {/* Right rail — live agenda for the selected day */}
+          <ScheduledRail
+            day={selectedDay}
+            bookings={bookings}
+            isLoading={isLoading}
+            onPrevDay={() => handleSelectDay(addDays(selectedDay, -1))}
+            onNextDay={() => handleSelectDay(addDays(selectedDay, 1))}
+            onOpenDayView={() => setView('day')}
+            onNewBooking={() => openQuickBooking(format(selectedDay, "yyyy-MM-dd'T'14:00"))}
+          />
+        </div>
       )}
     </div>
   )

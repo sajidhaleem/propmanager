@@ -108,7 +108,8 @@ export function Sidebar() {
         }
         className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col
                    bg-sidebar border-r border-sidebar-border
-                   lg:relative lg:!transform-none lg:flex"
+                   lg:relative lg:!transform-none lg:flex
+                   lg:w-full lg:rounded-2xl lg:border lg:glass-sidebar"
       >
         {/* ── Logo ── */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-sidebar-border">

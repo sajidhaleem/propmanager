@@ -14,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <InactivityGuard />
       <div className="flex h-[100dvh] overflow-hidden bg-background">
         {/* Desktop sidebar — hidden on mobile */}
-        <div className="hidden lg:flex lg:w-[260px] lg:shrink-0">
+        <div className="hidden lg:flex lg:w-[276px] lg:shrink-0 lg:p-3">
           <Sidebar />
         </div>
 
