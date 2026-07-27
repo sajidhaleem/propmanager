@@ -1213,7 +1213,7 @@ function BookingsInner() {
           </div>{/* end scrollable form */}
 
           {/* ── Right summary panel ───────────────────── */}
-          <div className="w-full md:w-[270px] shrink-0 overflow-y-auto border-t md:border-t-0 bg-muted/20 px-4 py-5 space-y-4 text-sm max-h-48 md:max-h-none">
+          <div className="w-full md:w-[270px] shrink-0 overflow-y-auto border-t md:border-t-0 md:border-l md:border-border/50 px-4 py-5 space-y-4 text-sm max-h-48 md:max-h-none">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Summary</p>
 
             {/* Nights + totals - always visible */}
@@ -1224,7 +1224,7 @@ function BookingsInner() {
               const total = (Number(form.rate)||0)*nights + (Number(form.cleaningFee)||0) + (Number(form.miscCharges)||0)
               const outstanding = Math.max(0, total - (Number(form.paidAmount)||0))
               return (
-                <div className="rounded-lg border bg-background p-3 space-y-1.5">
+                <div className="space-y-1.5 pb-4 border-b border-border/50">
                   {nights > 0 && <SumRow label="Nights" value={String(nights)} />}
                   {total > 0  && <SumRow label="Total"  value={format(total)} />}
                   {(Number(form.paidAmount)||0) > 0 && <SumRow label="Paid" value={format(Number(form.paidAmount))} />}
@@ -1338,9 +1338,9 @@ function BookingsInner() {
 
 function SumSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5 pb-4 border-b border-border/50 last:border-0 last:pb-0">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{title}</p>
-      <div className="rounded-lg border bg-background px-3 py-2 space-y-1">{children}</div>
+      <div className="space-y-1">{children}</div>
     </div>
   )
 }
