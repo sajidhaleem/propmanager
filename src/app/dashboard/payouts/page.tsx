@@ -20,7 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { Payout } from '@/types'
 import * as XLSX from 'xlsx'
 
-const PAYOUT_TYPES = ['SALARY','BONUS','COMMISSION','REIMBURSEMENT','CLEANING_FEE','OTHER']
+const PAYOUT_TYPES = ['SALARY','BONUS','COMMISSION','REIMBURSEMENT','CLEANING_FEE','FOOD_ALLOWANCE','OTHER']
 const currentYear = new Date().getFullYear()
 const EMPTY_FORM = { recipientName: '', amount: '', date: '', type: 'SALARY', description: '', status: 'PENDING', notes: '' }
 

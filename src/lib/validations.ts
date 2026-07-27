@@ -102,7 +102,7 @@ export const payoutSchema = z.object({
   recipientName: z.string().min(2, 'Recipient name is required'),
   amount: z.number().min(0, 'Amount must be positive'),
   date: z.string().or(z.date()),
-  type: z.enum(['SALARY', 'BONUS', 'COMMISSION', 'REIMBURSEMENT', 'CLEANING_FEE', 'OTHER']),
+  type: z.enum(['SALARY', 'BONUS', 'COMMISSION', 'REIMBURSEMENT', 'CLEANING_FEE', 'FOOD_ALLOWANCE', 'OTHER']),
   description: z.string().optional(),
   status: z.enum(['PENDING', 'PAID', 'CANCELLED']).default('PENDING'),
   notes: z.string().optional(),

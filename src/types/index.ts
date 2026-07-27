@@ -3,7 +3,7 @@ export type Platform = 'AIRBNB' | 'DIRECT' | 'BOOKING_COM' | 'VRBO' | 'OTHER'
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW'
 export type PropertyStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
 export type ExpenseCategory = 'CLEANING' | 'MAINTENANCE' | 'UTILITIES' | 'SUPPLIES' | 'MARKETING' | 'PLATFORM_FEES' | 'INSURANCE' | 'TAXES' | 'SALARY' | 'REPAIRS' | 'OTHER'
-export type PayoutType = 'SALARY' | 'BONUS' | 'COMMISSION' | 'REIMBURSEMENT' | 'CLEANING_FEE' | 'OTHER'
+export type PayoutType = 'SALARY' | 'BONUS' | 'COMMISSION' | 'REIMBURSEMENT' | 'CLEANING_FEE' | 'FOOD_ALLOWANCE' | 'OTHER'
 export type PayoutStatus = 'PENDING' | 'PAID' | 'CANCELLED'
 
 export interface User {
