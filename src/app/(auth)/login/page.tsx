@@ -106,18 +106,18 @@ function LoginForm() {
           LEFT — branding panel
       ═══════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex lg:w-[46%] xl:w-[42%] relative overflow-hidden flex-col justify-between p-12
-        bg-[linear-gradient(135deg,#0c1512_0%,#101b17_50%,#070f0c_100%)]">
+        bg-[linear-gradient(135deg,#152144_0%,#0f1730_50%,#0a1024_100%)]">
 
         {/* dot grid */}
         <div className="absolute inset-0 opacity-[0.12] pointer-events-none"
           style={{
-            backgroundImage: 'radial-gradient(circle, #2fbfa8 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, #60a5fa 1px, transparent 1px)',
             backgroundSize: '26px 26px',
           }}
         />
 
         {/* Spotlight from aceternity */}
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#f08a3c" />
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#3b82f6" />
 
         {/* ambient glow blobs */}
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[130px] pointer-events-none" />

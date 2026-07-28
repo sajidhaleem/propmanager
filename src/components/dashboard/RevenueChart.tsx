@@ -152,9 +152,19 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   <span className="text-muted-foreground capitalize">{value}</span>
                 )}
               />
-              <Bar dataKey="revenue" name="Revenue" fill="#d96708" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <defs>
+                <linearGradient id="revBar" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#60a5fa" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+                <linearGradient id="expBar" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#fb7185" />
+                  <stop offset="100%" stopColor="#e11d48" />
+                </linearGradient>
+              </defs>
+              <Bar dataKey="revenue" name="Revenue" fill="url(#revBar)" radius={[6, 6, 0, 0]} maxBarSize={40} />
               {hasExpenses && (
-                <Bar dataKey="expenses" name="Expenses" fill="#e5484d" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="expenses" name="Expenses" fill="url(#expBar)" radius={[6, 6, 0, 0]} maxBarSize={40} />
               )}
             </BarChart>
           </ResponsiveContainer>

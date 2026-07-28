@@ -18,9 +18,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 30% 9%;
 
-    /* — Brand (electric cyan — Spatial UI accent) */
-    --primary: 189 94% 43%;
-    --primary-foreground: 220 30% 8%;
+    /* — Brand (electric blue) */
+    --app-canvas: 220 24% 92%;
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
 
     /* — Neutral */
     --secondary: 220 18% 93%;
@@ -40,19 +41,19 @@
     /* — Structure */
     --border: 220 14% 87%;
     --input: 220 14% 87%;
-    --ring: 189 94% 43%;
+    --ring: 217 91% 55%;
     --radius: 0.875rem;
 
-    /* — Sidebar (obsidian — matches dark theme ground) */
-    --sidebar-background: 222 28% 6%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 189 94% 55%;
-    --sidebar-primary-foreground: 220 30% 8%;
-    --sidebar-accent: 222 20% 13%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 222 20% 15%;
-    --sidebar-ring: 189 94% 55%;
-    --sidebar-muted: 220 10% 58%;
+    /* — Sidebar (deep navy — matches dark theme ground) */
+    --sidebar-background: 226 40% 8%;
+    --sidebar-foreground: 210 30% 97%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 223 28% 16%;
+    --sidebar-accent-foreground: 210 30% 97%;
+    --sidebar-border: 222 24% 20%;
+    --sidebar-ring: 217 91% 60%;
+    --sidebar-muted: 216 14% 62%;
 
     /* — Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -63,46 +64,45 @@
   }
 
   .dark {
-    /* Obsidian spatial ground (#0b0f14-ish) — Apple Vision Pro / AR panel aesthetic */
-    --background: 222 28% 6%;
-    --foreground: 210 20% 96%;
+    /* Deep navy ground — the app frame floats on --app-canvas, panels sit on --card */
+    --app-canvas: 224 28% 22%;
+    --background: 226 38% 9%;
+    --foreground: 210 30% 97%;
 
-    /* Glass surfaces are rendered translucent via .glass-panel; these are the
-       opaque fallback / non-glass surface tone underneath */
-    --card: 222 24% 10%;
-    --card-foreground: 210 20% 96%;
-    --popover: 222 26% 9%;
-    --popover-foreground: 210 20% 96%;
+    --card: 224 34% 13%;
+    --card-foreground: 210 30% 97%;
+    --popover: 224 36% 12%;
+    --popover-foreground: 210 30% 97%;
 
-    --primary: 189 94% 55%;
-    --primary-foreground: 220 30% 8%;
+    /* Electric blue */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 18% 15%;
-    --secondary-foreground: 210 12% 72%;
-    --muted: 222 18% 15%;
-    --muted-foreground: 218 10% 66%;
-    --accent: 222 18% 15%;
-    --accent-foreground: 210 20% 96%;
+    --secondary: 223 28% 18%;
+    --secondary-foreground: 213 20% 76%;
+    --muted: 223 28% 18%;
+    --muted-foreground: 216 16% 70%;
+    --accent: 223 28% 18%;
+    --accent-foreground: 210 30% 97%;
 
-    --destructive: 0 72% 58%;
+    --destructive: 0 74% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 168 65% 48%;
+    --success: 152 66% 47%;
     --violet: 258 90% 72%;
 
-    /* Faint glass edge — thin near-white outline that reads against a moving backdrop */
-    --border: 220 16% 22%;
-    --input: 220 16% 20%;
-    --ring: 189 94% 55%;
+    --border: 222 24% 22%;
+    --input: 222 24% 20%;
+    --ring: 217 91% 60%;
 
-    --sidebar-background: 222 30% 4%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 189 94% 55%;
-    --sidebar-primary-foreground: 220 30% 8%;
-    --sidebar-accent: 222 20% 12%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 220 18% 16%;
-    --sidebar-ring: 189 94% 55%;
-    --sidebar-muted: 220 10% 56%;
+    --sidebar-background: 226 40% 8%;
+    --sidebar-foreground: 210 30% 97%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 223 28% 16%;
+    --sidebar-accent-foreground: 210 30% 97%;
+    --sidebar-border: 222 24% 20%;
+    --sidebar-ring: 217 91% 60%;
+    --sidebar-muted: 216 14% 62%;
   }
 }
 
@@ -166,7 +166,8 @@
     @apply rounded-2xl border bg-card shadow-sm;
   }
   .dark .glass-panel {
-    background: hsl(var(--card) / 0.62);
+    /* Opaque enough that menus/dialogs layered over content stay legible */
+    background: hsl(var(--card) / 0.92);
     border-color: hsl(0 0% 100% / 0.08);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -174,6 +175,36 @@
       0 1px 0 0 hsl(0 0% 100% / 0.06) inset,
       0 20px 40px -16px hsl(222 60% 2% / 0.55),
       0 2px 8px -2px hsl(222 60% 2% / 0.4);
+  }
+
+  /* The whole app sits in a rounded frame floating on a lighter canvas */
+  .app-canvas { background: hsl(var(--app-canvas)); }
+  .app-frame {
+    background: hsl(var(--background));
+    @apply rounded-none lg:rounded-[28px] lg:border;
+  }
+  .dark .app-frame {
+    border-color: hsl(0 0% 100% / 0.07);
+    box-shadow: 0 40px 80px -24px hsl(226 50% 3% / 0.7);
+  }
+
+  /* Floating pill nav bar */
+  .nav-pill {
+    @apply rounded-full border;
+  }
+  .dark .nav-pill {
+    background: hsl(var(--card) / 0.75);
+    border-color: hsl(0 0% 100% / 0.07);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  /* Electric-blue gradient — hero panels and primary CTAs */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(221 83% 53%) 55%, hsl(226 71% 44%) 100%);
+  }
+  .bg-gradient-panel {
+    background: linear-gradient(150deg, hsl(220 60% 26%) 0%, hsl(224 48% 17%) 48%, hsl(226 40% 13%) 100%);
   }
 
   /* Sidebar as a floating glass panel (desktop) */

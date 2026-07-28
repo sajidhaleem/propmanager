@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Label } from 'recharts'
 
-const COLORS = ['#e5484d', '#8b6ce8', '#1ba58e', '#d96708', '#4d82d6']
+const COLORS = ['#3b82f6', '#8b6ce8', '#22d3ee', '#f59e0b', '#f43f5e']
 const PLATFORM_LABELS: Record<string, string> = {
   AIRBNB: 'Airbnb',
   DIRECT: 'Direct',

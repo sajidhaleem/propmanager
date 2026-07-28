@@ -211,23 +211,57 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Greeting banner ── */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card px-6 py-5">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.08),transparent_60%)]" />
-        <div className="relative flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="font-display text-[1.75rem] font-semibold tracking-tight">{greeting} 👋</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Here&apos;s what&apos;s happening with your properties today.
-            </p>
+      {/* ── Hero panel: headline revenue + inset metric pills ── */}
+      <div className="bg-gradient-panel relative overflow-hidden rounded-[22px] border border-white/10 px-6 py-6 lg:px-8 lg:py-7">
+        <div className="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-primary/25 blur-[90px]" />
+        <div className="relative flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-sm text-white/70">{greeting} — here&apos;s today at 52A</p>
+            {isLoading ? (
+              <Skeleton className="mt-2 h-11 w-56" />
+            ) : (
+              <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                <span className="font-display text-4xl font-semibold tracking-tight text-white lg:text-[2.75rem]">
+                  {format(stats?.totalRevenue || 0)}
+                </span>
+                {stats?.revenueGrowth !== undefined && stats?.revenueGrowth !== 0 && (
+                  <span className={cn(
+                    'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                    stats.revenueGrowth > 0 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-red-400/15 text-red-300'
+                  )}>
+                    <TrendingUp className={cn('h-3 w-3', stats.revenueGrowth < 0 && 'rotate-180')} />
+                    {stats.revenueGrowth > 0 ? '+' : ''}{stats.revenueGrowth}%
+                  </span>
+                )}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-white/50">Revenue this month · vs last month</p>
           </div>
+
           <Button
             variant="ghost" size="sm"
-            className="h-8 gap-1.5 border border-white/20 bg-white/10 text-foreground hover:bg-white/20 backdrop-blur-sm"
+            className="h-8 gap-1.5 border border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
             onClick={() => refetch()} disabled={isFetching}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />Refresh
           </Button>
+        </div>
+
+        {/* Inset metric pills */}
+        <div className="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Net income',    value: format((stats?.totalRevenue||0)-(stats?.totalExpenses||0)) },
+            { label: 'Occupancy',     value: `${stats?.occupancyRate||0}%` },
+            { label: 'Active stays',  value: String(stats?.activeBookings ?? 0) },
+            { label: 'Outstanding',   value: format(stats?.outstandingAmount||0) },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur-sm">
+              <p className="text-[11px] font-medium text-white/60">{label}</p>
+              {isLoading
+                ? <Skeleton className="mt-1.5 h-6 w-20" />
+                : <p className="mt-0.5 truncate text-lg font-semibold text-white">{value}</p>}
+            </div>
+          ))}
         </div>
       </div>
 
