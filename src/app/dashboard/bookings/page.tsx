@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -499,10 +499,10 @@ function BookingsInner() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Bookings" description={`${total} total bookings`}>
-        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
+      <PageHero title="Bookings" description={`${total} total booking${total === 1 ? '' : 's'}`}>
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />New Booking</Button>
-      </PageHeader>
+      </PageHero>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Expense } from '@/types'
@@ -168,31 +168,22 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Expenses" description="Track operational costs and expenses">
-        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
+      <PageHero
+        title="Expenses"
+        description="Track operational costs and expenses"
+        loading={isLoading}
+        headline={{
+          value: format(summary.totalAmount || 0),
+          caption: year === 'all' ? 'Total spend · all years' : `Total spend · ${year}`,
+        }}
+        metrics={byCategory.slice(0, 4).map((c: any) => ({
+          label: labelize(c.category),
+          value: format(c._sum.amount || 0),
+        }))}
+      >
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Expense</Button>
-      </PageHeader>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="col-span-full sm:col-span-1">
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Total Expenses</p>
-            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2 text-red-500">{format(summary.totalAmount || 0)}</p>
-            )}
-          </CardContent>
-        </Card>
-        {byCategory.slice(0, 3).map((c: any) => (
-          <Card key={c.category}>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">{c.category.replace('_', ' ')}</p>
-              {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <p className="text-2xl font-bold mt-2">{format(c._sum.amount || 0)}</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      </PageHero>
 
       {chartData.length > 0 && (
         <Card>

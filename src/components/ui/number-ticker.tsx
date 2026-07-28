@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface NumberTickerProps {
@@ -12,9 +12,10 @@ interface NumberTickerProps {
 }
 
 export function NumberTicker({ value, format, className }: NumberTickerProps) {
-  const raw = useMotionValue(0)
-  const spring = useSpring(raw, { damping: 50, stiffness: 80 })
-  const display = useTransform(spring, (v) =>
+  const shouldReduceMotion = useReducedMotion()
+  const raw = useMotionValue(shouldReduceMotion ? value : 0)
+  const spring = useSpring(raw, { damping: 26, stiffness: 140 })
+  const display = useTransform(shouldReduceMotion ? raw : spring, (v) =>
     format ? format(v) : Math.round(v).toLocaleString()
   )
 

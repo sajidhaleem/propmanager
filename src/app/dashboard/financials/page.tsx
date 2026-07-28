@@ -6,14 +6,14 @@ import { Download, Edit, Trash2, Info } from 'lucide-react'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getPlatformColor } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useAuth } from '@/hooks/useAuth'
@@ -164,9 +164,22 @@ export default function FinancialsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Income" description="Revenue auto-recorded when a booking is checked out">
-        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export</Button>
-      </PageHeader>
+      <PageHero
+        title="Income"
+        description="Revenue auto-recorded when a booking is checked out"
+        loading={isLoading}
+        headline={{
+          value: format(summary.netAmount || 0),
+          caption: 'Net income · gross − platform fees',
+        }}
+        metrics={[
+          { label: 'Gross revenue',    value: format(summary.grossAmount || 0), hint: 'incl. cleaning fees' },
+          { label: 'Cleaning collected', value: format(summary.cleaningFee || 0), hint: 'included in gross' },
+          { label: 'Platform fees',   value: `-${format(summary.platformFee || 0)}`, tone: 'negative', hint: 'deducted from gross' },
+        ]}
+      >
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={exportToExcel}><Download className="h-4 w-4" />Export</Button>
+      </PageHero>
 
       {/* How income works banner */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
@@ -180,46 +193,6 @@ export default function FinancialsPage() {
           section. Each record reflects the booking's gross amount, fees, and net income.
           Admins and Managers can edit amounts and notes to correct discrepancies.
         </span>
-      </div>
-
-      {/* Summary cards — formula: Net = Gross − Platform Fee */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Gross Revenue</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">incl. cleaning fees collected</p>
-            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2">{format(summary.grossAmount || 0)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Cleaning Collected</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">included in gross &amp; net</p>
-            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2 text-yellow-600">{format(summary.cleaningFee || 0)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Platform Fees</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">deducted from gross</p>
-            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2 text-red-500">-{format(summary.platformFee || 0)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="border-green-200 dark:border-green-900">
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Net Income</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">gross − platform fee</p>
-            {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-              <p className="text-2xl font-bold mt-2 text-green-600">{format(summary.netAmount || 0)}</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters */}

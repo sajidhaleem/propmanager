@@ -5,14 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { isSameDay, parseISO, addDays } from 'date-fns'
 import {
-  Banknote, TrendingUp, CalendarCheck, Building2,
+  CalendarCheck, Building2,
   ArrowUpRight, Clock, AlertCircle, RefreshCw, Check, X,
-  BookOpen, CreditCard, Globe,
+  BookOpen, CreditCard,
   ArrowDownToLine, ArrowUpFromLine, CalendarClock,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { StatsCard } from '@/components/dashboard/StatsCard'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -211,86 +212,45 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero panel: headline revenue + inset metric pills ── */}
-      <div className="bg-gradient-panel relative overflow-hidden rounded-[22px] border border-white/10 px-6 py-6 lg:px-8 lg:py-7">
-        <div className="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-primary/25 blur-[90px]" />
-        <div className="relative flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0">
-            <p className="text-sm text-white/70">{greeting} — here&apos;s today at 52A</p>
-            {isLoading ? (
-              <Skeleton className="mt-2 h-11 w-56" />
-            ) : (
-              <div className="mt-1.5 flex flex-wrap items-center gap-3">
-                <span className="font-display text-4xl font-semibold tracking-tight text-white lg:text-[2.75rem]">
-                  {format(stats?.totalRevenue || 0)}
-                </span>
-                {stats?.revenueGrowth !== undefined && stats?.revenueGrowth !== 0 && (
-                  <span className={cn(
-                    'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
-                    stats.revenueGrowth > 0 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-red-400/15 text-red-300'
-                  )}>
-                    <TrendingUp className={cn('h-3 w-3', stats.revenueGrowth < 0 && 'rotate-180')} />
-                    {stats.revenueGrowth > 0 ? '+' : ''}{stats.revenueGrowth}%
-                  </span>
-                )}
-              </div>
-            )}
-            <p className="mt-1 text-xs text-white/50">Revenue this month · vs last month</p>
-          </div>
+      <PageHero
+        title={greeting}
+        description="Here's today at 52A"
+        loading={isLoading}
+        headline={{
+          value: format(stats?.totalRevenue || 0),
+          delta: stats?.revenueGrowth,
+          caption: 'Revenue this month · vs last month',
+        }}
+        metrics={[
+          { label: 'Net income',   value: format((stats?.totalRevenue||0)-(stats?.totalExpenses||0)), tone: 'positive' },
+          { label: 'Occupancy',    value: `${stats?.occupancyRate||0}%`, hint: `${stats?.bookedNights||0} nights booked` },
+          { label: 'Active stays', value: stats?.activeBookings ?? 0, hint: `${stats?.pendingBookings||0} pending` },
+          { label: 'Outstanding',  value: format(stats?.outstandingAmount||0), tone: 'warning', hint: 'Unpaid balance' },
+        ]}
+      >
+        <Button
+          variant="ghost" size="sm"
+          className={cn('h-8 gap-1.5', HERO_CONTROL)}
+          onClick={() => refetch()} disabled={isFetching}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />Refresh
+        </Button>
+      </PageHero>
 
-          <Button
-            variant="ghost" size="sm"
-            className="h-8 gap-1.5 border border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
-            onClick={() => refetch()} disabled={isFetching}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />Refresh
-          </Button>
-        </div>
-
-        {/* Inset metric pills */}
-        <div className="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: 'Net income',    value: format((stats?.totalRevenue||0)-(stats?.totalExpenses||0)) },
-            { label: 'Occupancy',     value: `${stats?.occupancyRate||0}%` },
-            { label: 'Active stays',  value: String(stats?.activeBookings ?? 0) },
-            { label: 'Outstanding',   value: format(stats?.outstandingAmount||0) },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur-sm">
-              <p className="text-[11px] font-medium text-white/60">{label}</p>
-              {isLoading
-                ? <Skeleton className="mt-1.5 h-6 w-20" />
-                : <p className="mt-0.5 truncate text-lg font-semibold text-white">{value}</p>}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => <Card key={i} className="p-6"><Skeleton className="h-20" /></Card>)}
-        </div>
-      ) : (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Monthly Revenue"   value={format(stats?.totalRevenue || 0)} change={stats?.revenueGrowth} icon={<Banknote className="h-5 w-5" />} color="blue"   index={0} />
-          <StatsCard title="Net Income"        value={format((stats?.totalRevenue||0)-(stats?.totalExpenses||0))} subtitle="After expenses" icon={<TrendingUp className="h-5 w-5" />} color="green"  index={1} />
-          <StatsCard title="Occupancy Rate"    value={`${stats?.occupancyRate||0}%`} subtitle={`${stats?.bookedNights||0} nights booked`} icon={<CalendarCheck className="h-5 w-5" />} color="yellow" index={2} />
-          <StatsCard title="Active Bookings"   value={stats?.activeBookings||0} subtitle={`${stats?.pendingBookings||0} pending`} icon={<Building2 className="h-5 w-5" />} color="purple" index={3} />
-        </div>
-      )}
-
+      {/* Quick links — figures the hero doesn't already carry */}
       {!isLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Link href="/dashboard/bookings" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Total Bookings"    value={stats?.totalBookings||0}         icon={<BookOpen className="h-5 w-5" />}   color="blue"   index={4} />
+            <StatsCard title="Total Bookings"    value={stats?.totalBookings||0}         icon={<BookOpen className="h-5 w-5" />}   color="blue"   index={0} />
           </Link>
           <Link href="/dashboard/properties" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Active Properties" value={stats?.totalProperties||0}       icon={<Building2 className="h-5 w-5" />}  color="green"  index={5} />
+            <StatsCard title="Active Properties" value={stats?.totalProperties||0}       icon={<Building2 className="h-5 w-5" />}  color="violet" index={1} />
           </Link>
           <Link href="/dashboard/expenses" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} icon={<CreditCard className="h-5 w-5" />} color="red"    index={6} />
+            <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} icon={<CreditCard className="h-5 w-5" />} color="red"    index={2} />
           </Link>
-          <Link href="/dashboard/bookings" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Outstanding"       value={format(stats?.outstandingAmount||0)} subtitle="Unpaid balance" icon={<Globe className="h-5 w-5" />} color="red" index={7} />
+          <Link href="/dashboard/calendar" className="block hover:opacity-90 transition-opacity">
+            <StatsCard title="Nights Booked"     value={stats?.bookedNights||0} subtitle="This month" icon={<CalendarCheck className="h-5 w-5" />} color="cyan"   index={3} />
           </Link>
         </div>
       )}

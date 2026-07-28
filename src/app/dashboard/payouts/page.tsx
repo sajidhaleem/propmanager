@@ -9,12 +9,12 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getStatusColor } from '@/lib/utils'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Payout } from '@/types'
@@ -135,29 +135,22 @@ export default function PayoutsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Payouts" description="Track staff payments and disbursements">
-        <Button variant="outline" size="sm" onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
+      <PageHero
+        title="Payouts"
+        description="Track staff payments and disbursements"
+        loading={isLoading}
+        headline={{
+          value: format(summary.paidAmount || 0),
+          caption: year === 'all' ? 'Paid out · all years' : `Paid out · ${year}`,
+        }}
+        metrics={[
+          { label: 'Pending', value: format(summary.pendingAmount || 0), tone: 'warning' },
+          { label: 'Records', value: total },
+        ]}
+      >
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />New Payout</Button>
-      </PageHeader>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">Total Paid</p>
-          {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-            <p className="text-2xl font-bold mt-2 text-green-600">{format(summary.paidAmount || 0)}</p>
-          )}
-        </CardContent></Card>
-        <Card className="border-yellow-200 dark:border-yellow-800"><CardContent className="p-6">
-          <p className="text-sm text-yellow-600 dark:text-yellow-400">Pending</p>
-          {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-            <p className="text-2xl font-bold mt-2 text-yellow-600">{format(summary.pendingAmount || 0)}</p>
-          )}
-        </CardContent></Card>
-        <Card><CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">Total Records</p>
-          <p className="text-2xl font-bold mt-2">{total}</p>
-        </CardContent></Card>
-      </div>
+      </PageHero>
 
       <div className="flex gap-3">
         <Select value={year} onValueChange={setYear}>

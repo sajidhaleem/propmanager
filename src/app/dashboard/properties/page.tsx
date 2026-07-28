@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { MagicCard } from '@/components/ui/magic-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getStatusColor } from '@/lib/utils'
@@ -97,9 +97,17 @@ export default function PropertiesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Properties" description="Manage your rental properties and rooms">
+      <PageHero
+        title="Properties"
+        description="Manage your rental properties and rooms"
+        loading={isLoading}
+        metrics={[
+          { label: 'Properties', value: properties.length },
+          { label: 'Active',     value: properties.filter((p) => p.status === 'ACTIVE').length, tone: 'positive' },
+        ]}
+      >
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Property</Button>
-      </PageHeader>
+      </PageHero>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -111,10 +119,10 @@ export default function PropertiesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((p, i) => {
             const COLORS = [
-              { bar: 'from-teal-400 to-teal-600',   glow: 'rgba(27,165,142,0.10)',  icon: 'bg-teal-500/15 text-teal-600 dark:text-teal-400' },
-              { bar: 'from-green-400 to-green-600',  glow: 'rgba(34,197,94,0.10)',   icon: 'bg-green-500/15 text-green-600 dark:text-green-400' },
-              { bar: 'from-purple-400 to-violet-600',glow: 'rgba(168,85,247,0.10)',  icon: 'bg-purple-500/15 text-purple-600 dark:text-purple-400' },
-              { bar: 'from-orange-400 to-orange-600',glow: 'rgba(249,115,22,0.10)',  icon: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
+              { bar: 'from-blue-400 to-blue-600',     glow: 'rgba(59,130,246,0.12)',  icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+              { bar: 'from-violet-400 to-violet-600', glow: 'rgba(139,108,232,0.12)', icon: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+              { bar: 'from-cyan-400 to-cyan-600',     glow: 'rgba(34,211,238,0.12)',  icon: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
+              { bar: 'from-indigo-400 to-indigo-600', glow: 'rgba(99,102,241,0.12)',  icon: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
             ]
             const c = COLORS[i % COLORS.length]
             return (
@@ -124,7 +132,7 @@ export default function PropertiesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: shouldReduceMotion ? 0.01 : 0.3, delay: shouldReduceMotion ? 0 : i * 0.08 }}
               >
-                <MagicCard glowColor={c.glow} className="relative overflow-hidden rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+                <MagicCard glowColor={c.glow} className="glass-panel depth-1 relative overflow-hidden transition-shadow hover:shadow-lg">
                   {/* Gradient top bar */}
                   <div className={`h-[3px] bg-gradient-to-r ${c.bar}`} />
 

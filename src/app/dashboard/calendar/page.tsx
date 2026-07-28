@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking, Property } from '@/types'
 import Link from 'next/link'
@@ -830,7 +830,7 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
+      <PageHero
         title="Calendar"
         description={
           view === 'month'
@@ -839,37 +839,29 @@ export default function CalendarPage() {
         }
       >
         {/* View toggle */}
-        <div className="flex items-center gap-1 rounded-lg border border-border p-1 bg-muted/40">
-          <button
-            onClick={() => setView('month')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors',
-              view === 'month'
-                ? 'bg-card text-foreground shadow-sm dark:glow-cyan'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Month
-          </button>
-          <button
-            onClick={() => setView('day')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors',
-              view === 'day'
-                ? 'bg-card text-foreground shadow-sm dark:glow-cyan'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            Day
-          </button>
+        <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.08] p-1 backdrop-blur-sm">
+          {([
+            { key: 'month', label: 'Month', Icon: LayoutGrid },
+            { key: 'day',   label: 'Day',   Icon: Clock },
+          ] as const).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                view === key ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
 
         <Button size="sm" onClick={() => openQuickBooking(format(view === 'day' ? selectedDay : new Date(), "yyyy-MM-dd'T'14:00"))}>
           <Plus className="h-4 w-4" />New Booking
         </Button>
-      </PageHeader>
+      </PageHero>
 
       <QuickBookingDialog
         open={quickOpen}

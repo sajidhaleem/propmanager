@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { cn } from '@/lib/utils'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -313,22 +313,22 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports & Analytics" description="Annual, comparative and AI-driven business insights">
+      <PageHero title="Reports &amp; Analytics" description="Annual, comparative and AI-driven business insights">
         <Select value={year} onValueChange={setYear}>
-          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+          <SelectTrigger className={cn('h-9 w-28', HERO_CONTROL)}><SelectValue /></SelectTrigger>
           <SelectContent>
             {[currentYear, currentYear-1, currentYear-2].map((y) => (
               <SelectItem key={y} value={String(y)}>{y}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />Refresh
         </Button>
-        <Button variant="outline" size="sm" onClick={tab === 'pnl' ? exportPnL : exportMonthly} disabled={tab === 'insights'}>
+        <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={tab === 'pnl' ? exportPnL : exportMonthly} disabled={tab === 'insights'}>
           <Download className="h-4 w-4" />Export
         </Button>
-      </PageHeader>
+      </PageHero>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>

@@ -22,7 +22,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { registerSchema, RegisterInput } from '@/lib/validations'
 import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -271,7 +271,7 @@ export default function SettingsPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Settings" description="Manage users, roles, and system configuration" />
+      <PageHero title="Settings" description="Manage users, roles, and system configuration" />
 
       <Tabs defaultValue="finance">
         <TabsList>

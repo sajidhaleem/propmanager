@@ -13,29 +13,24 @@ const configs = {
     glow:   'rgba(59,130,246,0.18)',
     border: 'border-blue-100 dark:border-blue-400/20',
   },
-  green:  {
-    icon:   'bg-green-500/15 text-green-600 dark:text-green-400',
-    bar:    'from-green-400 via-green-500 to-green-600',
-    glow:   'rgba(34,197,94,0.10)',
-    border: 'border-green-100 dark:border-green-900/40',
-  },
-  yellow: {
-    icon:   'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-    bar:    'from-amber-400 via-amber-500 to-orange-500',
-    glow:   'rgba(245,158,11,0.10)',
-    border: 'border-amber-100 dark:border-amber-900/40',
-  },
-  red:    {
-    icon:   'bg-red-500/15 text-red-600 dark:text-red-400',
-    bar:    'from-red-400 via-red-500 to-red-600',
-    glow:   'rgba(239,68,68,0.10)',
-    border: 'border-red-100 dark:border-red-900/40',
-  },
-  purple: {
+  violet: {
     icon:   'bg-violet-500/15 text-violet-600 dark:text-violet-300',
     bar:    'from-violet-400 via-violet-500 to-violet-600',
     glow:   'rgba(139,92,246,0.16)',
     border: 'border-violet-100 dark:border-violet-400/20',
+  },
+  /* Reserved for spend — the one place a warm hue is semantic, not decorative */
+  red:    {
+    icon:   'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    bar:    'from-rose-400 via-rose-500 to-rose-600',
+    glow:   'rgba(244,63,94,0.14)',
+    border: 'border-rose-100 dark:border-rose-400/20',
+  },
+  cyan:   {
+    icon:   'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
+    bar:    'from-cyan-400 via-cyan-500 to-cyan-600',
+    glow:   'rgba(34,211,238,0.16)',
+    border: 'border-cyan-100 dark:border-cyan-400/20',
   },
 }
 
