@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { expenseSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
+import { EXPENSE_LIST_SELECT } from '@/lib/expense'
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
+        select: EXPENSE_LIST_SELECT,
       }),
       prisma.expense.count({ where }),
       prisma.expense.aggregate({
@@ -74,13 +76,15 @@ export async function POST(req: NextRequest) {
 
     const date = new Date(result.data.date)
     if (isNaN(date.getTime())) return apiError('Invalid date')
+    const { removeReceipt: _removeReceipt, ...data } = result.data
     const expense = await prisma.expense.create({
       data: {
-        ...result.data,
+        ...data,
         date,
         month: date.getMonth() + 1,
         year: date.getFullYear(),
       },
+      select: EXPENSE_LIST_SELECT,
     })
     return apiResponse(expense, 201)
   } catch (error: any) {

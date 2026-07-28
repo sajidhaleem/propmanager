@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Edit, Download, Receipt } from 'lucide-react'
+import { Plus, Trash2, Edit, Download, Receipt, Eye, X } from 'lucide-react'
+import { BillScanner, type ScannedBill } from '@/components/ui/BillScanner'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
@@ -49,6 +50,8 @@ export default function ExpensesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editExpense, setEditExpense] = useState<Expense | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [newReceipt, setNewReceipt] = useState<{ data: string; mimeType: string; name: string } | null>(null)
+  const [removeReceipt, setRemoveReceipt] = useState(false)
   const [sortBy,    setSortBy]    = useState('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -74,10 +77,18 @@ export default function ExpensesPage() {
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       const url = editExpense ? `/api/expenses/${editExpense.id}` : '/api/expenses'
+      const body: any = { ...payload, amount: Number(payload.amount) }
+      if (newReceipt) {
+        body.receiptData = newReceipt.data
+        body.receiptMimeType = newReceipt.mimeType
+        body.receiptName = newReceipt.name
+      } else if (removeReceipt) {
+        body.removeReceipt = true
+      }
       const res = await fetch(url, {
         method: editExpense ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, amount: Number(payload.amount) }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
@@ -107,14 +118,32 @@ export default function ExpensesPage() {
     },
   })
 
-  function openCreate() { setEditExpense(null); setForm(EMPTY_FORM); setModalOpen(true) }
+  function openCreate() {
+    setEditExpense(null); setForm(EMPTY_FORM)
+    setNewReceipt(null); setRemoveReceipt(false)
+    setModalOpen(true)
+  }
   function openEdit(e: Expense) {
     setEditExpense(e)
     setForm({
       date: e.date.split('T')[0], category: e.category, description: e.description,
       amount: String(e.amount), vendor: e.vendor || '', notes: e.notes || '',
     })
+    setNewReceipt(null); setRemoveReceipt(false)
     setModalOpen(true)
+  }
+
+  function applyScannedBill(data: ScannedBill) {
+    setForm(f => ({
+      ...f,
+      vendor:      data.vendor || f.vendor,
+      amount:      data.amount || f.amount,
+      date:        data.date || f.date,
+      category:    CATEGORIES.includes(data.category) ? data.category : f.category,
+      description: data.description || f.description,
+    }))
+    setNewReceipt({ data: data.receiptData, mimeType: data.receiptMimeType, name: data.receiptName })
+    setRemoveReceipt(false)
   }
 
   function exportToExcel() {
@@ -241,6 +270,14 @@ export default function ExpensesPage() {
                     <td className="px-4 py-3 text-right font-semibold text-red-500">{format(e.amount)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        {e.receiptMimeType && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-muted-foreground"
+                            title="View scanned bill" asChild>
+                            <a href={`/api/expenses/${e.id}/receipt`} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" onClick={() => openEdit(e)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
@@ -270,6 +307,27 @@ export default function ExpensesPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle></DialogHeader>
+
+          <BillScanner onExtracted={applyScannedBill} />
+
+          {newReceipt ? (
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900/40 px-3 py-2 text-xs text-green-700 dark:text-green-300">
+              <Receipt className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 truncate">Attaching new scan: {newReceipt.name}</span>
+            </div>
+          ) : editExpense?.receiptMimeType && !removeReceipt ? (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
+              <Receipt className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <a href={`/api/expenses/${editExpense.id}/receipt`} target="_blank" rel="noopener noreferrer"
+                className="flex-1 truncate text-primary hover:underline">
+                {editExpense.receiptName || 'View attached receipt'}
+              </a>
+              <button type="button" onClick={() => setRemoveReceipt(true)} className="text-muted-foreground hover:text-destructive shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
               <Label>Date *</Label>

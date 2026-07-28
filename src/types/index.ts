@@ -105,7 +105,8 @@ export interface Expense {
   description: string
   amount: number
   vendor?: string | null
-  receiptUrl?: string | null
+  receiptMimeType?: string | null
+  receiptName?: string | null
   notes?: string | null
   month: number
   year: number

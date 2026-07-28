@@ -96,6 +96,10 @@ export const expenseSchema = z.object({
   amount: z.number().min(0, 'Amount must be positive'),
   vendor: z.string().optional(),
   notes: z.string().optional(),
+  receiptData: z.string().optional(),
+  receiptMimeType: z.string().optional(),
+  receiptName: z.string().optional(),
+  removeReceipt: z.boolean().optional(),
 })
 
 export const payoutSchema = z.object({

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
 import { expenseSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
+import { EXPENSE_LIST_SELECT } from '@/lib/expense'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,8 +21,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data.month = date.getMonth() + 1
       data.year = date.getFullYear()
     }
+    if (data.removeReceipt) {
+      data.receiptData = null
+      data.receiptMimeType = null
+      data.receiptName = null
+    }
+    delete data.removeReceipt
 
-    const expense = await prisma.expense.update({ where: { id }, data })
+    const expense = await prisma.expense.update({ where: { id }, data, select: EXPENSE_LIST_SELECT })
     return apiResponse(expense)
   } catch (error: any) {
     return handleApiError(error)

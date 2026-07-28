@@ -151,18 +151,20 @@ model Income {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  date        DateTime
-  category    ExpenseCategory
-  description String
-  amount      Float
-  vendor      String?
-  receiptUrl  String?
-  notes       String?
-  month       Int
-  year        Int
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  date            DateTime
+  category        ExpenseCategory
+  description     String
+  amount          Float
+  vendor          String?
+  notes           String?
+  month           Int
+  year            Int
+  receiptData     String?         @db.Text
+  receiptMimeType String?
+  receiptName     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([year, month])
   @@index([category])
