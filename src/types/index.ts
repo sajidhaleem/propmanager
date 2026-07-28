@@ -102,6 +102,7 @@ export interface Expense {
   id: string
   date: string
   category: ExpenseCategory
+  subcategory?: string | null
   description: string
   amount: number
   vendor?: string | null

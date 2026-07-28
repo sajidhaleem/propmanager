@@ -92,6 +92,7 @@ export const expenseSchema = z.object({
     'CLEANING', 'MAINTENANCE', 'UTILITIES', 'SUPPLIES', 'MARKETING',
     'PLATFORM_FEES', 'INSURANCE', 'TAXES', 'SALARY', 'REPAIRS', 'OTHER',
   ]),
+  subcategory: z.string().optional(),
   description: z.string().min(2, 'Description is required'),
   amount: z.number().min(0, 'Amount must be positive'),
   vendor: z.string().optional(),

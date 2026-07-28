@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { requireAuth } from '@/lib/auth'
 import { apiError, apiResponse } from '@/lib/utils'
+import { SUBCATEGORIES, normalizeSubcategory } from '@/lib/expense'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -10,6 +11,10 @@ const CATEGORIES = [
   'PLATFORM_FEES', 'INSURANCE', 'TAXES', 'SALARY', 'REPAIRS', 'OTHER',
 ]
 
+const SUBCATEGORY_GUIDE = Object.entries(SUBCATEGORIES)
+  .map(([cat, subs]) => `  - if category is ${cat}: ${subs.join(', ')}`)
+  .join('\n')
+
 const PROMPT = `This is a photo of a bill, receipt, or invoice for a small guesthouse's expenses.
 Extract the following and return ONLY valid JSON — no markdown, no explanation:
 {
@@ -17,8 +22,13 @@ Extract the following and return ONLY valid JSON — no markdown, no explanation
   "amount": "the final total amount paid, digits only, e.g. 4500.50",
   "date": "the bill/transaction date as YYYY-MM-DD",
   "category": "best match from: ${CATEGORIES.join(', ')}",
+  "subcategory": "the specific type, chosen from the list matching the category you picked (see below); empty string for categories not listed",
   "description": "a short one-line description of what this expense was for, e.g. 'Monthly electricity bill' or 'Plumbing repair — Room 3'"
 }
+
+Allowed "subcategory" values:
+${SUBCATEGORY_GUIDE}
+
 Use empty string "" for any field that cannot be read clearly. "category" must always be one of the listed values — use "OTHER" if unsure.`
 
 export async function POST(req: NextRequest) {
@@ -58,6 +68,7 @@ export async function POST(req: NextRequest) {
 
     const extracted = JSON.parse(text)
     if (!CATEGORIES.includes(extracted.category)) extracted.category = 'OTHER'
+    extracted.subcategory = normalizeSubcategory(extracted.category, extracted.subcategory) ?? ''
     return apiResponse(extracted)
   } catch (err: any) {
     if (err.message === 'Unauthorized') return apiError('Unauthorized', 401)

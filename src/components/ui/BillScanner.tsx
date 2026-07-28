@@ -10,6 +10,7 @@ export interface ScannedBill {
   amount: string
   date: string
   category: string
+  subcategory: string
   description: string
   receiptData: string
   receiptMimeType: string
@@ -61,6 +62,7 @@ export function BillScanner({ onExtracted, className }: Props) {
         amount: extractRes.amount || '',
         date: extractRes.date || '',
         category: extractRes.category || 'OTHER',
+        subcategory: extractRes.subcategory || '',
         description: extractRes.description || '',
         receiptData: base64,
         receiptMimeType: file.type || 'image/jpeg',

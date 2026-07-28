@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { expenseSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
-import { EXPENSE_LIST_SELECT } from '@/lib/expense'
+import { EXPENSE_LIST_SELECT, normalizeSubcategory } from '@/lib/expense'
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,12 +14,14 @@ export async function GET(req: NextRequest) {
     const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : undefined
     const month = searchParams.get('month') ? parseInt(searchParams.get('month')!) : undefined
     const category = searchParams.get('category')
+    const subcategory = searchParams.get('subcategory')
     const search = searchParams.get('search')
 
     const where: any = {}
     if (year) where.year = year
     if (month) where.month = month
     if (category) where.category = category
+    if (subcategory) where.subcategory = subcategory
     if (search) {
       where.OR = [
         { description: { contains: search, mode: 'insensitive' } },
@@ -80,6 +82,7 @@ export async function POST(req: NextRequest) {
     const expense = await prisma.expense.create({
       data: {
         ...data,
+        subcategory: normalizeSubcategory(data.category, data.subcategory),
         date,
         month: date.getMonth() + 1,
         year: date.getFullYear(),

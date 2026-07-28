@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
 import { expenseSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
-import { EXPENSE_LIST_SELECT } from '@/lib/expense'
+import { EXPENSE_LIST_SELECT, normalizeSubcategory } from '@/lib/expense'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -27,6 +27,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data.receiptName = null
     }
     delete data.removeReceipt
+
+    // Normalise against whichever category the row will end up with, so
+    // switching Utilities → Cleaning can't leave a stale "ELECTRICITY" behind
+    if ('category' in data || 'subcategory' in data) {
+      const category = data.category
+        ?? (await prisma.expense.findUnique({ where: { id }, select: { category: true } }))?.category
+      data.subcategory = normalizeSubcategory(category, data.subcategory)
+    }
 
     const expense = await prisma.expense.update({ where: { id }, data, select: EXPENSE_LIST_SELECT })
     return apiResponse(expense)

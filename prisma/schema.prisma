@@ -154,6 +154,7 @@ model Expense {
   id              String          @id @default(cuid())
   date            DateTime
   category        ExpenseCategory
+  subcategory     String?
   description     String
   amount          Float
   vendor          String?

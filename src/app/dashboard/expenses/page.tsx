@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Edit, Download, Receipt, Eye, X } from 'lucide-react'
 import { BillScanner, type ScannedBill } from '@/components/ui/BillScanner'
+import { SUBCATEGORIES, SUBCATEGORY_LABEL, labelize } from '@/lib/expense'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SortableTh } from '@/components/ui/sortable-th'
 import toast from 'react-hot-toast'
@@ -32,7 +33,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   OTHER: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
 }
 const currentYear = new Date().getFullYear()
-const EMPTY_FORM = { date: '', category: 'CLEANING', description: '', amount: '', vendor: '', notes: '' }
+const EMPTY_FORM = { date: '', category: 'CLEANING', subcategory: '', description: '', amount: '', vendor: '', notes: '' }
 
 async function fetchExpenses(params: Record<string, string>) {
   const res = await fetch(`/api/expenses?${new URLSearchParams(params)}`)
@@ -45,6 +46,7 @@ export default function ExpensesPage() {
   const { format, currencyInfo } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
   const [category, setCategory] = useState('all')
+  const [subcategory, setSubcategory] = useState('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
@@ -64,6 +66,7 @@ export default function ExpensesPage() {
   const params: Record<string, string> = { page: String(page), limit: '15', sortBy, sortOrder }
   if (year !== 'all') params.year = year
   if (category !== 'all') params.category = category
+  if (subcategory !== 'all') params.subcategory = subcategory
   if (search) params.search = search
 
   const { data, isLoading } = useQuery({ queryKey: ['expenses', params], queryFn: () => fetchExpenses(params) })
@@ -126,7 +129,8 @@ export default function ExpensesPage() {
   function openEdit(e: Expense) {
     setEditExpense(e)
     setForm({
-      date: e.date.split('T')[0], category: e.category, description: e.description,
+      date: e.date.split('T')[0], category: e.category, subcategory: e.subcategory || '',
+      description: e.description,
       amount: String(e.amount), vendor: e.vendor || '', notes: e.notes || '',
     })
     setNewReceipt(null); setRemoveReceipt(false)
@@ -140,6 +144,7 @@ export default function ExpensesPage() {
       amount:      data.amount || f.amount,
       date:        data.date || f.date,
       category:    CATEGORIES.includes(data.category) ? data.category : f.category,
+      subcategory: data.subcategory || '',
       description: data.description || f.description,
     }))
     setNewReceipt({ data: data.receiptData, mimeType: data.receiptMimeType, name: data.receiptName })
@@ -148,8 +153,8 @@ export default function ExpensesPage() {
 
   function exportToExcel() {
     const ws = XLSX.utils.json_to_sheet(expenses.map((e) => ({
-      Date: formatDate(e.date), Category: e.category, Description: e.description,
-      Amount: e.amount, Vendor: e.vendor,
+      Date: formatDate(e.date), Category: e.category, Type: e.subcategory ? labelize(e.subcategory) : '',
+      Description: e.description, Amount: e.amount, Vendor: e.vendor,
     })))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Expenses')
@@ -225,13 +230,26 @@ export default function ExpensesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={(v) => { setCategory(v); setSubcategory('all'); setPage(1) }}>
           <SelectTrigger className="w-44"><SelectValue placeholder="All Categories" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c.replace('_', ' ')}</SelectItem>)}
           </SelectContent>
         </Select>
+        {SUBCATEGORIES[category] && (
+          <Select value={subcategory} onValueChange={(v) => { setSubcategory(v); setPage(1) }}>
+            <SelectTrigger className="w-48 animate-fade-in">
+              <SelectValue placeholder={`All ${SUBCATEGORY_LABEL[category]?.toLowerCase()}s`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All {SUBCATEGORY_LABEL[category]?.toLowerCase()}s</SelectItem>
+              {SUBCATEGORIES[category].map((s) => (
+                <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <Card>
@@ -264,6 +282,9 @@ export default function ExpensesPage() {
                       <Badge className={CATEGORY_COLORS[e.category] || CATEGORY_COLORS.OTHER} variant="outline">
                         {e.category.replace('_', ' ')}
                       </Badge>
+                      {e.subcategory && (
+                        <p className="mt-1 text-xs text-muted-foreground">{labelize(e.subcategory)}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-medium">{e.description}</td>
                     <td className="px-4 py-3 text-muted-foreground">{e.vendor || '—'}</td>
@@ -335,13 +356,30 @@ export default function ExpensesPage() {
             </div>
             <div className="space-y-2">
               <Label>Category *</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              {/* Changing category clears the sub-type — an "ELECTRICITY" left
+                  on a Cleaning expense would be nonsense */}
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, subcategory: '' })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c.replace('_', ' ')}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
+            {SUBCATEGORIES[form.category] && (
+              <div className="col-span-2 space-y-2 animate-fade-in">
+                <Label>{SUBCATEGORY_LABEL[form.category]}</Label>
+                <Select value={form.subcategory} onValueChange={(v) => setForm({ ...form, subcategory: v })}>
+                  <SelectTrigger><SelectValue placeholder={`Which ${SUBCATEGORY_LABEL[form.category]?.toLowerCase().replace(' type', '')}?`} /></SelectTrigger>
+                  <SelectContent>
+                    {SUBCATEGORIES[form.category].map((s) => (
+                      <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="col-span-2 space-y-2">
               <Label>Description *</Label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
