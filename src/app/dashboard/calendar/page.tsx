@@ -70,6 +70,43 @@ function slotType(b: Booking, day: Date): Slot | null {
   return 'middle'
 }
 
+// ── Room availability ──────────────────────────────────────────────────────
+
+/* Cancelled and no-show bookings release the room. */
+const HOLDS_ROOM = new Set(['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'])
+
+const dateOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+/* A room is occupied for the NIGHT of `day` when checkIn <= day < checkOut.
+   The checkout day is deliberately excluded: the guest leaves that morning and
+   the room can be sold again the same night. Counting it as occupied would hide
+   a bookable night on every departure date. */
+function occupancyForDay(bookings: Booking[], properties: Property[], day: Date) {
+  const d = dateOnly(day)
+  const bookedBy = new Map<string, Booking>()
+
+  for (const b of bookings) {
+    if (!HOLDS_ROOM.has(b.status)) continue
+    if (d < dateOnly(parseISO(b.checkIn)) || d >= dateOnly(parseISO(b.checkOut))) continue
+    // Keep the most committed booking if two overlap on one room
+    const held = bookedBy.get(b.propertyId)
+    if (!held || held.status === 'PENDING') bookedBy.set(b.propertyId, b)
+  }
+
+  const rooms = properties.map(p => ({
+    property: p,
+    booking: bookedBy.get(p.id) ?? null,
+    /* A room under maintenance is unbookable but not booked — a third state. */
+    state: bookedBy.has(p.id) ? 'booked' : p.status === 'MAINTENANCE' ? 'blocked' : 'free',
+  } as const))
+
+  return {
+    rooms,
+    free: rooms.filter(r => r.state === 'free').map(r => r.property),
+    bookedCount: rooms.filter(r => r.state === 'booked').length,
+  }
+}
+
 // ── Day-view constants ─────────────────────────────────────────────────────
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6) // 6 AM – 11 PM
@@ -438,11 +475,12 @@ const STATUS_BAR: Record<string, string> = {
 // ── Month grid (spatial glass day cells) ────────────────────────────────────
 
 function MonthGrid({
-  current, days, bookings, selectedDay, today, onSelectDay,
+  current, days, bookings, properties, selectedDay, today, onSelectDay,
 }: {
   current: Date
   days: Date[]
   bookings: Booking[]
+  properties: Property[]
   selectedDay: Date
   today: Date
   onSelectDay: (d: Date) => void
@@ -471,6 +509,8 @@ function MonthGrid({
           const isToday    = isSameDay(day, today)
           const isSelected = isSameDay(day, selectedDay)
           const dayBks     = dayBookingsList(day)
+          const occ        = occupancyForDay(bookings, properties, day)
+          const isFull     = occ.free.length === 0
           return (
             <motion.button
               key={day.toISOString()}
@@ -488,12 +528,43 @@ function MonthGrid({
                   : 'border-border/60 bg-card/40 hover:border-primary/30 hover:bg-card/70',
               )}
             >
-              <span className={cn(
-                'inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold',
-                isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'
-              )}>
-                {format(day, 'd')}
-              </span>
+              <div className="flex items-center justify-between gap-1">
+                <span className={cn(
+                  'inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold',
+                  isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'
+                )}>
+                  {format(day, 'd')}
+                </span>
+                <span className={cn(
+                  'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+                  isFull
+                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                )}>
+                  {isFull ? 'Full' : `${occ.free.length} free`}
+                </span>
+              </div>
+
+              {/* One segment per room — filled when booked, hollow when free */}
+              <div className="mt-1.5 flex gap-0.5">
+                {occ.rooms.map(({ property, booking, state }) => (
+                  <span
+                    key={property.id}
+                    title={
+                      state === 'booked' ? `${property.name} — ${booking!.guestName}`
+                      : state === 'blocked' ? `${property.name} — under maintenance`
+                      : `${property.name} — free`
+                    }
+                    className={cn(
+                      'h-1.5 flex-1 rounded-full',
+                      state === 'booked'  && (STATUS_BAR[booking!.status] || STATUS_BAR.CONFIRMED),
+                      state === 'blocked' && 'bg-zinc-400/40 dark:bg-zinc-500/40',
+                      state === 'free'    && 'bg-foreground/10 dark:bg-white/10',
+                    )}
+                  />
+                ))}
+              </div>
+
               <div className="mt-1.5 space-y-1">
                 {dayBks.slice(0, 2).map(b => {
                   const c = STATUS_COLORS[b.status] || STATUS_COLORS.CONFIRMED
@@ -518,19 +589,21 @@ function MonthGrid({
 // ── Scheduled rail (right panel) ────────────────────────────────────────────
 
 function ScheduledRail({
-  day, bookings, isLoading, onPrevDay, onNextDay, onOpenDayView, onNewBooking,
+  day, bookings, properties, isLoading, onPrevDay, onNextDay, onOpenDayView, onNewBooking,
 }: {
   day: Date
   bookings: Booking[]
+  properties: Property[]
   isLoading: boolean
   onPrevDay: () => void
   onNextDay: () => void
   onOpenDayView: () => void
-  onNewBooking: () => void
+  onNewBooking: (propertyId?: string) => void
 }) {
   const { format: money } = useCurrency()
   const dayBookings = bookingsForDay(bookings, day)
     .sort((a, b) => bookingSlotForDay(a, day).hour - bookingSlotForDay(b, day).hour)
+  const occ = occupancyForDay(bookings, properties, day)
 
   return (
     <div className="glass-panel depth-1 rounded-2xl p-5 w-full lg:w-[300px] shrink-0 flex flex-col lg:max-h-[calc(100vh-220px)]">
@@ -557,9 +630,51 @@ function ScheduledRail({
         </p>
       </button>
 
-      <Button size="sm" className="mb-4 gap-1.5 w-full" onClick={onNewBooking}>
+      <Button size="sm" className="mb-4 gap-1.5 w-full" onClick={() => onNewBooking()}>
         <Plus className="h-3.5 w-3.5" /> New Booking
       </Button>
+
+      {/* Availability — which rooms are open this night, and book one directly */}
+      {!isLoading && properties.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border/60 bg-card/40 p-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Rooms</span>
+            <span className={cn(
+              'text-xs font-semibold',
+              occ.free.length === 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'
+            )}>
+              {occ.free.length} of {occ.rooms.length} free
+            </span>
+          </div>
+
+          <div className="mt-2 space-y-1">
+            {occ.rooms.map(({ property, booking, state }) => (
+              state === 'free' ? (
+                <button
+                  key={property.id}
+                  onClick={() => onNewBooking(property.id)}
+                  className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-2 py-1.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                  <span className="flex-1 truncate text-xs font-medium">{property.name}</span>
+                  <Plus className="h-3 w-3 shrink-0 text-muted-foreground" />
+                </button>
+              ) : (
+                <div key={property.id} className="flex items-center gap-2 px-2 py-1.5">
+                  <span className={cn(
+                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                    state === 'blocked' ? 'bg-zinc-400' : (STATUS_BAR[booking!.status] || STATUS_BAR.CONFIRMED)
+                  )} />
+                  <span className="flex-1 truncate text-xs text-muted-foreground">{property.name}</span>
+                  <span className="shrink-0 truncate text-[10px] text-muted-foreground/70 max-w-[90px]">
+                    {state === 'blocked' ? 'Maintenance' : booking!.guestName}
+                  </span>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto scrollbar-thin -mx-1 px-1 space-y-2.5">
         {isLoading ? (
@@ -776,14 +891,14 @@ export default function CalendarPage() {
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickInitial, setQuickInitial] = useState(QUICK_EMPTY)
 
-  // Open the quick-booking dialog prefilled from a date/time
-  const openQuickBooking = useCallback((dtLocal?: string) => {
+  // Open the quick-booking dialog prefilled from a date/time, and optionally a room
+  const openQuickBooking = useCallback((dtLocal?: string, propertyId?: string) => {
     const ci = dtLocal ?? format(new Date(), "yyyy-MM-dd'T'14:00")
     const ciDate = new Date(ci)
     const coDate = new Date(ciDate); coDate.setDate(coDate.getDate() + 1)
     const pad = (n: number) => String(n).padStart(2, '0')
     const co = `${coDate.getFullYear()}-${pad(coDate.getMonth() + 1)}-${pad(coDate.getDate())}T12:00`
-    setQuickInitial({ ...QUICK_EMPTY, checkIn: ci, checkOut: co })
+    setQuickInitial({ ...QUICK_EMPTY, checkIn: ci, checkOut: co, propertyId: propertyId ?? '' })
     setQuickOpen(true)
   }, [])
 
@@ -953,6 +1068,7 @@ export default function CalendarPage() {
                 current={current}
                 days={days}
                 bookings={bookings}
+                properties={properties}
                 selectedDay={selectedDay}
                 today={today}
                 onSelectDay={handleSelectDay}
@@ -968,12 +1084,17 @@ export default function CalendarPage() {
                 { label: 'Checked in',  color: STATUS_BAR.CHECKED_IN },
                 { label: 'Checked out', color: STATUS_BAR.CHECKED_OUT },
                 { label: 'Cancelled',   color: STATUS_BAR.CANCELLED },
+                { label: 'Free',        color: 'bg-foreground/10 dark:bg-white/10' },
+                { label: 'Maintenance', color: 'bg-zinc-400/40 dark:bg-zinc-500/40' },
               ].map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <div className={cn('h-2.5 w-2.5 rounded-full', color)} />
                   <span className="text-xs text-muted-foreground">{label}</span>
                 </div>
               ))}
+              <span className="text-xs text-muted-foreground/70">
+                One bar per room · a departure day frees the room that night
+              </span>
             </div>
           </div>
 
@@ -981,11 +1102,12 @@ export default function CalendarPage() {
           <ScheduledRail
             day={selectedDay}
             bookings={bookings}
+            properties={properties}
             isLoading={isLoading}
             onPrevDay={() => handleSelectDay(addDays(selectedDay, -1))}
             onNextDay={() => handleSelectDay(addDays(selectedDay, 1))}
             onOpenDayView={() => setView('day')}
-            onNewBooking={() => openQuickBooking(format(selectedDay, "yyyy-MM-dd'T'14:00"))}
+            onNewBooking={(propertyId) => openQuickBooking(format(selectedDay, "yyyy-MM-dd'T'14:00"), propertyId)}
           />
         </div>
       )}

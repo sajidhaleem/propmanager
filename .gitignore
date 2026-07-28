@@ -18,6 +18,10 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+# Copies and backups carry the same live credentials
+.env.*
+*.env
+!.env.example
 
 # Prisma generated client (regenerated on deploy)
 prisma/generated/
