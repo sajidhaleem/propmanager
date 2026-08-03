@@ -148,7 +148,7 @@ function LoginForm() {
         </motion.div>
 
         {/* ── Hero content ── */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center -mt-4">
+        <div className="relative z-10 flex-1 flex flex-col justify-center overflow-y-auto">
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
