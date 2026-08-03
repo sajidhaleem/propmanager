@@ -80,14 +80,19 @@ const dateOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 /* A room is occupied for the NIGHT of `day` when checkIn <= day < checkOut.
    The checkout day is deliberately excluded: the guest leaves that morning and
    the room can be sold again the same night. Counting it as occupied would hide
-   a bookable night on every departure date. */
+   a bookable night on every departure date. Exception: a same-day booking
+   (checkIn and checkOut on the same date, e.g. a day-use stay) has no other
+   night to occupy, so that day must still count as booked. */
 function occupancyForDay(bookings: Booking[], properties: Property[], day: Date) {
   const d = dateOnly(day)
   const bookedBy = new Map<string, Booking>()
 
   for (const b of bookings) {
     if (!HOLDS_ROOM.has(b.status)) continue
-    if (d < dateOnly(parseISO(b.checkIn)) || d >= dateOnly(parseISO(b.checkOut))) continue
+    const ciD = dateOnly(parseISO(b.checkIn))
+    const coD = dateOnly(parseISO(b.checkOut))
+    if (d < ciD || d > coD) continue
+    if (d === coD && coD !== ciD) continue
     // Keep the most committed booking if two overlap on one room
     const held = bookedBy.get(b.propertyId)
     if (!held || held.status === 'PENDING') bookedBy.set(b.propertyId, b)
