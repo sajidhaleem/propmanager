@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Eye, EyeOff, Loader2, Building2, ShieldCheck,
-  CalendarCheck, Banknote, Check, ArrowRight, Star,
+  Check, ArrowRight,
 } from 'lucide-react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -45,38 +45,11 @@ function Spotlight({ className, fill }: { className?: string; fill?: string }) {
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────
-const STATS = [
-  {
-    icon: Building2,
-    label: 'Properties',
-    value: '12+',
-    gradient: 'from-primary to-primary',
-    bg: 'bg-primary/10 border-primary/20',
-    text: 'text-primary',
-  },
-  {
-    icon: CalendarCheck,
-    label: 'Avg Occupancy',
-    value: '94%',
-    gradient: 'from-emerald-500 to-green-700',
-    bg: 'bg-emerald-500/10 border-emerald-500/20',
-    text: 'text-emerald-300',
-  },
-  {
-    icon: Banknote,
-    label: 'Monthly Revenue',
-    value: 'Rs 2.4M',
-    gradient: 'from-violet-500 to-purple-700',
-    bg: 'bg-violet-500/10 border-violet-500/20',
-    text: 'text-violet-300',
-  },
-]
-
 const FEATURES = [
   'Smart booking management across all channels',
   'Real-time revenue, expense & payout tracking',
   'Property calendar with availability overview',
-  'Role-based access — Admin, Manager & Staff',
+  'Role-based access for Admin, Manager and Staff',
 ]
 
 // ── Animation variants ────────────────────────────────────────────────────
@@ -138,11 +111,8 @@ function LoginForm() {
           </div>
           <div>
             <div className="text-xl font-bold text-white tracking-tight">PropManager</div>
-            <div className="flex items-center gap-0.5 mt-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-              ))}
-              <span className="text-[10px] text-slate-500 ml-1.5">5.0 · Trusted Platform</span>
+            <div className="text-[10px] text-slate-500 mt-0.5 tracking-wide">
+              52A Guesthouse · Lahore
             </div>
           </div>
         </motion.div>
@@ -183,25 +153,10 @@ function LoginForm() {
             Track bookings, income, and payouts effortlessly.
           </motion.p>
 
-          {/* ── Stats grid ── */}
-          <div className="grid grid-cols-3 gap-3 mb-10">
-            {STATS.map((s, i) => (
-              <motion.div key={s.label} {...fadeUp(i)}
-                className={cn('rounded-xl border p-3.5 backdrop-blur-sm', s.bg)}
-              >
-                <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br mb-3', s.gradient)}>
-                  <s.icon className="h-4 w-4 text-white" />
-                </div>
-                <div className={cn('text-lg font-bold leading-none', s.text)}>{s.value}</div>
-                <div className="text-[11px] text-slate-500 mt-1 leading-tight">{s.label}</div>
-              </motion.div>
-            ))}
-          </div>
-
           {/* ── Feature list ── */}
           <div className="space-y-2.5">
             {FEATURES.map((f, i) => (
-              <motion.div key={f} {...fadeUp(i + 3)} className="flex items-center gap-2.5">
+              <motion.div key={f} {...fadeUp(i)} className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full
                   bg-primary/15 border border-primary/25">
                   <Check className="h-2.5 w-2.5 text-primary" />
