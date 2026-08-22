@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const sortBy    = searchParams.get('sortBy')    || 'date'
     const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
 
-    const [payouts, total, aggregate, pendingAgg, paidAgg] = await Promise.all([
+    const [payouts, total, aggregate, pendingAgg, statusPaidAgg] = await Promise.all([
       prisma.payout.findMany({
         where,
         orderBy: { [sortBy]: sortOrder },
@@ -32,10 +32,13 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       prisma.payout.count({ where }),
-      prisma.payout.aggregate({ _sum: { amount: true }, where }),
+      prisma.payout.aggregate({ _sum: { amount: true, paidAmount: true }, where }),
       prisma.payout.aggregate({ _sum: { amount: true }, where: { ...where, status: 'PENDING' } }),
       prisma.payout.aggregate({ _sum: { amount: true }, where: { ...where, status: 'PAID'    } }),
     ])
+
+    const totalAmount = aggregate._sum.amount      || 0
+    const paidAmount   = aggregate._sum.paidAmount || 0
 
     return apiResponse({
       data: payouts,
@@ -44,9 +47,14 @@ export async function GET(req: NextRequest) {
       limit,
       totalPages: Math.ceil(total / limit),
       summary: {
-        totalAmount:   aggregate._sum.amount   || 0,
-        pendingAmount: pendingAgg._sum.amount  || 0,
-        paidAmount:    paidAgg._sum.amount     || 0,
+        totalAmount,
+        pendingAmount: pendingAgg._sum.amount || 0,
+        // Cash basis — actual money paid out, regardless of status.
+        paidAmount,
+        outstandingAmount: Math.max(0, totalAmount - paidAmount),
+        // Old status-gated figure ("amount where status=PAID"), kept under its
+        // own name for anything that specifically wants that reading.
+        statusPaidTotal: statusPaidAgg._sum.amount || 0,
       },
     })
   } catch (error: any) {
@@ -66,6 +74,11 @@ export async function POST(req: NextRequest) {
     const payout = await prisma.payout.create({
       data: {
         ...result.data,
+        // Unlike Expense, a payout's status already says whether money moved:
+        // a brand-new PENDING payout hasn't been paid, so only default to
+        // "fully paid" when the caller also marked it PAID.
+        paidAmount: result.data.paidAmount
+          ?? (result.data.status === 'PAID' ? result.data.amount : 0),
         date,
         month: date.getMonth() + 1,
         year: date.getFullYear(),

@@ -43,23 +43,26 @@ export async function GET(req: NextRequest) {
         _sum: { netAmount: true },
         where: { month: lastMonthStart.getMonth() + 1, year: lastMonthStart.getFullYear() },
       }),
-      // Expenses (operational costs)
+      // Expenses (operational costs) — cash basis: actual paidAmount, not the
+      // full logged amount/liability.
       prisma.expense.aggregate({
-        _sum: { amount: true },
+        _sum: { paidAmount: true },
         where: { date: { gte: thisMonthStart, lte: thisMonthEnd } },
       }),
       prisma.expense.aggregate({
-        _sum: { amount: true },
+        _sum: { paidAmount: true },
         where: { date: { gte: lastMonthStart, lte: lastMonthEnd } },
       }),
-      // Payouts — only PAID payouts count as actual money out
+      // Payouts — cash basis: sum actual paidAmount regardless of status, so a
+      // partially-paid PENDING payout counts its real paid portion, and a PAID
+      // payout doesn't over-count if paidAmount hasn't caught up to amount.
       prisma.payout.aggregate({
-        _sum: { amount: true },
-        where: { status: 'PAID', date: { gte: thisMonthStart, lte: thisMonthEnd } },
+        _sum: { paidAmount: true },
+        where: { date: { gte: thisMonthStart, lte: thisMonthEnd } },
       }),
       prisma.payout.aggregate({
-        _sum: { amount: true },
-        where: { status: 'PAID', date: { gte: lastMonthStart, lte: lastMonthEnd } },
+        _sum: { paidAmount: true },
+        where: { date: { gte: lastMonthStart, lte: lastMonthEnd } },
       }),
       prisma.booking.count(),
       prisma.booking.count({ where: { status: { in: ['CONFIRMED', 'CHECKED_IN'] } } }),
@@ -98,8 +101,8 @@ export async function GET(req: NextRequest) {
 
     const currentRevenue  = currentIncome._sum.netAmount  || 0
     const lastRevenue     = lastMonthIncome._sum.netAmount || 0
-    const currentExp      = (currentExpenses._sum.amount || 0) + (currentPayouts._sum.amount || 0)
-    const lastExp         = (lastMonthExpenses._sum.amount || 0) + (lastMonthPayouts._sum.amount || 0)
+    const currentExp      = (currentExpenses._sum.paidAmount || 0) + (currentPayouts._sum.paidAmount || 0)
+    const lastExp         = (lastMonthExpenses._sum.paidAmount || 0) + (lastMonthPayouts._sum.paidAmount || 0)
 
     const revenueGrowth = lastRevenue === 0
       ? (currentRevenue === 0 ? 0 : 100)
@@ -128,18 +131,18 @@ export async function GET(req: NextRequest) {
       ? Math.round((bookedNights / totalNightsAvailable) * 100)
       : 0
 
-    // Last 6 months of expenses + paid payouts combined for chart
+    // Last 6 months of expenses + payouts combined for chart — cash basis
     const [expensesByMonthRaw, payoutsByMonthRaw] = await Promise.all([
       prisma.expense.groupBy({
         by: ['year', 'month'],
-        _sum: { amount: true },
+        _sum: { paidAmount: true },
         where: { date: { gte: sixMonthsAgoStart } },
         orderBy: [{ year: 'asc' }, { month: 'asc' }],
       }),
       prisma.payout.groupBy({
         by: ['year', 'month'],
-        _sum: { amount: true },
-        where: { status: 'PAID', date: { gte: sixMonthsAgoStart } },
+        _sum: { paidAmount: true },
+        where: { date: { gte: sixMonthsAgoStart } },
         orderBy: [{ year: 'asc' }, { month: 'asc' }],
       }),
     ])

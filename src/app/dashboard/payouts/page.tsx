@@ -16,13 +16,16 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getStatusColor } from '@/lib/utils'
+import { AmountSummary } from '@/components/ui/amount-summary'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Payout } from '@/types'
 import * as XLSX from 'xlsx'
 
 const PAYOUT_TYPES = ['SALARY','BONUS','COMMISSION','REIMBURSEMENT','CLEANING_FEE','FOOD_ALLOWANCE','OTHER']
 const currentYear = new Date().getFullYear()
-const EMPTY_FORM = { recipientName: '', amount: '', date: '', type: 'SALARY', description: '', status: 'PENDING', notes: '' }
+const currentMonth = new Date().getMonth() + 1
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const EMPTY_FORM = { recipientName: '', amount: '', paidAmount: '', date: '', type: 'SALARY', description: '', status: 'PENDING', notes: '' }
 
 async function fetchPayouts(params: Record<string, string>) {
   const res = await fetch(`/api/payouts?${new URLSearchParams(params)}`)
@@ -34,6 +37,7 @@ export default function PayoutsPage() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
+  const [month, setMonth] = useState(String(currentMonth))
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
@@ -50,6 +54,7 @@ export default function PayoutsPage() {
 
   const params: Record<string, string> = { page: String(page), limit: '15', sortBy, sortOrder }
   if (year !== 'all') params.year = year
+  if (year !== 'all' && month !== 'all') params.month = month
   if (status !== 'all') params.status = status
 
   const { data, isLoading } = useQuery({ queryKey: ['payouts', params], queryFn: () => fetchPayouts(params) })
@@ -64,7 +69,7 @@ export default function PayoutsPage() {
       const res = await fetch(url, {
         method: editPayout ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, amount: Number(payload.amount) }),
+        body: JSON.stringify({ ...payload, amount: Number(payload.amount), paidAmount: Number(payload.paidAmount) || 0 }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
@@ -81,11 +86,12 @@ export default function PayoutsPage() {
   })
 
   const markPaidMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/payouts/${id}`, {
+    mutationFn: async (p: Payout) => {
+      const res = await fetch(`/api/payouts/${p.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'PAID' }),
+        // Cash-basis reporting reads paidAmount, not status — keep them in sync
+        body: JSON.stringify({ status: 'PAID', paidAmount: p.amount }),
       })
       if (!res.ok) throw new Error('Failed to update')
     },
@@ -117,6 +123,7 @@ export default function PayoutsPage() {
     setEditPayout(p)
     setForm({
       recipientName: p.recipientName, amount: String(p.amount),
+      paidAmount: String(p.paidAmount ?? (p.status === 'PAID' ? p.amount : 0)),
       date: p.date.split('T')[0], type: p.type,
       description: p.description || '', status: p.status, notes: p.notes || '',
     })
@@ -125,7 +132,8 @@ export default function PayoutsPage() {
 
   function exportToExcel() {
     const ws = XLSX.utils.json_to_sheet(payouts.map((p) => ({
-      Recipient: p.recipientName, Amount: p.amount, Date: formatDate(p.date),
+      Recipient: p.recipientName, Total: p.amount, Paid: p.paidAmount ?? 0,
+      Remaining: Math.max(0, p.amount - (p.paidAmount ?? 0)), Date: formatDate(p.date),
       Type: p.type, Status: p.status, Description: p.description,
     })))
     const wb = XLSX.utils.book_new()
@@ -141,7 +149,11 @@ export default function PayoutsPage() {
         loading={isLoading}
         headline={{
           value: format(summary.paidAmount || 0),
-          caption: year === 'all' ? 'Paid out · all years' : `Paid out · ${year}`,
+          caption: year === 'all'
+            ? 'Paid out · all years'
+            : month === 'all'
+              ? `Paid out · ${year}`
+              : `Paid out · ${MONTH_NAMES[Number(month) - 1]} ${year}`,
         }}
         metrics={[
           { label: 'Pending', value: format(summary.pendingAmount || 0), tone: 'warning' },
@@ -153,7 +165,7 @@ export default function PayoutsPage() {
       </PageHero>
 
       <div className="flex gap-3">
-        <Select value={year} onValueChange={setYear}>
+        <Select value={year} onValueChange={(v) => { setYear(v); setPage(1) }}>
           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Years</SelectItem>
@@ -162,7 +174,16 @@ export default function PayoutsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={month} onValueChange={(v) => { setMonth(v); setPage(1) }} disabled={year === 'all'}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {MONTH_NAMES.map((m, i) => (
+              <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1) }}>
           <SelectTrigger className="w-36"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -206,12 +227,19 @@ export default function PayoutsPage() {
                     <td className="px-4 py-3">
                       <Badge className={getStatusColor(p.status)} variant="outline">{p.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">{format(p.amount)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="font-semibold">{format(p.amount)}</div>
+                      {Math.max(0, p.amount - (p.paidAmount ?? 0)) > 0 && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Paid: {format(p.paidAmount ?? 0)} · Remaining: {format(p.amount - (p.paidAmount ?? 0))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {p.status === 'PENDING' && (
                           <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-green-600"
-                            onClick={() => markPaidMutation.mutate(p.id)}
+                            onClick={() => markPaidMutation.mutate(p)}
                             title="Mark as paid" aria-label="Mark as paid">
                             <CheckCircle className="h-3.5 w-3.5" />
                           </Button>
@@ -251,8 +279,32 @@ export default function PayoutsPage() {
               <Input value={form.recipientName} onChange={(e) => setForm({ ...form, recipientName: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Amount ({currencyInfo.symbol}) *</Label>
-              <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <Label>Total Amount ({currencyInfo.symbol}) *</Label>
+              <Input type="number" value={form.amount} onChange={(e) => {
+                const amount = e.target.value
+                setForm(f => ({
+                  ...f,
+                  amount,
+                  // Only auto-track the total into Paid once already marked PAID —
+                  // a new PENDING payout hasn't had money move yet.
+                  paidAmount: f.status === 'PAID' && f.paidAmount === f.amount ? amount : f.paidAmount,
+                }))
+              }} />
+            </div>
+            <div className="space-y-2">
+              <Label>Amount Paid ({currencyInfo.symbol})</Label>
+              <Input type="number" value={form.paidAmount} onChange={(e) => {
+                const paidAmount = e.target.value
+                setForm(f => {
+                  const remaining = Math.max(0, (Number(f.amount) || 0) - (Number(paidAmount) || 0))
+                  return {
+                    ...f,
+                    paidAmount,
+                    // Suggest PAID once fully paid — the user can still change it back
+                    status: remaining === 0 && Number(f.amount) > 0 && f.status !== 'CANCELLED' ? 'PAID' : f.status,
+                  }
+                })
+              }} />
             </div>
             <div className="space-y-2">
               <Label>Date *</Label>
@@ -269,7 +321,12 @@ export default function PayoutsPage() {
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <Select value={form.status} onValueChange={(v) => setForm(f => ({
+                ...f,
+                status: v,
+                // Marking as PAID with nothing entered yet assumes fully paid
+                paidAmount: v === 'PAID' && !(Number(f.paidAmount) > 0) ? f.amount : f.paidAmount,
+              }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['PENDING','PAID','CANCELLED'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -280,6 +337,9 @@ export default function PayoutsPage() {
               <Label>Description</Label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
+            {(Number(form.amount) || 0) > 0 && (
+              <AmountSummary total={Number(form.amount) || 0} paid={Number(form.paidAmount) || 0} format={format} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>

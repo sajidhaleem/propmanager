@@ -157,6 +157,7 @@ model Expense {
   subcategory     String?
   description     String
   amount          Float
+  paidAmount      Float           @default(0)
   vendor          String?
   notes           String?
   month           Int
@@ -190,6 +191,7 @@ model Payout {
   id            String       @id @default(cuid())
   recipientName String
   amount        Float
+  paidAmount    Float        @default(0)
   date          DateTime
   type          PayoutType
   description   String?

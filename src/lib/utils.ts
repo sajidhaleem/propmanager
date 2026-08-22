@@ -93,12 +93,15 @@ export function handleApiError(error: unknown, fallbackMessage = 'Internal serve
   return apiError(fallbackMessage, 500)
 }
 
-type MonthlyAmountGroup = { year: number; month: number; _sum: { amount: number | null } }
+type MonthlyAmountGroup = { year: number; month: number; _sum: { paidAmount: number | null } }
 
 /**
- * Combines an expense groupBy and a payout groupBy (same shape: year/month/_sum.amount)
+ * Combines an expense groupBy and a payout groupBy (same shape: year/month/_sum.paidAmount)
  * into the totals for one year/month, matching the merge logic previously
  * duplicated in the dashboard stats and reports routes.
+ *
+ * Cash basis: sums actual paidAmount, not the full logged amount/liability —
+ * an expense or payout only counts once real money has moved.
  */
 export function getMonthlyExpenseTotal(
   expensesByMonth: MonthlyAmountGroup[],
@@ -108,7 +111,7 @@ export function getMonthlyExpenseTotal(
 ) {
   const exp = expensesByMonth.find((e) => e.year === year && e.month === month)
   const pay = payoutsByMonth.find((p) => p.year === year && p.month === month)
-  const expenses = exp?._sum.amount || 0
-  const payouts = pay?._sum.amount || 0
+  const expenses = exp?._sum.paidAmount || 0
+  const payouts = pay?._sum.paidAmount || 0
   return { expenses, payouts, total: expenses + payouts }
 }

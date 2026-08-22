@@ -2,6 +2,7 @@
 // route serves it separately when actually needed
 export const EXPENSE_LIST_SELECT = {
   id: true, date: true, category: true, subcategory: true, description: true, amount: true,
+  paidAmount: true,
   vendor: true, notes: true, month: true, year: true,
   receiptMimeType: true, receiptName: true,
   createdAt: true, updatedAt: true,

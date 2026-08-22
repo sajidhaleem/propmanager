@@ -95,6 +95,7 @@ export const expenseSchema = z.object({
   subcategory: z.string().optional(),
   description: z.string().min(2, 'Description is required'),
   amount: z.number().min(0, 'Amount must be positive'),
+  paidAmount: z.coerce.number().min(0, 'Paid amount must be positive').optional(),
   vendor: z.string().optional(),
   notes: z.string().optional(),
   receiptData: z.string().optional(),
@@ -106,6 +107,7 @@ export const expenseSchema = z.object({
 export const payoutSchema = z.object({
   recipientName: z.string().min(2, 'Recipient name is required'),
   amount: z.number().min(0, 'Amount must be positive'),
+  paidAmount: z.coerce.number().min(0, 'Paid amount must be positive').optional(),
   date: z.string().or(z.date()),
   type: z.enum(['SALARY', 'BONUS', 'COMMISSION', 'REIMBURSEMENT', 'CLEANING_FEE', 'FOOD_ALLOWANCE', 'OTHER']),
   description: z.string().optional(),

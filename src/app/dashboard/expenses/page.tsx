@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate } from '@/lib/utils'
+import { AmountSummary } from '@/components/ui/amount-summary'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Expense } from '@/types'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
@@ -33,7 +34,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   OTHER: 'bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300',
 }
 const currentYear = new Date().getFullYear()
-const EMPTY_FORM = { date: '', category: 'CLEANING', subcategory: '', description: '', amount: '', vendor: '', notes: '' }
+const currentMonth = new Date().getMonth() + 1
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const EMPTY_FORM = { date: '', category: 'CLEANING', subcategory: '', description: '', amount: '', paidAmount: '', vendor: '', notes: '' }
 
 async function fetchExpenses(params: Record<string, string>) {
   const res = await fetch(`/api/expenses?${new URLSearchParams(params)}`)
@@ -45,6 +48,7 @@ export default function ExpensesPage() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
   const [year, setYear] = useState(String(currentYear))
+  const [month, setMonth] = useState(String(currentMonth))
   const [category, setCategory] = useState('all')
   const [subcategory, setSubcategory] = useState('all')
   const [search, setSearch] = useState('')
@@ -65,6 +69,7 @@ export default function ExpensesPage() {
 
   const params: Record<string, string> = { page: String(page), limit: '15', sortBy, sortOrder }
   if (year !== 'all') params.year = year
+  if (year !== 'all' && month !== 'all') params.month = month
   if (category !== 'all') params.category = category
   if (subcategory !== 'all') params.subcategory = subcategory
   if (search) params.search = search
@@ -80,7 +85,7 @@ export default function ExpensesPage() {
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       const url = editExpense ? `/api/expenses/${editExpense.id}` : '/api/expenses'
-      const body: any = { ...payload, amount: Number(payload.amount) }
+      const body: any = { ...payload, amount: Number(payload.amount), paidAmount: Number(payload.paidAmount) }
       if (newReceipt) {
         body.receiptData = newReceipt.data
         body.receiptMimeType = newReceipt.mimeType
@@ -131,22 +136,28 @@ export default function ExpensesPage() {
     setForm({
       date: e.date.split('T')[0], category: e.category, subcategory: e.subcategory || '',
       description: e.description,
-      amount: String(e.amount), vendor: e.vendor || '', notes: e.notes || '',
+      amount: String(e.amount), paidAmount: String(e.paidAmount ?? e.amount),
+      vendor: e.vendor || '', notes: e.notes || '',
     })
     setNewReceipt(null); setRemoveReceipt(false)
     setModalOpen(true)
   }
 
   function applyScannedBill(data: ScannedBill) {
-    setForm(f => ({
-      ...f,
-      vendor:      data.vendor || f.vendor,
-      amount:      data.amount || f.amount,
-      date:        data.date || f.date,
-      category:    CATEGORIES.includes(data.category) ? data.category : f.category,
-      subcategory: data.subcategory || '',
-      description: data.description || f.description,
-    }))
+    setForm(f => {
+      const amount = data.amount || f.amount
+      return {
+        ...f,
+        vendor:      data.vendor || f.vendor,
+        amount,
+        // Track the total until the user manually edits "Amount Paid"
+        paidAmount:  f.paidAmount === f.amount ? amount : f.paidAmount,
+        date:        data.date || f.date,
+        category:    CATEGORIES.includes(data.category) ? data.category : f.category,
+        subcategory: data.subcategory || '',
+        description: data.description || f.description,
+      }
+    })
     setNewReceipt({ data: data.receiptData, mimeType: data.receiptMimeType, name: data.receiptName })
     setRemoveReceipt(false)
   }
@@ -154,7 +165,8 @@ export default function ExpensesPage() {
   function exportToExcel() {
     const ws = XLSX.utils.json_to_sheet(expenses.map((e) => ({
       Date: formatDate(e.date), Category: e.category, Type: e.subcategory ? labelize(e.subcategory) : '',
-      Description: e.description, Amount: e.amount, Vendor: e.vendor,
+      Description: e.description, Total: e.amount, Paid: e.paidAmount ?? e.amount,
+      Remaining: Math.max(0, e.amount - (e.paidAmount ?? e.amount)), Vendor: e.vendor,
     })))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Expenses')
@@ -174,7 +186,11 @@ export default function ExpensesPage() {
         loading={isLoading}
         headline={{
           value: format(summary.totalAmount || 0),
-          caption: year === 'all' ? 'Total spend · all years' : `Total spend · ${year}`,
+          caption: year === 'all'
+            ? 'Total spend · all years'
+            : month === 'all'
+              ? `Total spend · ${year}`
+              : `Total spend · ${MONTH_NAMES[Number(month) - 1]} ${year}`,
         }}
         metrics={byCategory.slice(0, 4).map((c: any) => ({
           label: labelize(c.category),
@@ -212,12 +228,21 @@ export default function ExpensesPage() {
 
       <div className="flex flex-wrap gap-3">
         <Input placeholder="Search..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Select value={year} onValueChange={setYear}>
+        <Select value={year} onValueChange={(v) => { setYear(v); setPage(1) }}>
           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Years</SelectItem>
             {[currentYear, currentYear-1, currentYear-2].map((y) => (
               <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={month} onValueChange={(v) => { setMonth(v); setPage(1) }} disabled={year === 'all'}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {MONTH_NAMES.map((m, i) => (
+              <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -279,7 +304,14 @@ export default function ExpensesPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{e.description}</td>
                     <td className="px-4 py-3 text-muted-foreground">{e.vendor || '—'}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-red-500">{format(e.amount)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="font-semibold text-red-500">{format(e.amount)}</div>
+                      {Math.max(0, e.amount - (e.paidAmount ?? e.amount)) > 0 && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Paid: {format(e.paidAmount ?? e.amount)} · Remaining: {format(e.amount - (e.paidAmount ?? e.amount))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {e.receiptMimeType && (
@@ -376,8 +408,16 @@ export default function ExpensesPage() {
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Amount ({currencyInfo.symbol}) *</Label>
-              <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <Label>Total Amount ({currencyInfo.symbol}) *</Label>
+              <Input type="number" value={form.amount} onChange={(e) => {
+                const amount = e.target.value
+                // Track the total until the user manually edits "Amount Paid"
+                setForm(f => ({ ...f, amount, paidAmount: f.paidAmount === f.amount ? amount : f.paidAmount }))
+              }} />
+            </div>
+            <div className="space-y-2">
+              <Label>Amount Paid ({currencyInfo.symbol})</Label>
+              <Input type="number" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>Vendor</Label>
@@ -387,6 +427,9 @@ export default function ExpensesPage() {
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+            {(Number(form.amount) || 0) > 0 && (
+              <AmountSummary total={Number(form.amount) || 0} paid={Number(form.paidAmount) || 0} format={format} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>

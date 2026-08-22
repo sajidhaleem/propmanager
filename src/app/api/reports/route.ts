@@ -20,15 +20,17 @@ export async function GET(req: NextRequest) {
         }),
         prisma.expense.groupBy({
           by: ['year', 'month'],
-          _sum: { amount: true },
+          _sum: { paidAmount: true },
           where: { year },
           orderBy: [{ month: 'asc' }],
         }),
-        // PAID payouts only — pending not yet disbursed
+        // Cash basis — actual paidAmount regardless of status, not just
+        // payouts marked PAID (a partially-paid PENDING payout still counts
+        // its real paid portion).
         prisma.payout.groupBy({
           by: ['year', 'month'],
-          _sum: { amount: true },
-          where: { year, status: 'PAID' },
+          _sum: { paidAmount: true },
+          where: { year },
           orderBy: [{ month: 'asc' }],
         }),
         prisma.booking.groupBy({
@@ -121,12 +123,12 @@ export async function GET(req: NextRequest) {
         }),
         prisma.expense.findMany({
           where: { year, date: { gte: dateStart, lt: dateEnd } },
-          select: { month: true, category: true, amount: true },
+          select: { month: true, category: true, paidAmount: true },
         }),
-        // PAID payouts only
+        // Cash basis — actual paidAmount regardless of status
         prisma.payout.findMany({
-          where: { year, status: 'PAID', date: { gte: dateStart, lt: dateEnd } },
-          select: { month: true, type: true, amount: true },
+          where: { year, date: { gte: dateStart, lt: dateEnd } },
+          select: { month: true, type: true, paidAmount: true },
         }),
       ])
 
@@ -148,13 +150,13 @@ export async function GET(req: NextRequest) {
         EXPENSE_CATS.forEach((cat) => {
           byCategory[cat] = monthExpenses
             .filter((e) => e.category === cat)
-            .reduce((s, e) => s + e.amount, 0)
+            .reduce((s, e) => s + e.paidAmount, 0)
         })
         // Non-standard categories roll into OTHER
         const trackedCats = EXPENSE_CATS as readonly string[]
         const extraOther = monthExpenses
           .filter((e) => !trackedCats.includes(e.category))
-          .reduce((s, e) => s + e.amount, 0)
+          .reduce((s, e) => s + e.paidAmount, 0)
         byCategory['OTHER'] = (byCategory['OTHER'] || 0) + extraOther
 
         const totalOperationalExpenses = Object.values(byCategory).reduce((s, v) => s + v, 0)
@@ -162,7 +164,7 @@ export async function GET(req: NextRequest) {
         // Payouts (salaries, commissions, etc.)
         const totalPayouts = payoutRows
           .filter((r) => r.month === month)
-          .reduce((s, r) => s + r.amount, 0)
+          .reduce((s, r) => s + r.paidAmount, 0)
 
         const totalExpenses = totalOperationalExpenses + totalPayouts
         const netProfit     = totalRevenue - totalExpenses

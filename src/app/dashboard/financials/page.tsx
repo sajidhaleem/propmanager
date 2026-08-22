@@ -53,7 +53,7 @@ export default function FinancialsPage() {
   const isManager   = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const [year,       setYear]       = useState(String(currentYear))
-  const [month,      setMonth]      = useState('all')
+  const [month,      setMonth]      = useState(String(new Date().getMonth() + 1))
   const [propertyId, setPropertyId] = useState('all')
   const [page,       setPage]       = useState(1)
   const [editIncome, setEditIncome] = useState<Income | null>(null)

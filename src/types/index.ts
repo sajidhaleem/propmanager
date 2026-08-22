@@ -105,6 +105,7 @@ export interface Expense {
   subcategory?: string | null
   description: string
   amount: number
+  paidAmount: number
   vendor?: string | null
   receiptMimeType?: string | null
   receiptName?: string | null
@@ -119,6 +120,7 @@ export interface Payout {
   id: string
   recipientName: string
   amount: number
+  paidAmount: number
   date: string
   type: PayoutType
   description?: string | null

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.expense.count({ where }),
       prisma.expense.aggregate({
-        _sum: { amount: true },
+        _sum: { amount: true, paidAmount: true },
         where,
       }),
     ])
@@ -61,6 +61,8 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / limit),
       summary: {
         totalAmount: aggregate._sum.amount || 0,
+        paidAmount: aggregate._sum.paidAmount || 0,
+        outstandingAmount: Math.max(0, (aggregate._sum.amount || 0) - (aggregate._sum.paidAmount || 0)),
         byCategory,
       },
     })
@@ -82,6 +84,10 @@ export async function POST(req: NextRequest) {
     const expense = await prisma.expense.create({
       data: {
         ...data,
+        // A new expense is assumed fully paid unless the form says otherwise —
+        // preserves the old single-Amount-field behavior for any caller that
+        // doesn't send paidAmount.
+        paidAmount: data.paidAmount ?? data.amount,
         subcategory: normalizeSubcategory(data.category, data.subcategory),
         date,
         month: date.getMonth() + 1,
