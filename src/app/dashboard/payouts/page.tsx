@@ -202,7 +202,9 @@ export default function PayoutsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Description</th>
                 <SortableTh label="Date"        field="date"          sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 <SortableTh label="Status"      field="status"        sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Amount"      field="amount"        sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                <SortableTh label="Total Amount" field="amount"       sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount Paid</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Remaining</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -210,13 +212,15 @@ export default function PayoutsPage() {
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="border-b">
-                    {[...Array(7)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
+                    {[...Array(9)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
                   </tr>
                 ))
               ) : payouts.length === 0 ? (
-                <tr><td colSpan={7}><EmptyState icon={Banknote} title="No payouts recorded" description="Log salaries, bonuses, and reimbursements — paid payouts count toward monthly expenses." action={{ label: 'Add Payout', onClick: openCreate }} /></td></tr>
+                <tr><td colSpan={9}><EmptyState icon={Banknote} title="No payouts recorded" description="Log salaries, bonuses, and reimbursements — paid payouts count toward monthly expenses." action={{ label: 'Add Payout', onClick: openCreate }} /></td></tr>
               ) : (
-                payouts.map((p) => (
+                payouts.map((p) => {
+                  const remaining = Math.max(0, p.amount - (p.paidAmount ?? 0))
+                  return (
                   <tr key={p.id} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-medium">{p.recipientName}</td>
                     <td className="px-4 py-3">
@@ -227,13 +231,10 @@ export default function PayoutsPage() {
                     <td className="px-4 py-3">
                       <Badge className={getStatusColor(p.status)} variant="outline">{p.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="font-semibold">{format(p.amount)}</div>
-                      {Math.max(0, p.amount - (p.paidAmount ?? 0)) > 0 && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Paid: {format(p.paidAmount ?? 0)} · Remaining: {format(p.amount - (p.paidAmount ?? 0))}
-                        </div>
-                      )}
+                    <td className="px-4 py-3 text-right font-semibold">{format(p.amount)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{format(p.paidAmount ?? 0)}</td>
+                    <td className={`px-4 py-3 text-right ${remaining > 0 ? 'text-amber-500 font-semibold' : 'text-green-600'}`}>
+                      {remaining > 0 ? format(remaining) : 'Fully paid ✓'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -254,7 +255,8 @@ export default function PayoutsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>

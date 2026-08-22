@@ -277,7 +277,9 @@ export default function ExpensesPage() {
                 <SortableTh label="Category"    field="category"    sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 <SortableTh label="Description" field="description" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                 <SortableTh label="Vendor"      field="vendor"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                <SortableTh label="Amount"      field="amount"      sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                <SortableTh label="Total Amount" field="amount"     sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount Paid</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Remaining</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -285,13 +287,16 @@ export default function ExpensesPage() {
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="border-b">
-                    {[...Array(6)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
+                    {[...Array(8)].map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4" /></td>)}
                   </tr>
                 ))
               ) : expenses.length === 0 ? (
-                <tr><td colSpan={6}><EmptyState icon={Receipt} title="No expenses recorded" description="Track utilities, cleaning, and repairs to see accurate monthly profit." action={{ label: 'Add Expense', onClick: openCreate }} /></td></tr>
+                <tr><td colSpan={8}><EmptyState icon={Receipt} title="No expenses recorded" description="Track utilities, cleaning, and repairs to see accurate monthly profit." action={{ label: 'Add Expense', onClick: openCreate }} /></td></tr>
               ) : (
-                expenses.map((e) => (
+                expenses.map((e) => {
+                  const paid = e.paidAmount ?? e.amount
+                  const remaining = Math.max(0, e.amount - paid)
+                  return (
                   <tr key={e.id} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(e.date)}</td>
                     <td className="px-4 py-3">
@@ -304,13 +309,10 @@ export default function ExpensesPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{e.description}</td>
                     <td className="px-4 py-3 text-muted-foreground">{e.vendor || '—'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="font-semibold text-red-500">{format(e.amount)}</div>
-                      {Math.max(0, e.amount - (e.paidAmount ?? e.amount)) > 0 && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Paid: {format(e.paidAmount ?? e.amount)} · Remaining: {format(e.amount - (e.paidAmount ?? e.amount))}
-                        </div>
-                      )}
+                    <td className="px-4 py-3 text-right font-semibold text-red-500">{format(e.amount)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{format(paid)}</td>
+                    <td className={`px-4 py-3 text-right ${remaining > 0 ? 'text-amber-500 font-semibold' : 'text-green-600'}`}>
+                      {remaining > 0 ? format(remaining) : 'Fully paid ✓'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -332,7 +334,8 @@ export default function ExpensesPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
