@@ -202,9 +202,14 @@ export default function DashboardPage() {
     )
   }
 
-  const chartData = monthlyRevenue.map((r: any) => {
-    const exp = expensesByMonth.find((e: any) => e.month === r.month)
-    return { month: r.month, revenue: r.revenue, expenses: exp?.expenses || 0 }
+  const chartMonths = Array.from(new Set([
+    ...monthlyRevenue.map((r: any) => r.month),
+    ...expensesByMonth.map((e: any) => e.month),
+  ])).sort()
+  const chartData = chartMonths.map((month) => {
+    const rev = monthlyRevenue.find((r: any) => r.month === month)
+    const exp = expensesByMonth.find((e: any) => e.month === month)
+    return { month, revenue: rev?.revenue || 0, expenses: exp?.expenses || 0 }
   })
 
   const now = new Date()
