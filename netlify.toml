@@ -7,11 +7,7 @@
   # serves them at /_next/static/ BEFORE the SSR function can intercept
   # db push WITHOUT --accept-data-loss: a destructive schema change fails the
   # build instead of silently dropping production columns/tables
-  # TEMPORARY (remove after this one deploy): one-off backfill for the new
-  # Expense/Payout paidAmount column — see scripts/backfill-paid-amount.ts.
-  # Must not stay here permanently: it would re-run on every future deploy
-  # and incorrectly flip any genuinely-unpaid new record back to "paid".
-  command = "npx prisma db push && npx ts-node --project tsconfig.seed.json scripts/backfill-paid-amount.ts && npm run build && node scripts/copy-static.mjs"
+  command = "npx prisma db push && npm run build && node scripts/copy-static.mjs"
   publish = ".next"
 
 [build.environment]
