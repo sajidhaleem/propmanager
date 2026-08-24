@@ -610,6 +610,12 @@ function ScheduledRail({
     .sort((a, b) => bookingSlotForDay(a, day).hour - bookingSlotForDay(b, day).hour)
   const occ = occupancyForDay(bookings, properties, day)
 
+  /* Every room gets a card, so the rail reads as a full roster rather than only
+     the rooms that happen to be busy. A room already represented by a booking
+     card above (including a morning checkout) is skipped so it appears once. */
+  const spokenFor = new Set(dayBookings.map(b => b.propertyId))
+  const openRooms = occ.rooms.filter(r => !spokenFor.has(r.property.id))
+
   return (
     <div className="glass-panel depth-1 rounded-2xl p-5 w-full lg:w-[300px] shrink-0 flex flex-col lg:max-h-[calc(100vh-220px)]">
       <div className="flex items-center justify-between mb-1">
@@ -686,7 +692,7 @@ function ScheduledRail({
           [...Array(3)].map((_, i) => <Skeleton key={i} className="h-[72px] w-full rounded-xl" />)
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
-            {dayBookings.length === 0 ? (
+            {dayBookings.length === 0 && openRooms.length === 0 && (
               <motion.p
                 key="empty"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -694,8 +700,9 @@ function ScheduledRail({
               >
                 Nothing scheduled this day.
               </motion.p>
-            ) : (
-              dayBookings.map((b, i) => {
+            )}
+
+            {dayBookings.map((b, i) => {
                 const bar = STATUS_BAR[b.status] || STATUS_BAR.CONFIRMED
                 const kind = bookingSlotForDay(b, day).kind
                 const ci = parseISO(b.checkIn)
@@ -729,8 +736,65 @@ function ScheduledRail({
                     </Link>
                   </motion.div>
                 )
-              })
-            )}
+              })}
+
+            {openRooms.map(({ property, state }, i) => {
+                const blocked = state === 'blocked'
+                const body = (
+                  <>
+                    <div className={cn(
+                      'h-[3px] w-full',
+                      blocked ? 'bg-zinc-400/40 dark:bg-zinc-500/40' : 'bg-emerald-400/40'
+                    )} />
+                    <div className="p-3">
+                      <p className={cn(
+                        'text-sm font-semibold truncate',
+                        !blocked && 'group-hover:text-primary transition-colors'
+                      )}>
+                        {property.name}
+                      </p>
+                      <p className={cn(
+                        'text-xs mt-0.5 truncate',
+                        blocked ? 'text-muted-foreground' : 'text-emerald-600 dark:text-emerald-400'
+                      )}>
+                        {blocked ? 'Under maintenance' : 'Room Available'}
+                      </p>
+                      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                        <span>{blocked ? 'Not bookable' : 'No booking this day'}</span>
+                        {!blocked && (
+                          <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                            <Plus className="h-3 w-3" /> Book
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )
+                return (
+                  <motion.div
+                    key={`open-${property.id}`}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25, delay: (dayBookings.length + i) * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {blocked ? (
+                      <div className="rounded-xl border border-border/60 bg-card/30 overflow-hidden">
+                        {body}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onNewBooking(property.id)}
+                        className="block w-full text-left rounded-xl border border-dashed border-border/70 bg-card/30 overflow-hidden hover:border-primary/40 hover:-translate-y-0.5 transition-[transform,border-color] group"
+                      >
+                        {body}
+                      </button>
+                    )}
+                  </motion.div>
+                )
+              })}
           </AnimatePresence>
         )}
       </div>
