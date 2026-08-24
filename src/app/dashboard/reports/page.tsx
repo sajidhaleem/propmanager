@@ -50,6 +50,27 @@ const STATUS_META: Record<Status, { label: string; bg: string; text: string; rin
   urgent:      { label: 'Urgent',       bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-300',      ring: 'ring-red-400',    glow: 'rgba(239,68,68,0.12)' },
 }
 
+/* The detail-panel accent used to be a fixed colour per tile, so a tile could
+   show a red "Urgent" badge above a green accent bar. Accent follows status. */
+const STATUS_ACCENT: Record<Status, { accentBg: string; accentText: string; accentSection: string }> = {
+  excellent:   { accentBg: 'bg-green-500',  accentText: 'text-green-700 dark:text-green-300',   accentSection: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/40' },
+  strong:      { accentBg: 'bg-emerald-500',accentText: 'text-emerald-700 dark:text-emerald-300',accentSection: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40' },
+  good:        { accentBg: 'bg-blue-500',   accentText: 'text-blue-700 dark:text-blue-300',     accentSection: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/40' },
+  opportunity: { accentBg: 'bg-purple-500', accentText: 'text-purple-700 dark:text-purple-300', accentSection: 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-900/40' },
+  warning:     { accentBg: 'bg-yellow-500', accentText: 'text-yellow-700 dark:text-yellow-300', accentSection: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/40' },
+  urgent:      { accentBg: 'bg-red-500',    accentText: 'text-red-700 dark:text-red-300',       accentSection: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40' },
+}
+
+/* Higher-is-better metrics grade downward through the bands; the two
+   lower-is-better ratios (expenses, uncollected revenue) invert. */
+const gradeHigh = (v: number, bands: [number, number, number, number]): Status =>
+  v >= bands[0] ? 'excellent' : v >= bands[1] ? 'strong' : v >= bands[2] ? 'good' : v >= bands[3] ? 'warning' : 'urgent'
+const gradeLow = (v: number, bands: [number, number, number, number]): Status =>
+  v <= bands[0] ? 'excellent' : v <= bands[1] ? 'strong' : v <= bands[2] ? 'good' : v <= bands[3] ? 'warning' : 'urgent'
+
+const statusIcon = (s: Status) =>
+  s === 'urgent' ? XCircle : s === 'warning' || s === 'opportunity' ? AlertTriangle : CheckCircle2
+
 // ── Expandable action item ─────────────────────────────────────────
 function ActionItem({ num, text, accentBg }: { num: number; text: string; accentBg: string }) {
   const [open, setOpen] = useState(false)
@@ -131,6 +152,28 @@ export default function ReportsPage() {
   const revenueGap80  = Math.max(0, revenueAt80 - (iStats?.totalRevenue || 0))
   const outstandingPct = iStats?.totalRevenue > 0 ? Math.round((iStats.outstandingAmount / iStats.totalRevenue) * 100) : 0
 
+  const revenue        = iStats?.totalRevenue || 0
+  const expenses       = iStats?.totalExpenses || 0
+  const netIncome      = iStats?.netIncome ?? (revenue - expenses)
+  const profitable     = netIncome > 0
+  const shortfall      = Math.max(0, expenses - revenue)
+  const occupancyRate  = iStats?.occupancyRate || 0
+  const aboveTarget    = occupancyRate >= 70
+  const revenueGrowth  = iStats?.revenueGrowth || 0
+  const outstanding    = iStats?.outstandingAmount || 0
+  const roomCount      = iStats?.totalProperties || 0
+  const emptyNightValue = emptyNights * revPerNight
+  const signedPct      = (n: number) => `${n > 0 ? '+' : ''}${n}%`
+
+  /* Each status was previously a hardcoded literal, so every badge and colour
+     read the same whether the month made money or lost it. All are derived. */
+  const marginStatus      = gradeHigh(margin, [40, 25, 10, 1])
+  const occupancyStatus   = gradeHigh(occupancyRate, [80, 70, 55, 40])
+  const revenueStatus     = gradeHigh(revenueGrowth, [10, 1, 0, -10])
+  const expenseStatus     = gradeLow(expenseRatio, [60, 75, 90, 100])
+  const outstandingStatus = gradeLow(outstandingPct, [0, 5, 15, 30])
+  const activeStatus: Status   = (iStats?.pendingBookings || 0) > 0 ? 'warning' : 'good'
+
   const airbnbData    = iPlatforms.find(p => p.platform === 'AIRBNB')
   const directData    = iPlatforms.find(p => p.platform === 'DIRECT')
   const airbnbCount   = airbnbData?._count?.id || 0
@@ -140,6 +183,11 @@ export default function ReportsPage() {
   const airbnbAvg     = airbnbCount > 0 ? Math.round(airbnbNet / airbnbCount) : 0
   const directAvg     = directCount > 0 ? Math.round(directNet / directCount) : 0
   const airbnbPremium = directAvg > 0 ? Math.round(((airbnbAvg - directAvg) / directAvg) * 100) : 0
+
+  /* Channel concentration: a book of business that is almost entirely direct
+     is a diversification opportunity, not a problem. */
+  const directShare   = (iStats?.totalBookings || 0) > 0 ? Math.round((directCount / iStats.totalBookings) * 100) : 0
+  const channelStatus: Status = directShare >= 80 ? 'opportunity' : 'good'
 
   const todayD = new Date()
   const todayCheckouts = iUpcoming.filter(b => {
@@ -153,43 +201,57 @@ export default function ReportsPage() {
     {
       id: 'revenue', num: 1, title: 'Monthly Revenue', Icon: Banknote,
       value: format(iStats?.totalRevenue || 0), sub: `${format(revPerNight)}/night avg`,
-      status: 'strong' as Status,
+      status: revenueStatus,
       analysis: [
-        `Earning ${format(revPerNight)} per booked night — strong for a direct-booking operation. Every additional night booked adds approximately ${format(Math.round(revPerNight * (margin / 100)))} to net profit.`,
-        `Revenue growth shows +${iStats?.revenueGrowth || 0}% vs last month. If last month had no income recorded this shows 100% — confirm entries are complete for an accurate trend line.`,
-        `Gross (${format(iStats?.totalRevenue || 0)}) vs net may differ if Airbnb platform fees haven't been deducted yet — cross-reference with your P&L report.`,
+        `Earning ${format(revPerNight)} per booked night. Rent, utilities and internet do not change when you sell one more night, so each additional night contributes close to the full ${format(revPerNight)} toward covering those fixed costs.`,
+        `Revenue growth shows ${signedPct(revenueGrowth)} vs last month. If last month had no income recorded this shows 100% — confirm entries are complete for an accurate trend line.`,
+        `Gross (${format(revenue)}) vs net may differ if Airbnb platform fees haven't been deducted yet — cross-reference with your P&L report.`,
       ],
       actions: [
         `Raise nightly rates 10–15% on peak weekends and holidays. Your current avg of ${format(revPerNight)}/night still has meaningful upside in this market.`,
         `Add a minimum 2–3 night stay on weekends to cut turnover costs and push per-booking revenue higher without raising the nightly rate.`,
         `Build a seasonal pricing calendar: 20–25% higher during Eid, school holidays, and summer months — set these in advance so bookings auto-capture the premium.`,
       ],
-      accentBg: 'bg-green-500', accentText: 'text-green-700 dark:text-green-300', accentSection: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/40',
+      ...STATUS_ACCENT[revenueStatus],
     },
     {
       id: 'net', num: 2, title: 'Net Income', Icon: TrendingUp,
-      value: format(iStats?.netIncome || 0), sub: `${margin}% margin`,
-      status: 'excellent' as Status,
-      analysis: [
-        `A ${margin}% profit margin is exceptional — industry benchmark is 40–55%. For every Rs 100 earned you keep Rs ${margin} after all costs. This margin is your most important number to protect as you scale.`,
-        `Expenses are only ${expenseRatio}% of revenue. This is lean — but verify all costs are logged. Utilities, cleaning, internet, and minor repairs are common gaps that artificially inflate the margin figure.`,
-        `Net income scales directly with occupancy. Going from ${iStats?.occupancyRate || 0}% to 70% occupancy adds approximately ${format(Math.round(revenueGap70 * (margin / 100)))} per month to net profit alone.`,
+      value: format(netIncome), sub: `${margin}% margin`,
+      status: marginStatus,
+      analysis: profitable ? [
+        `A ${margin}% profit margin is healthy — industry benchmark is 40–55%. For every Rs 100 earned you keep Rs ${margin} after all costs. This margin is your most important number to protect as you scale.`,
+        `Expenses are ${expenseRatio}% of revenue. Verify all costs are logged — utilities, cleaning, internet, and minor repairs are common gaps that artificially inflate the margin figure.`,
+        `Net income scales with occupancy. Going from ${occupancyRate}% to 70% occupancy adds approximately ${format(Math.round(revenueGap70 * (margin / 100)))} per month to net profit alone.`,
+      ] : [
+        `A ${margin}% margin means the month lost money: expenses of ${format(expenses)} exceeded revenue of ${format(revenue)} by ${format(Math.abs(netIncome))}. For every Rs 100 earned you are spending Rs ${expenseRatio}.`,
+        `Before treating this as an operating loss, open the Expenses page and check for one-off or capital costs — renovation, furniture, deposits, annual payments — recorded as ordinary monthly expense. A single large entry can invert this figure.`,
+        aboveTarget
+          ? `At ${occupancyRate}% occupancy this is not a demand problem. You are near capacity, so filling the remaining ${emptyNights} nights (worth about ${format(emptyNightValue)}) would not close a ${format(shortfall)} gap on its own — the cost base is the lever.`
+          : `Occupancy is ${occupancyRate}%. Filling the ${emptyNights} empty nights would add about ${format(emptyNightValue)} of revenue against a ${format(shortfall)} shortfall — necessary, but check costs alongside it.`,
       ],
-      actions: [
+      actions: profitable ? [
         `Log every expense immediately — even small ones. Accurate numbers let you spot cost trends before they quietly erode your ${margin}% margin.`,
         `Review cleaning fees charged to guests. If cleaning costs rise with higher occupancy, pass that through as an increased cleaning fee rather than absorbing it.`,
         `Set a monthly net income target (e.g. Rs 100,000). At your current margin, that requires ${format(Math.round(100000 / (margin / 100)))} in revenue — a clear goal to work backwards from.`,
+      ] : [
+        `Open Reports → P&L and sort expense categories by size. Identify the two largest contributors to the ${format(expenses)} total before changing anything else.`,
+        `Reclassify any one-off or capital spending out of monthly operating expense so the margin reflects true running costs rather than a single large purchase.`,
+        `Break-even at the current cost base needs ${format(expenses)} of monthly revenue — ${format(shortfall)} more than this month. Decide whether that comes from rate, occupancy, or cutting the cost base.`,
       ],
-      accentBg: 'bg-emerald-500', accentText: 'text-emerald-700 dark:text-emerald-300', accentSection: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40',
+      ...STATUS_ACCENT[marginStatus],
     },
     {
       id: 'occupancy', num: 3, title: 'Occupancy Rate', Icon: CalendarCheck,
-      value: `${iStats?.occupancyRate || 0}%`, sub: `${iStats?.bookedNights || 0}/${totalNights} nights`,
-      status: 'warning' as Status,
-      analysis: [
-        `At ${iStats?.occupancyRate || 0}% you have ${emptyNights} empty nights this month. At ${format(revPerNight)}/night those represent ${format(emptyNights * revPerNight)} in forgone revenue — the single biggest growth lever in your business right now.`,
+      value: `${occupancyRate}%`, sub: `${iStats?.bookedNights || 0}/${totalNights} nights`,
+      status: occupancyStatus,
+      analysis: aboveTarget ? [
+        `At ${occupancyRate}% you are above the 70% target and at the top of the 65–80% industry band. The ${emptyNights} remaining empty nights are worth about ${format(emptyNightValue)}, but occupancy is no longer your main constraint.`,
+        `Because you are near capacity, further growth has to come from rate rather than volume. A 10% increase on your ${format(revPerNight)}/night average is worth roughly ${format(Math.round(revPerNight * 0.10 * (iStats?.bookedNights || 0)))}/month on the nights you already sell.`,
+        `Guard against over-indexing on occupancy: a full calendar at a rate that does not cover costs simply loses money faster. Check this tile against Net Income before pushing volume.`,
+      ] : [
+        `At ${occupancyRate}% you have ${emptyNights} empty nights this month. At ${format(revPerNight)}/night those represent ${format(emptyNightValue)} in forgone revenue — the single biggest growth lever in your business right now.`,
         `Raising to 70% occupancy adds ${format(revenueGap70)}/month. Raising to 80% adds ${format(revenueGap80)}/month. No new properties, no rate increase required — just filling existing gaps.`,
-        `Industry standard for well-managed short-term rentals is 65–80%. You have significant headroom to grow with the assets you already own.`,
+        `Industry standard for well-managed short-term rentals is 65–80%. You have headroom to grow with the assets you already own.`,
       ],
       actions: [
         `List on Booking.com in addition to Airbnb. More channels = more visibility = fewer empty nights. Your direct booking demand is proven — amplify it online with zero capital cost.`,
@@ -197,12 +259,12 @@ export default function ReportsPage() {
         `Create a WhatsApp broadcast list of your ${directCount} past direct guests and send monthly availability updates — this is a warm audience that already trusts you.`,
         `Drop minimum stay to 1 night for last-minute gaps (2–3 days before a vacancy) to fill calendar holes that would otherwise go empty.`,
       ],
-      accentBg: 'bg-yellow-500', accentText: 'text-yellow-700 dark:text-yellow-300', accentSection: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/40',
+      ...STATUS_ACCENT[occupancyStatus],
     },
     {
       id: 'active', num: 4, title: 'Active Bookings', Icon: Building2,
       value: String(iStats?.activeBookings || 0), sub: `${iStats?.pendingBookings || 0} pending`,
-      status: 'good' as Status,
+      status: activeStatus,
       analysis: [
         `${iStats?.activeBookings || 0} confirmed bookings means your rooms are occupied right now — excellent utilisation for the current period. Monitor the Arrivals & Departures card on the dashboard for real-time check-in/out status.`,
         `${iStats?.pendingBookings || 0} pending booking${(iStats?.pendingBookings || 0) !== 1 ? 's' : ''} — respond within 2 hours. Guests who don't hear back book elsewhere, and a slow response rate hurts your Airbnb ranking algorithm.`,
@@ -215,31 +277,33 @@ export default function ReportsPage() {
         `Set a reminder on every booking (the bell icon in the Calendar view) for the day before checkout to prompt final payment and a smooth handover.`,
         `Respond to all pending bookings within 2 hours — this directly improves your Airbnb response rate score and increases conversion.`,
       ],
-      accentBg: 'bg-blue-500', accentText: 'text-blue-700 dark:text-blue-300', accentSection: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/40',
+      ...STATUS_ACCENT[activeStatus],
     },
     {
       id: 'bookings', num: 5, title: 'Total Bookings', Icon: BookOpen,
       value: String(iStats?.totalBookings || 0), sub: `${directCount} direct · ${airbnbCount} Airbnb`,
-      status: 'opportunity' as Status,
+      status: channelStatus,
       analysis: [
-        `94% of your ${iStats?.totalBookings || 0} bookings are direct — this shows strong word-of-mouth and repeat business. The risk is single-channel dependency: if direct referrals slow down, you have no backup pipeline.`,
+        `${directShare}% of your ${iStats?.totalBookings || 0} bookings are direct — this shows strong word-of-mouth and repeat business. The risk is single-channel dependency: if direct referrals slow down, you have no backup pipeline.`,
         `Airbnb bookings average ${format(airbnbAvg)} vs ${format(directAvg)} for direct — a ${airbnbPremium}% premium. Platform guests tend to book longer stays and accept higher rates due to trust signals like reviews and verified photos.`,
         `If you converted just 20% of future direct bookings to Airbnb at the higher average, monthly revenue would increase by approximately ${format(Math.round(directCount * 0.20 * (airbnbAvg - directAvg)))}.`,
       ],
       actions: [
-        `Invest in professional photography for all 4 rooms — Airbnb listings with pro photos get up to 40% more bookings. This is the single highest-ROI action you can take right now.`,
+        `Invest in professional photography for all ${roomCount} rooms — Airbnb listings with pro photos get up to 40% more bookings. This is the single highest-ROI action you can take right now.`,
         `List on Booking.com. It targets a different demographic (business travel, longer weekday stays) and fills gaps your direct guests don't cover.`,
         `Enable Airbnb smart pricing with a floor set to your current direct average (${format(directAvg)}) — this protects your minimum while letting the algorithm push rates higher during demand spikes.`,
       ],
-      accentBg: 'bg-purple-500', accentText: 'text-purple-700 dark:text-purple-300', accentSection: 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-900/40',
+      ...STATUS_ACCENT[channelStatus],
     },
     {
       id: 'properties', num: 6, title: 'Active Properties', Icon: Home,
-      value: String(iStats?.totalProperties || 0), sub: `${format(Math.round((iStats?.totalRevenue || 0) / Math.max(1, iStats?.totalProperties || 1)))}/room avg`,
-      status: 'good' as Status,
+      value: String(roomCount), sub: `${format(Math.round(revenue / Math.max(1, roomCount)))}/room avg`,
+      status: occupancyStatus,
       analysis: [
-        `Average revenue per room is ${format(Math.round((iStats?.totalRevenue || 0) / Math.max(1, iStats?.totalProperties || 1)))} this month. Adding a 5th room at similar performance would increase monthly revenue by the same amount — but only after fully optimising your current 4.`,
-        `Going from ${iStats?.occupancyRate || 0}% to 70% occupancy across your existing 4 rooms generates the same revenue uplift as a full additional room at 100% occupancy — with zero capital expenditure.`,
+        `Average revenue per room is ${format(Math.round(revenue / Math.max(1, roomCount)))} this month. Adding a ${roomCount + 1}th room at similar performance would increase monthly revenue by the same amount — but only after fully optimising your current ${roomCount}.`,
+        aboveTarget
+          ? `At ${occupancyRate}% your existing ${roomCount} rooms are already close to full. Extra capacity, not extra occupancy, is what would move revenue from here — but only once each room covers its own costs.`
+          : `Going from ${occupancyRate}% to 70% occupancy across your existing ${roomCount} rooms generates the same revenue uplift as a full additional room at 100% occupancy — with zero capital expenditure.`,
         `Check Reports → By Property to identify your best and worst performers. Replicate the highest earner's pricing, listing, and booking strategy across all others before considering expansion.`,
       ],
       actions: [
@@ -247,42 +311,57 @@ export default function ReportsPage() {
         `Introduce upsell add-ons: early check-in (+Rs 500), late checkout (+Rs 500), airport transfer, or breakfast. Each adds revenue with near-zero extra cost.`,
         `When you expand, prioritise rooms in or adjacent to your current building so you can operate them under a single check-in system and cleaning rotation.`,
       ],
-      accentBg: 'bg-teal-500', accentText: 'text-teal-700 dark:text-teal-300', accentSection: 'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/40',
+      ...STATUS_ACCENT[occupancyStatus],
     },
     {
       id: 'expenses', num: 7, title: 'Monthly Expenses', Icon: CreditCard,
-      value: format(iStats?.totalExpenses || 0), sub: `${expenseRatio}% of revenue`,
-      status: 'excellent' as Status,
+      value: format(expenses), sub: `${expenseRatio}% of revenue`,
+      status: expenseStatus,
       analysis: [
-        `At ${expenseRatio}% of revenue your expense ratio is very lean. Industry standard is 45–60% for managed short-term rentals. This gives you strong margins — but raises the question of whether all recurring costs are being captured.`,
-        `Average cost per booked night: ${format(Math.round((iStats?.totalExpenses || 0) / Math.max(1, iStats?.bookedNights || 1)))}. This is your hard cost floor — your current nightly rate is well above it, giving healthy contribution per booking.`,
-        `Expense growth is ${iStats?.expenseGrowth || 0}% vs last month. A flat expense line as revenue grows is ideal — watch for step-changes in cleaning or maintenance as bookings increase.`,
+        expenseRatio > 100
+          ? `At ${expenseRatio}% of revenue your costs exceed everything you earn — the industry norm is 45–60% for managed short-term rentals. This ratio alone is what turns ${format(revenue)} of revenue into a ${format(shortfall)} loss.`
+          : `At ${expenseRatio}% of revenue your expense ratio sits against an industry standard of 45–60% for managed short-term rentals. If it looks unusually low, check that all recurring costs are being captured.`,
+        `Average cost per booked night: ${format(Math.round(expenses / Math.max(1, iStats?.bookedNights || 1)))}, against ${format(revPerNight)} earned per night. ${
+          Math.round(expenses / Math.max(1, iStats?.bookedNights || 1)) > revPerNight
+            ? 'Each night currently costs more than it earns on a fully-loaded basis — though that comparison charges fixed monthly costs to the nights you happened to sell.'
+            : 'Your nightly rate clears this floor, giving positive contribution per booking.'
+        }`,
+        `Expense growth is ${signedPct(iStats?.expenseGrowth || 0)} vs last month. A flat expense line as revenue grows is ideal — watch for step-changes in cleaning or maintenance as bookings increase.`,
       ],
       actions: [
-        `Log all expenses immediately via the Expenses page, even small ones. Accurate data lets you identify cost trends weeks before they become a margin problem.`,
-        `Negotiate bulk pricing with your cleaning provider. At 4+ turnovers per week on average, cleaning is likely your largest variable cost and most negotiable.`,
-        `Set a monthly expense budget per room (e.g. Rs 5,500–6,500) and use the P&L report to flag any room exceeding it — this catches maintenance cost outliers early.`,
+        `Open Reports → P&L and rank expense categories by size. The largest one or two categories are where any meaningful reduction has to come from.`,
+        `Separate one-off and capital spending (renovation, furniture, deposits, annual fees) from recurring operating cost so this ratio reflects how the business actually runs month to month.`,
+        `Negotiate bulk pricing with your cleaning provider. Cleaning is typically the largest variable cost and the most negotiable.`,
+        `Set a monthly expense budget per room and use the P&L report to flag any room exceeding it — this catches maintenance cost outliers early.`,
       ],
-      accentBg: 'bg-orange-500', accentText: 'text-orange-700 dark:text-orange-300', accentSection: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/40',
+      ...STATUS_ACCENT[expenseStatus],
     },
     {
       id: 'outstanding', num: 8, title: 'Outstanding Balance', Icon: Zap,
-      value: format(iStats?.outstandingAmount || 0), sub: `${outstandingPct}% of revenue`,
-      status: 'urgent' as Status,
-      analysis: [
-        `${format(iStats?.outstandingAmount || 0)} is owed — ${outstandingPct}% of your monthly revenue sitting uncollected. This is the most immediately impactful problem to fix: it requires no new guests, no rate changes — just collection.`,
+      value: format(outstanding), sub: `${outstandingPct}% of revenue`,
+      status: outstandingStatus,
+      analysis: outstanding <= 0 ? [
+        `Nothing is outstanding — every booking counted this month is paid in full. This is the ideal state, and it means collection is not currently costing you anything.`,
+        `The goal here is to keep this at zero as volume grows. Collection discipline usually slips when booking count rises, so treat a non-zero figure in a future month as an early warning.`,
+        `Your working capital is clean: revenue recorded equals cash actually received, so the Net Income figure reflects real money rather than invoices you are still chasing.`,
+      ] : [
+        `${format(outstanding)} is owed — ${outstandingPct}% of your monthly revenue sitting uncollected. This is the most immediately impactful problem to fix: it requires no new guests, no rate changes — just collection.`,
         `Uncollected payments represent real operating risk. Once a guest has checked out, recovery becomes very difficult. The only reliable collection point is before or at check-in.`,
         todayOwed > 0
           ? `${todayCheckouts.length} guest${todayCheckouts.length !== 1 ? 's' : ''} checking out today owe a combined ${format(todayOwed)}. Contact them now — before checkout.`
-          : `No outstanding balance from today's checkouts — all settled. Focus on the remaining ${format(iStats?.outstandingAmount || 0)} from other active bookings.`,
+          : `No outstanding balance from today's checkouts — all settled. Focus on the remaining ${format(outstanding)} from other active bookings.`,
       ],
-      actions: [
-        `Immediate action: contact guests checking out today and collect ${format(todayOwed > 0 ? todayOwed : 0)} before they leave the property.`,
+      actions: outstanding <= 0 ? [
+        `Keep the current policy in place — whatever you are doing on collection is working. Document it so it survives handing bookings to staff.`,
+        `Maintain deposit-at-booking and balance-at-check-in as volume grows. This is what keeps the figure at zero.`,
+        `Use the reminder bell on bookings for any future booking taken without a deposit, so an exception does not quietly become an unpaid balance.`,
+      ] : [
+        `Immediate action: contact guests checking out today and collect ${format(todayOwed)} before they leave the property.`,
         `Implement a strict 50% deposit at booking + full payment at check-in policy. No exceptions. This single change will reduce your outstanding balance to near zero within weeks.`,
         `For direct bookings, require bank transfer before check-in — share the door code or welcome the guest only after payment confirmation arrives.`,
         `Use the reminder bell on bookings to set a 1-day-before-checkout alert so you can proactively chase any unpaid balance while the guest is still on property.`,
       ],
-      accentBg: 'bg-red-500', accentText: 'text-red-700 dark:text-red-300', accentSection: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40',
+      ...STATUS_ACCENT[outstandingStatus],
     },
   ]
 
@@ -356,9 +435,9 @@ export default function ReportsPage() {
               {/* ── Layer 1: Health Score ── */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Profit Margin', value: margin, suffix: '%', note: 'Industry avg: 40–55%', status: 'excellent' as Status, Icon: CheckCircle2 },
-                  { label: 'Occupancy Rate', value: iStats?.occupancyRate || 0, suffix: '%', note: 'Target: 70%+', status: 'warning' as Status, Icon: AlertTriangle },
-                  { label: 'Revenue Uncollected', value: outstandingPct, suffix: '%', note: 'Act immediately', status: 'urgent' as Status, Icon: XCircle },
+                  { label: 'Profit Margin', value: margin, suffix: '%', note: 'Industry avg: 40–55%', status: marginStatus, Icon: statusIcon(marginStatus) },
+                  { label: 'Occupancy Rate', value: occupancyRate, suffix: '%', note: aboveTarget ? 'Above 70% target' : 'Target: 70%+', status: occupancyStatus, Icon: statusIcon(occupancyStatus) },
+                  { label: 'Revenue Uncollected', value: outstandingPct, suffix: '%', note: outstanding <= 0 ? 'All bookings paid' : 'Act immediately', status: outstandingStatus, Icon: statusIcon(outstandingStatus) },
                 ].map(({ label, value, suffix, note, status, Icon }) => {
                   const s = STATUS_META[status]
                   return (
@@ -378,8 +457,26 @@ export default function ReportsPage() {
               <Card className="border-dashed">
                 <CardContent className="py-3 px-5">
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    <strong className="text-foreground">Your business is profitable at {margin}% margin</strong> — well above industry average. The primary growth lever is occupancy: {emptyNights} empty nights this month represent{' '}
-                    <strong className="text-foreground">{format(revenueGap70)} in additional monthly revenue</strong> at 70% target. Most urgent: {format(iStats?.outstandingAmount || 0)} outstanding — {outstandingPct}% of revenue uncollected.
+                    {profitable ? (
+                      <>
+                        <strong className="text-foreground">Your business is profitable at {margin}% margin</strong>
+                        {margin >= 40 ? ' — at or above industry average.' : ' — below the 40–55% industry average.'}{' '}
+                        {aboveTarget
+                          ? <>Occupancy is {occupancyRate}%, already past the 70% target, so further growth has to come from rate rather than volume.</>
+                          : <>The primary growth lever is occupancy: {emptyNights} empty nights this month represent <strong className="text-foreground">{format(revenueGap70)} in additional monthly revenue</strong> at 70% target.</>}
+                      </>
+                    ) : (
+                      <>
+                        <strong className="text-foreground">Your business is running at a loss ({margin}% margin).</strong>{' '}
+                        Expenses of {format(expenses)} exceed revenue of {format(revenue)} by <strong className="text-foreground">{format(shortfall)}</strong> this month.{' '}
+                        {aboveTarget
+                          ? <>At {occupancyRate}% occupancy this is not a demand problem: the cost base, not empty nights, is what needs attention.</>
+                          : <>Occupancy is {occupancyRate}% — filling the {emptyNights} empty nights would add about {format(emptyNightValue)}, but the cost base needs attention alongside it.</>}
+                      </>
+                    )}{' '}
+                    {outstanding > 0
+                      ? <>Most urgent: {format(outstanding)} outstanding — {outstandingPct}% of revenue uncollected.</>
+                      : <>Collection is clean: nothing outstanding.</>}
                     {todayOwed > 0 && <strong className="text-red-600"> {format(todayOwed)} is owed by guests checking out today.</strong>}
                   </p>
                 </CardContent>
