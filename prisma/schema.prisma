@@ -84,6 +84,9 @@ model Booking {
   guestFatherName      String?
   guestGender          String?
   guestAddress         String?
+  passportNumber       String?
+  nationality          String?
+  passportExpiry       String?
   guestProvince        String?
   guestDistrict        String?
   tempAddress          String?

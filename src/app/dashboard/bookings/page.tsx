@@ -20,6 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { Booking } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
+import { PassportScanner, type PassportData } from '@/components/ui/PassportScanner'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { useSearchParams } from 'next/navigation'
 
@@ -44,6 +45,7 @@ const EMPTY_FORM = {
   paidAmount: '',
   // Hotel Eye / Guest identity
   guestCnic: '', guestFatherName: '', guestGender: '', guestAddress: '',
+  passportNumber: '', nationality: '', passportExpiry: '',
   guestProvince: '', guestDistrict: '',
   tempAddress: '', tempProvince: '', tempDistrict: '',
   purposeOfVisit: '',
@@ -308,6 +310,17 @@ function BookingsInner() {
     }))
   }
 
+  function applyScannedPassport(data: PassportData) {
+    setForm(f => ({
+      ...f,
+      guestName:      data.name             || f.guestName,
+      passportNumber: data.passport_number  || f.passportNumber,
+      nationality:    data.nationality      || f.nationality,
+      guestGender:    data.gender           || f.guestGender,
+      passportExpiry: data.expiry_date      || f.passportExpiry,
+    }))
+  }
+
   async function pushToHotelEye(b: Booking) {
     // Open the portal immediately (must be synchronous with the click for popup blockers)
     window.open('https://hoteleye.punjab.gov.pk/hotel/addwatchentries', '_blank', 'noopener')
@@ -401,6 +414,8 @@ function BookingsInner() {
       reminderAt: '', reminderNote: '', paidAmount: '',
       guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
       guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
+      passportNumber: (b as any).passportNumber || '', nationality: (b as any).nationality || '',
+      passportExpiry: (b as any).passportExpiry || '',
       guestProvince: (b as any).guestProvince || '', guestDistrict: (b as any).guestDistrict || '',
       tempAddress: (b as any).tempAddress || '', tempProvince: (b as any).tempProvince || '',
       tempDistrict: (b as any).tempDistrict || '', purposeOfVisit: (b as any).purposeOfVisit || '',
@@ -416,7 +431,7 @@ function BookingsInner() {
     setSectionOpen({
       misc: !!((b as any).miscCharges || (b as any).miscDescription),
       reminder: false,
-      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName),
+      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName || (b as any).passportNumber),
       reference: !!((b as any).refName),
     })
     setModalOpen(true)
@@ -435,6 +450,8 @@ function BookingsInner() {
       paidAmount: String(b.paidAmount ?? 0),
       guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
       guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
+      passportNumber: (b as any).passportNumber || '', nationality: (b as any).nationality || '',
+      passportExpiry: (b as any).passportExpiry || '',
       guestProvince: (b as any).guestProvince || '', guestDistrict: (b as any).guestDistrict || '',
       tempAddress: (b as any).tempAddress || '', tempProvince: (b as any).tempProvince || '',
       tempDistrict: (b as any).tempDistrict || '', purposeOfVisit: (b as any).purposeOfVisit || '',
@@ -449,7 +466,7 @@ function BookingsInner() {
     setSectionOpen({
       misc: !!((b as any).miscCharges || (b as any).miscDescription),
       reminder: !!((b as any).reminderAt || (b as any).reminderNote),
-      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName),
+      hotelEye: !!((b as any).guestCnic || (b as any).guestFatherName || (b as any).passportNumber),
       reference: !!((b as any).refName),
     })
     // Load existing documents for this booking
@@ -855,9 +872,10 @@ function BookingsInner() {
           {/* Scrollable form */}
           <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 md:border-r">
 
-            {/* CNIC Scanner — set apart as a quick-fill utility, not a form field */}
-            <div className="rounded-xl border border-dashed bg-muted/30 p-4">
+            {/* CNIC / Passport Scanners — set apart as quick-fill utilities, not form fields */}
+            <div className="rounded-xl border border-dashed bg-muted/30 p-4 space-y-4">
               <CnicScanner onExtracted={applyScannedCnic} />
+              <PassportScanner onExtracted={applyScannedPassport} />
             </div>
 
             {/* ── Guest Details ─────────────────────── */}
@@ -1072,6 +1090,20 @@ function BookingsInner() {
                       </select>
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div className="space-y-1.5">
+                      <Label>Passport #</Label>
+                      <Input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} placeholder="e.g. AB1234567" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Nationality</Label>
+                      <Input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} placeholder="e.g. British" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Passport Expiry</Label>
+                      <Input type="date" value={form.passportExpiry} onChange={(e) => setForm({ ...form, passportExpiry: e.target.value })} />
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
                     <Label>Father Name</Label>
                     <Input value={form.guestFatherName} onChange={(e) => setForm({ ...form, guestFatherName: e.target.value })} placeholder="Father's full name" />
@@ -1267,9 +1299,12 @@ function BookingsInner() {
             </SumSection>
 
             {/* Hotel Eye */}
-            {(form.guestCnic || form.guestFatherName || form.guestAddress || form.purposeOfVisit) && (
+            {(form.guestCnic || form.guestFatherName || form.guestAddress || form.purposeOfVisit || form.passportNumber) && (
               <SumSection title="Hotel Eye / Identity" aria-label="Hotel Eye / Identity">
                 <SumRow label="CNIC"          value={form.guestCnic} />
+                <SumRow label="Passport #"    value={form.passportNumber} />
+                <SumRow label="Nationality"   value={form.nationality} />
+                <SumRow label="Passport Exp." value={form.passportExpiry} />
                 <SumRow label="Father"        value={form.guestFatherName} />
                 <SumRow label="Gender"        value={form.guestGender} />
                 <SumRow label="Address"       value={form.guestAddress} />

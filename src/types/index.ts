@@ -62,6 +62,9 @@ export interface Booking {
   guestFatherName?: string | null
   guestGender?: string | null
   guestAddress?: string | null
+  passportNumber?: string | null
+  nationality?: string | null
+  passportExpiry?: string | null
   guestProvince?: string | null
   guestDistrict?: string | null
   tempAddress?: string | null
