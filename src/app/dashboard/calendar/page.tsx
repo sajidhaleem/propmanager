@@ -873,7 +873,9 @@ function QuickBookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      {/* Wide enough that the two datetime-local controls fit their columns —
+          at max-w-md they overflow and the native picker icon is clipped */}
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>New Booking</DialogTitle>
         </DialogHeader>
@@ -884,8 +886,11 @@ function QuickBookingDialog({
               onChange={e => setForm({ ...form, guestName: e.target.value })}
               placeholder="e.g. Ahmed Khan" />
           </div>
+          {/* min-w-0 on each cell: grid items default to min-width:auto, so a
+              native control wider than its column pushes the grid out instead
+              of shrinking */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Room *</Label>
               <Select value={form.propertyId}
                 onValueChange={v => {
@@ -898,7 +903,7 @@ function QuickBookingDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Platform</Label>
               <Select value={form.platform} onValueChange={v => setForm({ ...form, platform: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -909,32 +914,34 @@ function QuickBookingDialog({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label htmlFor="qb-ci">Check-in *</Label>
-              <Input id="qb-ci" type="datetime-local" value={form.checkIn}
+              <Input id="qb-ci" type="datetime-local" className="px-2.5" value={form.checkIn}
                 onChange={e => setForm({ ...form, checkIn: e.target.value })} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label htmlFor="qb-co">Check-out *</Label>
-              <Input id="qb-co" type="datetime-local" value={form.checkOut}
+              <Input id="qb-co" type="datetime-local" className="px-2.5" value={form.checkOut}
                 onChange={e => setForm({ ...form, checkOut: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label htmlFor="qb-rate">Rate / Night (Rs)</Label>
               <Input id="qb-rate" type="number" min="0" value={form.rate}
                 onChange={e => setForm({ ...form, rate: e.target.value })}
                 placeholder={selectedProperty ? String(selectedProperty.baseRate) : '0'} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label htmlFor="qb-paid">Paid (Rs)</Label>
               <Input id="qb-paid" type="number" min="0" value={form.paidAmount}
                 onChange={e => setForm({ ...form, paidAmount: e.target.value })} placeholder="0" />
             </div>
           </div>
         </div>
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between">
+        {/* space-x-0 cancels the footer's default sm:space-x-2, which would
+            otherwise stack on top of gap-2 */}
+        <DialogFooter className="flex-col sm:flex-row sm:items-center gap-2 sm:justify-between sm:space-x-0">
           <Button variant="ghost" size="sm" className="text-muted-foreground"
             onClick={() => router.push(`/dashboard/bookings?checkIn=${form.checkIn || format(new Date(), "yyyy-MM-dd'T'10:00")}`)}>
             Full form (CNIC, misc…)
@@ -1041,10 +1048,6 @@ export default function CalendarPage() {
             </button>
           ))}
         </div>
-
-        <Button size="sm" onClick={() => openQuickBooking(format(view === 'day' ? selectedDay : new Date(), "yyyy-MM-dd'T'14:00"))}>
-          <Plus className="h-4 w-4" />New Booking
-        </Button>
       </PageHero>
 
       <QuickBookingDialog
