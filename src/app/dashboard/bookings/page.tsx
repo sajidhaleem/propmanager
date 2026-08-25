@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
-import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
+import { formatDate, getStatusColor, getPlatformColor, cn, getPaymentStatus, PAYMENT_STATUS_META } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking, type ScannedImage } from '@/types'
@@ -104,6 +104,7 @@ function BookingsInner() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [hotelEyeFilter, setHotelEyeFilter] = useState('all')
+  const [paymentFilter, setPaymentFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [editBooking, setEditBooking] = useState<Booking | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -151,6 +152,7 @@ function BookingsInner() {
   // Custom platforms are stored as enum OTHER (label lives in notes)
   if (platformFilter !== 'all') params.platform = platformFilter.startsWith('OTHER:') ? 'OTHER' : platformFilter
   if (hotelEyeFilter !== 'all') params.hotelEyeStatus = hotelEyeFilter
+  if (paymentFilter !== 'all') params.paymentStatus = paymentFilter
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
   const { data: propertiesData } = useQuery({ queryKey: ['properties'], queryFn: fetchProperties })
@@ -583,6 +585,7 @@ function BookingsInner() {
       Guest: b.guestName, Email: b.guestEmail, 'Check-in': formatDate(b.checkIn),
       'Check-out': formatDate(b.checkOut), Nights: b.nights, 'Rate/Night': b.rate,
       Total: b.totalAmount, Paid: b.paidAmount ?? 0, Outstanding: b.totalAmount - (b.paidAmount ?? 0),
+      'Payment Status': PAYMENT_STATUS_META[getPaymentStatus(b.totalAmount, b.paidAmount)].label,
       Net: b.netAmount, Platform: b.platform, Status: b.status,
       Property: b.property?.name,
     })))
@@ -620,6 +623,15 @@ function BookingsInner() {
             {platforms.map((p, i) => (
               <SelectItem key={i} value={p.custom ? `OTHER:${p.label}` : p.value}>{p.label}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPage(1) }}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Payment" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Payments</SelectItem>
+            <SelectItem value="PAID">Paid</SelectItem>
+            <SelectItem value="PARTIAL">Partially Paid</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
           </SelectContent>
         </Select>
         <Select value={hotelEyeFilter} onValueChange={(v) => { setHotelEyeFilter(v); setPage(1) }}>
@@ -694,8 +706,8 @@ function BookingsInner() {
           <Card>
             <EmptyState
               icon={CalendarDays}
-              title={search || statusFilter !== 'all' || platformFilter !== 'all' ? 'No bookings match these filters' : 'No bookings yet'}
-              description={search || statusFilter !== 'all' || platformFilter !== 'all' ? 'Try clearing the search or filters.' : 'Log your first guest to see them here.'}
+              title={search || statusFilter !== 'all' || platformFilter !== 'all' || paymentFilter !== 'all' ? 'No bookings match these filters' : 'No bookings yet'}
+              description={search || statusFilter !== 'all' || platformFilter !== 'all' || paymentFilter !== 'all' ? 'Try clearing the search or filters.' : 'Log your first guest to see them here.'}
               action={{ label: 'New Booking', onClick: openCreate }}
             />
           </Card>
@@ -816,6 +828,18 @@ function BookingsInner() {
                               <SelectItem value="ENTERED">HE: Filed</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+
+                        {/* Payment status — derived from the amounts, not stored */}
+                        <div className="shrink-0">
+                          {(() => {
+                            const meta = PAYMENT_STATUS_META[getPaymentStatus(b.totalAmount, b.paidAmount)]
+                            return (
+                              <Badge variant="outline" className={cn('h-6 rounded-full px-2 text-[10px] font-semibold whitespace-nowrap', meta.className)}>
+                                {meta.label}
+                              </Badge>
+                            )
+                          })()}
                         </div>
 
                         {/* Status selector */}

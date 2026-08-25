@@ -115,3 +115,32 @@ export function getMonthlyExpenseTotal(
   const payouts = pay?._sum.paidAmount || 0
   return { expenses, payouts, total: expenses + payouts }
 }
+
+// ── Payment status ──────────────────────────────────────────────────────────
+
+export type PaymentStatus = 'PAID' | 'PARTIAL' | 'PENDING'
+
+/**
+ * Payment state is derived from the amounts rather than stored as its own
+ * column. paidAmount is editable inline in the bookings table, so a stored
+ * copy would drift the moment someone corrected a figure; deriving it also
+ * means every historical booking is classified without a backfill.
+ *
+ * Settled first, so a zero-value booking (nothing owed) and an overpayment
+ * both read as Paid rather than falling through to Pending.
+ */
+export function getPaymentStatus(
+  totalAmount: number,
+  paidAmount: number | null | undefined
+): PaymentStatus {
+  const paid = paidAmount ?? 0
+  if (paid >= totalAmount) return 'PAID'
+  if (paid > 0) return 'PARTIAL'
+  return 'PENDING'
+}
+
+export const PAYMENT_STATUS_META: Record<PaymentStatus, { label: string; className: string }> = {
+  PAID:    { label: 'Paid',           className: 'text-green-600 border-green-600/40 bg-green-500/10' },
+  PARTIAL: { label: 'Partially Paid', className: 'text-amber-500 border-amber-500/40 bg-amber-500/10' },
+  PENDING: { label: 'Pending',        className: 'text-rose-500 border-rose-500/40 bg-rose-500/10' },
+}

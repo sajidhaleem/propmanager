@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const platform = searchParams.get('platform')
     const hotelEyeStatus = searchParams.get('hotelEyeStatus')
+    const paymentStatus = searchParams.get('paymentStatus')
     const propertyId = searchParams.get('propertyId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -41,17 +42,41 @@ export async function GET(req: NextRequest) {
       d.setUTCHours(23, 59, 59, 999)
       return d
     }
+    // Both the date window and the payment filter contribute AND clauses, so
+    // they accumulate here rather than assigning where.AND twice
+    const and: any[] = []
+
     if (startDate && endDate) {
       // Overlap: booking overlaps with [startDate, endDate] window
-      where.AND = [
+      and.push(
         { checkIn:  { lte: endOfDayUTC(endDate) } },
         { checkOut: { gte: new Date(startDate) } },
-      ]
+      )
     } else if (startDate) {
       where.checkIn = { gte: new Date(startDate) }
     } else if (endDate) {
       where.checkIn = { lte: endOfDayUTC(endDate) }
     }
+
+    /* Payment status is derived from the amounts (see getPaymentStatus), so it
+       filters by comparing paidAmount against totalAmount rather than reading a
+       stored column. Kept server-side so it applies across the whole result set
+       and not just the current page. */
+    if (paymentStatus === 'PAID') {
+      and.push({ paidAmount: { gte: prisma.booking.fields.totalAmount } })
+    } else if (paymentStatus === 'PARTIAL') {
+      and.push(
+        { paidAmount: { gt: 0 } },
+        { paidAmount: { lt: prisma.booking.fields.totalAmount } },
+      )
+    } else if (paymentStatus === 'PENDING') {
+      and.push(
+        { paidAmount: { lte: 0 } },
+        { totalAmount: { gt: 0 } },
+      )
+    }
+
+    if (and.length > 0) where.AND = and
 
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
