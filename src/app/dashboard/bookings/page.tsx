@@ -84,6 +84,14 @@ function localInputToISO(localInput: string): string {
   return new Date(localInput).toISOString()
 }
 
+/* platform is a fixed enum, so a custom platform name is carried as a
+   "[Label] " prefix on notes. Splitting it back out on edit keeps the label in
+   its own field instead of leaving it buried in the notes text. */
+function splitPlatformLabel(notes: string) {
+  const m = notes.match(/^\[([^\]]+)\]\s*/)
+  return m ? { label: m[1], rest: notes.slice(m[0].length) } : { label: '', rest: notes }
+}
+
 /* Mirrors INLINE_SAFE in the document download route — anything else is only
    offered as a download, since the API refuses to serve it inline anyway. */
 const VIEWABLE_TYPES = new Set([
@@ -433,12 +441,15 @@ function BookingsInner() {
   }
   function openCopy(b: Booking) {
     setEditBooking(null)
+    const custom = b.platform === 'OTHER'
+      ? splitPlatformLabel(b.notes || '')
+      : { label: '', rest: b.notes || '' }
     setForm({
       guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
       checkIn: '', checkOut: '',
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
       platform: b.platform, status: 'CONFIRMED', propertyId: b.propertyId,
-      notes: b.notes || '', platformOther: '',
+      notes: custom.rest, platformOther: custom.label,
       miscCharges: String((b as any).miscCharges || ''), miscDescription: (b as any).miscDescription || '',
       reminderAt: '', reminderNote: '', paidAmount: '',
       guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
@@ -468,12 +479,15 @@ function BookingsInner() {
   }
   function openEdit(b: Booking) {
     setEditBooking(b)
+    const custom = b.platform === 'OTHER'
+      ? splitPlatformLabel(b.notes || '')
+      : { label: '', rest: b.notes || '' }
     setForm({
       guestName: b.guestName, guestEmail: b.guestEmail || '', guestPhone: b.guestPhone || '',
       checkIn: toLocalInput(b.checkIn), checkOut: toLocalInput(b.checkOut),
       rate: String(b.rate), cleaningFee: String(b.cleaningFee), platformFee: String(b.platformFee),
-      platform: b.platform, status: b.status, propertyId: b.propertyId, notes: b.notes || '',
-      platformOther: '', miscCharges: String((b as any).miscCharges || ''),
+      platform: b.platform, status: b.status, propertyId: b.propertyId, notes: custom.rest,
+      platformOther: custom.label, miscCharges: String((b as any).miscCharges || ''),
       miscDescription: (b as any).miscDescription || '',
       reminderAt: toLocalInput((b as any).reminderAt || ''),
       reminderNote: (b as any).reminderNote || '',
@@ -1024,8 +1038,14 @@ function BookingsInner() {
                 <div className="space-y-1.5">
                   <Label>Platform *</Label>
                   <Select
-                    value={form.platform === 'OTHER' && form.platformOther
-                      ? `OTHER:${form.platformOther}`
+                    /* Only select an OTHER:<label> item when one actually
+                       exists. Free text being typed into the box below has no
+                       matching item, and handing Select an unknown value blanks
+                       the trigger. */
+                    value={form.platform === 'OTHER'
+                      ? (platforms.some(p => p.custom && p.label === form.platformOther)
+                          ? `OTHER:${form.platformOther}`
+                          : 'OTHER')
                       : form.platform}
                     onValueChange={(v) => {
                       const item = platforms.find(p => (p.custom ? `OTHER:${p.label}` : p.value) === v)
@@ -1046,7 +1066,10 @@ function BookingsInner() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.platform === 'OTHER' && !form.platformOther && (
+                  {/* Rendered for the whole time OTHER is selected. Gating this
+                      on an empty platformOther unmounted the input on the first
+                      keystroke, so only one character could ever be typed. */}
+                  {form.platform === 'OTHER' && (
                     <Input value={form.platformOther} onChange={(e) => setForm({ ...form, platformOther: e.target.value })} placeholder="e.g. Facebook, Walk-in…" className="mt-2" autoFocus />
                   )}
                 </div>
@@ -1480,8 +1503,11 @@ function BookingsInner() {
             <Button
               onClick={() => {
                 const payload = { ...form }
-                if (form.platform === 'OTHER' && form.platformOther) {
-                  payload.notes = form.notes ? `[${form.platformOther}] ${form.notes}` : form.platformOther
+                const label = form.platformOther.trim()
+                if (form.platform === 'OTHER' && label) {
+                  /* Always bracketed, even with no notes — an unbracketed label
+                     could not be parsed back out on edit or in the list. */
+                  payload.notes = form.notes ? `[${label}] ${form.notes}` : `[${label}]`
                 }
                 saveMutation.mutate(payload)
               }}
