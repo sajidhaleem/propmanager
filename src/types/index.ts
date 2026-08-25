@@ -32,6 +32,14 @@ export interface Property {
   _count?: { bookings: number }
 }
 
+/* An image a scanner read, handed back so it can be filed against the booking.
+   Carried separately from the extracted fields because a scan taken while
+   creating a booking has no booking row to attach to yet. */
+export interface ScannedImage {
+  file: File | Blob
+  label: string
+}
+
 export interface Booking {
   id: string
   guestName: string

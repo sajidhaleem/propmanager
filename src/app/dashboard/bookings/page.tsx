@@ -17,7 +17,7 @@ import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getStatusColor, getPlatformColor, cn } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
-import { Booking } from '@/types'
+import { Booking, type ScannedImage } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
 import { PassportScanner, type PassportData } from '@/components/ui/PassportScanner'
@@ -84,6 +84,12 @@ function localInputToISO(localInput: string): string {
   return new Date(localInput).toISOString()
 }
 
+/* Mirrors INLINE_SAFE in the document download route — anything else is only
+   offered as a download, since the API refuses to serve it inline anyway. */
+const VIEWABLE_TYPES = new Set([
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf',
+])
+
 function BookingsInner() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
@@ -91,6 +97,9 @@ function BookingsInner() {
   const [page, setPage] = useState(1)
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
   const [uploading, setUploading] = useState(false)
+  /* Scans taken while creating a booking have no booking row to attach to yet,
+     so they wait here and are filed once the booking is saved. */
+  const [pendingScans, setPendingScans] = useState<ScannedImage[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
@@ -123,6 +132,7 @@ function BookingsInner() {
     setEditBooking(null)
     setForm({ ...EMPTY_FORM, checkIn: localValue, checkOut })
     setUploadedDocs([])
+    setPendingScans([])
     setSectionOpen({ misc: false, reminder: false, hotelEye: false, reference: false })
     setModalOpen(true)
     // Remove the query param from the URL without reloading
@@ -203,7 +213,7 @@ function BookingsInner() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: async (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
       queryClient.invalidateQueries({ queryKey: ['calendar-day'] })
@@ -212,6 +222,20 @@ function BookingsInner() {
       queryClient.invalidateQueries({ queryKey: ['insights'] })
       setModalOpen(false)
       toast.success(editBooking ? 'Booking updated' : 'Booking created')
+
+      /* Scans taken before the booking existed can only be filed now that it
+         has an id. The booking itself is already saved, so a failure here is
+         reported without rolling anything back. */
+      const savedId = result?.data?.id || editBooking?.id
+      const scans = pendingScans
+      if (savedId && scans.length > 0) {
+        setPendingScans([])
+        const settled = await Promise.allSettled(scans.map(s => uploadScan(savedId, s)))
+        const failed = settled.filter(r => r.status === 'rejected').length
+        const saved  = settled.length - failed
+        if (saved > 0)  toast.success(`${saved} scan${saved !== 1 ? 's' : ''} saved to Documents`)
+        if (failed > 0) toast.error(`${failed} scan${failed !== 1 ? 's' : ''} could not be saved to Documents`)
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   })
@@ -299,7 +323,7 @@ function BookingsInner() {
     amountMutation.mutate({ id, paidAmount: val })
   }
 
-  function applyScannedCnic(data: CnicData) {
+  function applyScannedCnic(data: CnicData, scan?: ScannedImage) {
     setForm(f => ({
       ...f,
       guestName:      data.name        || f.guestName,
@@ -308,9 +332,10 @@ function BookingsInner() {
       guestGender:    data.gender      || f.guestGender,
       guestAddress:   data.address     || f.guestAddress,
     }))
+    if (scan) attachScan(scan)
   }
 
-  function applyScannedPassport(data: PassportData) {
+  function applyScannedPassport(data: PassportData, scan?: ScannedImage) {
     setForm(f => ({
       ...f,
       guestName:      data.name             || f.guestName,
@@ -319,6 +344,7 @@ function BookingsInner() {
       guestGender:    data.gender           || f.guestGender,
       passportExpiry: data.expiry_date      || f.passportExpiry,
     }))
+    if (scan) attachScan(scan)
   }
 
   async function pushToHotelEye(b: Booking) {
@@ -399,6 +425,7 @@ function BookingsInner() {
     setEditBooking(null)
     setForm(EMPTY_FORM)
     setUploadedDocs([])
+    setPendingScans([])
     setSectionOpen({ misc: false, reminder: false, hotelEye: false, reference: false })
     setModalOpen(true)
   }
@@ -428,6 +455,7 @@ function BookingsInner() {
       refCell: (b as any).refCell || '', refVerified: (b as any).refVerified || false,
     })
     setUploadedDocs([])
+    setPendingScans([])
     setSectionOpen({
       misc: !!((b as any).miscCharges || (b as any).miscDescription),
       reminder: false,
@@ -470,11 +498,54 @@ function BookingsInner() {
       reference: !!((b as any).refName),
     })
     // Load existing documents for this booking
+    setPendingScans([])
     fetch(`/api/bookings/${b.id}/documents`)
       .then(r => r.json())
       .then(d => setUploadedDocs(d.data || []))
       .catch(() => {})
     setModalOpen(true)
+  }
+
+  /* Documents cap at 5MB while the scanners accept 10MB, so a large scan can
+     read fine and still be too big to file. */
+  const MAX_DOC_SIZE = 5 * 1024 * 1024
+
+  async function uploadScan(bookingId: string, scan: ScannedImage): Promise<UploadedDoc> {
+    const type = scan.file.type || 'image/jpeg'
+    const ext  = type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+    // ASCII only — the filename is echoed back in a Content-Disposition header
+    const name = `${scan.label} ${new Date().toISOString().slice(0, 10)}.${ext}`
+
+    const fd = new FormData()
+    fd.append('file', new File([scan.file], name, { type }))
+    const res = await fetch(`/api/bookings/${bookingId}/documents`, { method: 'POST', body: fd })
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}))
+      throw new Error(e.error || 'Could not save scan to Documents')
+    }
+    const { data } = await res.json()
+    return data
+  }
+
+  /* Every scan is filed against the booking so the original image stays
+     available after the extracted text has been edited. */
+  async function attachScan(scan: ScannedImage) {
+    if (scan.file.size > MAX_DOC_SIZE) {
+      toast('Scan read, but the image is over 5MB so it was not saved to Documents.', { icon: 'ℹ️' })
+      return
+    }
+    if (!editBooking) {
+      // Replace any earlier scan of the same side rather than queueing both
+      setPendingScans(prev => [...prev.filter(p => p.label !== scan.label), scan])
+      return
+    }
+    try {
+      const doc = await uploadScan(editBooking.id, scan)
+      setUploadedDocs(prev => [doc, ...prev])
+      toast.success(`${scan.label} saved to Documents`)
+    } catch (err: any) {
+      toast.error(err.message || 'Could not save scan to Documents')
+    }
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, bookingId?: string) {
@@ -1232,6 +1303,9 @@ function BookingsInner() {
                             <p className="text-sm font-medium truncate">{doc.name}</p>
                             <p className="text-xs text-muted-foreground">{(doc.size / 1024).toFixed(1)} KB</p>
                           </div>
+                          {VIEWABLE_TYPES.has(doc.mimeType) && (
+                            <a href={`/api/bookings/${editBooking.id}/documents/${doc.id}?inline=1`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline shrink-0">View</a>
+                          )}
                           <a href={`/api/bookings/${editBooking.id}/documents/${doc.id}`} target="_blank" className="text-xs text-primary hover:underline shrink-0">Download</a>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive shrink-0" onClick={() => deleteDoc(editBooking.id, doc.id)}>
                             <X className="h-3.5 w-3.5" />
@@ -1241,10 +1315,33 @@ function BookingsInner() {
                     </div>
                   )}
                 </div>
+              ) : pendingScans.length > 0 ? (
+                /* Scans captured before the booking exists — filed on save */
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {pendingScans.length} scan{pendingScans.length !== 1 ? 's' : ''} will be attached when you save this booking.
+                  </p>
+                  {pendingScans.map(scan => (
+                    <div key={scan.label} className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/30 px-3 py-2">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{scan.label}</p>
+                        <p className="text-xs text-muted-foreground">{(scan.file.size / 1024).toFixed(1)} KB · pending save</p>
+                      </div>
+                      <Button
+                        variant="ghost" size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                        onClick={() => setPendingScans(prev => prev.filter(p => p.label !== scan.label))}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Upload className="h-4 w-4" />
-                  Save the booking first, then you can <span className="text-primary">upload documents</span>.
+                  Save the booking first to <span className="text-primary">upload documents</span>. Anything you scan is attached automatically.
                 </p>
               )}
             </div>

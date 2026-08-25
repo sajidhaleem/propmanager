@@ -6,7 +6,8 @@ import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = [
   'application/pdf',
-  'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+  // gif is accepted by the vision model, so a scan of one must be filable too
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
