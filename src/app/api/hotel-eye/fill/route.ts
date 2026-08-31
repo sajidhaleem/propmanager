@@ -30,6 +30,17 @@ export async function POST(req: NextRequest) {
     }
 
     const job = await prisma.hotelEyeJob.create({ data: { payload, bookingId: bookingId ?? null } })
+
+    /* Mark the booking as in-flight so the desk can tell "handed to the filing
+       worker" from "nobody has touched this". Only moves bookings that are not
+       already on the portal — a re-send must never undo a recorded filing. */
+    if (bookingId) {
+      await prisma.booking.updateMany({
+        where: { id: bookingId, hotelEyeStatus: { in: ['NOT_ENTERED', 'FAILED'] } },
+        data: { hotelEyeStatus: 'QUEUED', hotelEyeError: null },
+      }).catch(() => {/* non-fatal: the job is queued either way */})
+    }
+
     return NextResponse.json({ success: true, jobId: job.id })
   } catch (err: any) {
     if (err.message === 'Unauthorized') return apiError('Unauthorized', 401)

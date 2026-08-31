@@ -65,6 +65,8 @@ export interface Booking {
   reminderAt?: string | null
   reminderNote?: string | null
   hotelEyeStatus?: string | null
+  hotelEyeFiledAt?: string | null
+  hotelEyeError?: string | null
   // Hotel Eye / guest identity
   guestCnic?: string | null
   guestFatherName?: string | null

@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '@/lib/auth'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { differenceInCalendarDays } from 'date-fns'
+import { FILING_WINDOW_HOURS } from '@/lib/hotelEye'
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,7 +32,8 @@ export async function GET(req: NextRequest) {
     }
     if (status) where.status = status
     if (platform) where.platform = platform
-    if (hotelEyeStatus) where.hotelEyeStatus = hotelEyeStatus
+    // OVERDUE is derived rather than stored; handled with the AND clauses below
+    if (hotelEyeStatus && hotelEyeStatus !== 'OVERDUE') where.hotelEyeStatus = hotelEyeStatus
     if (propertyId) where.propertyId = propertyId
     // Bare "YYYY-MM-DD" strings parse as UTC midnight, which truncates the
     // end boundary to the start of its day and silently drops same-day
@@ -73,6 +75,16 @@ export async function GET(req: NextRequest) {
       and.push(
         { paidAmount: { lte: 0 } },
         { totalAmount: { gt: 0 } },
+      )
+    }
+
+    /* Anything past its 24-hour filing window and still not on the portal.
+       Goes through AND so it composes with a date range instead of the two
+       fighting over where.checkIn. */
+    if (hotelEyeStatus === 'OVERDUE') {
+      and.push(
+        { hotelEyeStatus: { not: 'ENTERED' } },
+        { checkIn: { lt: new Date(Date.now() - FILING_WINDOW_HOURS * 60 * 60 * 1000) } },
       )
     }
 

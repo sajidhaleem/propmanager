@@ -102,6 +102,25 @@ export async function stubApi(
 
     if (path === '/api/properties')      return json(PROPERTIES)
     if (path === '/api/dashboard/stats') return json(stats)
+
+    /* Derived from the same fixture rows the list is served from, so the
+       banner and the badges can never disagree in a test. */
+    if (path === '/api/hotel-eye/compliance') {
+      const isToday = (d: string) => {
+        const x = new Date(d), n = new Date()
+        return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate()
+      }
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000
+      const arrivals = rows.filter((b) => isToday(b.checkIn))
+      return json({
+        arrivalsToday: arrivals.length,
+        filedToday: arrivals.filter((b) => b.hotelEyeStatus === 'ENTERED').length,
+        overdue: rows.filter((b) => b.hotelEyeStatus !== 'ENTERED' && new Date(b.checkIn).getTime() < cutoff).length,
+        failed: rows.filter((b) => b.hotelEyeStatus === 'FAILED').length,
+        clear: false,
+        windowHours: 24,
+      })
+    }
     if (path === '/api/settings')        return json(null) // falls back to DEFAULT_PLATFORMS
     return json(null)
   })

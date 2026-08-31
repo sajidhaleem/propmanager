@@ -106,7 +106,15 @@ model Booking {
   refCell              String?
   refVerified          Boolean? @default(false)
 
-  hotelEyeStatus  String   @default("NOT_ENTERED") // NOT_ENTERED | ENTERED
+  // NOT_ENTERED | QUEUED | ENTERED | FAILED
+  hotelEyeStatus  String    @default("NOT_ENTERED")
+  // When the portal accepted the entry — the proof an inspector asks for.
+  // Without it there is evidence that a guest was filed but not when.
+  hotelEyeFiledAt DateTime?
+  // Last failure reason from the filing worker. This previously only reached
+  // HotelEyeJob.error, a table the app never reads, so a failed filing was
+  // indistinguishable from one nobody had attempted.
+  hotelEyeError   String?
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

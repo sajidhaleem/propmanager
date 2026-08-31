@@ -30,10 +30,23 @@ export async function PATCH(
     data: { status, error: error || null },
   })
 
-  if (status === 'done' && job.bookingId) {
+  /* Mirror the outcome onto the booking. The job table is the worker's
+     queue and the app never reads it, so a result that stops here is a
+     result nobody ever sees — a failed filing used to be indistinguishable
+     from one nobody had attempted. */
+  if (job.bookingId) {
+    const outcome =
+      status === 'done'
+        // hotelEyeFiledAt is the timestamp an inspector asks for
+        ? { hotelEyeStatus: 'ENTERED', hotelEyeFiledAt: new Date(), hotelEyeError: null }
+        : status === 'failed'
+          ? { hotelEyeStatus: 'FAILED', hotelEyeError: String(error || 'Filing failed') }
+          // requeued: drop back to QUEUED and clear the stale error
+          : { hotelEyeStatus: 'QUEUED', hotelEyeError: null }
+
     await prisma.booking.update({
       where: { id: job.bookingId },
-      data: { hotelEyeStatus: 'ENTERED' },
+      data: outcome,
     }).catch(() => {/* booking may have been deleted */})
   }
 

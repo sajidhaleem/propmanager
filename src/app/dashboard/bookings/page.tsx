@@ -22,6 +22,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
 import { PassportScanner, type PassportData } from '@/components/ui/PassportScanner'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
+import { getFilingStatus, FILING_STATE_META } from '@/lib/hotelEye'
 import { useSearchParams } from 'next/navigation'
 
 async function fetchBookings(params: Record<string, string>) {
@@ -164,6 +165,17 @@ function BookingsInner() {
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
   const { data: propertiesData } = useQuery({ queryKey: ['properties'], queryFn: fetchProperties })
+  /* Server-computed: the client only holds one filtered page, so it cannot
+     answer "is every arrival today filed" on its own. */
+  const { data: complianceData } = useQuery({
+    queryKey: ['hotel-eye', 'compliance'],
+    queryFn: async () => {
+      const res = await fetch('/api/hotel-eye/compliance')
+      if (!res.ok) throw new Error('Failed')
+      return res.json()
+    },
+    refetchInterval: 5 * 60 * 1000,
+  })
   const { data: platformsData } = useQuery<PlatformItem[]>({
     queryKey: ['settings', 'platforms'],
     queryFn: async () => {
@@ -179,6 +191,9 @@ function BookingsInner() {
   const total = data?.data?.total || 0
   const totalPages = data?.data?.totalPages || 1
   const properties = propertiesData?.data || []
+  const compliance = complianceData?.data as
+    | { arrivalsToday: number; filedToday: number; overdue: number; failed: number; clear: boolean }
+    | undefined
 
   const groupedBookings = useMemo(() => {
     // Date-header grouping only makes sense when rows are ordered by check-in;
@@ -279,6 +294,8 @@ function BookingsInner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      // the today-filed counter is derived from this
+      queryClient.invalidateQueries({ queryKey: ['hotel-eye'] })
       toast.success('Hotel Eye status updated')
     },
     onError: (e: Error) => toast.error(e.message),
@@ -615,6 +632,34 @@ function BookingsInner() {
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />New Booking</Button>
       </PageHero>
 
+      {/* Hotel Eye compliance — today's filing position at a glance */}
+      {compliance && (compliance.arrivalsToday > 0 || compliance.overdue > 0 || compliance.failed > 0) && (
+        <button
+          type="button"
+          onClick={() => { setHotelEyeFilter(compliance.overdue > 0 ? 'OVERDUE' : compliance.failed > 0 ? 'FAILED' : 'NOT_ENTERED'); setPage(1) }}
+          className={cn(
+            'flex w-full flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border px-4 py-3 text-left text-sm transition-colors',
+            compliance.overdue > 0 || compliance.failed > 0
+              ? 'border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/15'
+              : compliance.clear
+                ? 'border-green-600/40 bg-green-500/10 hover:bg-green-500/15'
+                : 'border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/15'
+          )}
+        >
+          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hotel Eye today</span>
+          <span className="font-semibold tabular-nums">
+            {compliance.filedToday} / {compliance.arrivalsToday} filed
+          </span>
+          {compliance.overdue > 0 && (
+            <span className="font-semibold text-rose-500">{compliance.overdue} overdue past 24h</span>
+          )}
+          {compliance.failed > 0 && (
+            <span className="font-semibold text-rose-500">{compliance.failed} failed</span>
+          )}
+          {compliance.clear && <span className="font-semibold text-green-600">All arrivals filed</span>}
+        </button>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -652,8 +697,11 @@ function BookingsInner() {
           <SelectTrigger className="w-40"><SelectValue placeholder="Hotel Eye" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Hotel Eye</SelectItem>
-            <SelectItem value="NOT_ENTERED">Not Entered</SelectItem>
-            <SelectItem value="ENTERED">Entered</SelectItem>
+            <SelectItem value="OVERDUE">Overdue (24h+)</SelectItem>
+            <SelectItem value="FAILED">Filing failed</SelectItem>
+            <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
+            <SelectItem value="QUEUED">Filing…</SelectItem>
+            <SelectItem value="ENTERED">Filed</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -823,25 +871,37 @@ function BookingsInner() {
                           </Badge>
                         </div>
 
-                        {/* Hotel Eye status */}
+                        {/* Hotel Eye filing — state and remaining 24h window */}
                         <div className="hidden md:block shrink-0">
-                          <Select
-                            value={b.hotelEyeStatus === 'ENTERED' ? 'ENTERED' : 'NOT_ENTERED'}
-                            onValueChange={(s) => hotelEyeStatusMutation.mutate({ id: b.id, hotelEyeStatus: s })}
-                          >
-                            <SelectTrigger className={cn(
-                              'h-6 w-[110px] text-[10px] px-2 rounded-full border gap-1',
-                              b.hotelEyeStatus === 'ENTERED'
-                                ? 'text-green-600 border-green-600/40 bg-green-500/10'
-                                : 'text-amber-500 border-amber-500/40 bg-amber-500/10'
-                            )}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NOT_ENTERED">HE: Pending</SelectItem>
-                              <SelectItem value="ENTERED">HE: Filed</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {(() => {
+                            const fs = getFilingStatus(b)
+                            const meta = FILING_STATE_META[fs.state]
+                            const title =
+                              fs.state === 'FAILED'
+                                ? `Filing failed: ${b.hotelEyeError || 'reason not recorded'}`
+                                : fs.state === 'FILED'
+                                  ? b.hotelEyeFiledAt
+                                    ? `Filed ${formatDate(b.hotelEyeFiledAt, 'MMM d, h:mm a')}`
+                                    : 'Filed (time not recorded)'
+                                  : `Must be filed by ${formatDate(fs.deadline, 'MMM d, h:mm a')}`
+                            return (
+                              <Select
+                                value={b.hotelEyeStatus === 'ENTERED' ? 'ENTERED' : 'NOT_ENTERED'}
+                                onValueChange={(s) => hotelEyeStatusMutation.mutate({ id: b.id, hotelEyeStatus: s })}
+                              >
+                                <SelectTrigger
+                                  title={title}
+                                  className={cn('h-6 w-[124px] text-[10px] px-2 rounded-full border gap-1', meta.className)}
+                                >
+                                  <span className="truncate">{fs.label}</span>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
+                                  <SelectItem value="ENTERED">Filed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )
+                          })()}
                         </div>
 
                         {/* Payment status — derived from the amounts, not stored */}
