@@ -37,6 +37,8 @@ export const bookingBaseSchema = z.object({
   reminderNote: z.string().nullable().optional(),
   // QUEUED and FAILED are written by the filing worker, not chosen at the desk
   hotelEyeStatus: z.enum(['NOT_ENTERED', 'QUEUED', 'ENTERED', 'FAILED']).optional(),
+  // Saved guest profile this stay belongs to, when one was picked
+  guestId: z.string().nullable().optional(),
   // Hotel Eye / Guest identity
   guestCnic: z.string().optional(),
   guestFatherName: z.string().optional(),

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissionGuard'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { differenceInCalendarDays } from 'date-fns'
@@ -8,7 +9,7 @@ import { FILING_WINDOW_HOURS } from '@/lib/hotelEye'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req)
+    await requirePermission(req, 'bookings')
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const platform = searchParams.get('platform')
     const hotelEyeStatus = searchParams.get('hotelEyeStatus')
+    const view = searchParams.get('view')
     const paymentStatus = searchParams.get('paymentStatus')
     const propertyId = searchParams.get('propertyId')
     const startDate = searchParams.get('startDate')
@@ -86,6 +88,20 @@ export async function GET(req: NextRequest) {
         { hotelEyeStatus: { not: 'ENTERED' } },
         { checkIn: { lt: new Date(Date.now() - FILING_WINDOW_HOURS * 60 * 60 * 1000) } },
       )
+    }
+
+    /* The Hotel Eye view: every stay that carries guest identity, whatever its
+       filing state. Membership is "has a card on file", not hotelEyeStatus —
+       filtering on ENTERED would hide exactly the unfiled and overdue guests
+       this view exists to surface. */
+    if (view === 'hoteleye') {
+      and.push({
+        OR: [
+          { guestId: { not: null } },
+          { guestCnic: { not: null } },
+          { passportNumber: { not: null } },
+        ],
+      })
     }
 
     if (and.length > 0) where.AND = and

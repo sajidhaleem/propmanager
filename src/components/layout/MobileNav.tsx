@@ -16,7 +16,8 @@ import { useUIStore } from '@/store/ui'
 // Primary tabs always visible in the bottom bar
 const primaryTabs = [
   { href: '/dashboard',          label: 'Home',     icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/bookings', label: 'Bookings', icon: BookOpen },
+  // The tab bar goes to the compliance view; "All" lives in the full menu
+  { href: '/dashboard/bookings?view=hoteleye', label: 'Bookings', icon: BookOpen },
   { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/dashboard/reports',  label: 'Reports',  icon: BarChart3 },
 ]
@@ -33,7 +34,9 @@ const navGroups = [
   {
     label: 'Operations',
     items: [
-      { href: '/dashboard/bookings',   label: 'Bookings',   icon: BookOpen },
+      { href: '/dashboard/bookings?view=hoteleye', label: 'Hotel Eye Bookings', icon: BookOpen },
+      { href: '/dashboard/bookings?view=all',      label: 'All Bookings',       icon: BookOpen },
+      { href: '/dashboard/guests',     label: 'Guests',     icon: Users },
       { href: '/dashboard/properties', label: 'Properties', icon: Building2 },
     ],
   },
@@ -72,8 +75,10 @@ export function MobileNav() {
   const roleBadge = user?.role ? ROLE_BADGE[user.role] : ROLE_BADGE.STAFF
 
   function isActive(href: string, exact = false) {
-    if (exact) return pathname === href
-    return pathname === href || pathname.startsWith(href + '/')
+    // Nav entries can carry a ?view=, which is not part of the route
+    const path = href.split('?')[0]
+    if (exact) return pathname === path
+    return pathname === path || pathname.startsWith(path + '/')
   }
 
   // Check if the current page is one of the "More" items (not in primary tabs)

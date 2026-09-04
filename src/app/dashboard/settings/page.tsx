@@ -30,9 +30,10 @@ import { CurrencySelector } from '@/components/ui/CurrencySelector'
 import { getCurrency } from '@/lib/currencies'
 import { useCurrency } from '@/hooks/useCurrency'
 import { type PlatformItem, DEFAULT_PLATFORMS } from '@/lib/platforms'
+import { FEATURES, ROLE_DEFAULTS } from '@/lib/permissions'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type UserRow = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }
+type UserRow = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string; permissions?: string[] }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
@@ -106,7 +107,7 @@ export default function SettingsPage() {
   const [addModalOpen, setAddModalOpen]   = useState(false)
   const [editingUser, setEditingUser]     = useState<UserRow | null>(null)
   const [deletingUser, setDeletingUser]   = useState<UserRow | null>(null)
-  const [editForm, setEditForm]           = useState({ name: '', email: '', role: 'STAFF', resetPwd: false, newPassword: '' })
+  const [editForm, setEditForm]           = useState({ name: '', email: '', role: 'STAFF', permissions: [] as string[], resetPwd: false, newPassword: '' })
   const [showEditPwd, setShowEditPwd]     = useState(false)
 
   // My Account state
@@ -244,14 +245,23 @@ export default function SettingsPage() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   function openEditUser(u: UserRow) {
-    setEditForm({ name: u.name, email: u.email, role: u.role, resetPwd: false, newPassword: '' })
+    setEditForm({
+      name: u.name, email: u.email, role: u.role,
+      permissions: u.permissions || [],
+      resetPwd: false, newPassword: '',
+    })
     setShowEditPwd(false)
     setEditingUser(u)
   }
 
   function handleEditSave() {
     if (!editingUser) return
-    const payload: any = { name: editForm.name, email: editForm.email, role: editForm.role }
+    const payload: any = {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+      permissions: editForm.permissions,
+    }
     if (editForm.resetPwd) {
       if (!editForm.newPassword || editForm.newPassword.length < 6) {
         toast.error('New password must be at least 6 characters'); return
@@ -578,6 +588,54 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Feature access. Untouched means this user follows their role;
+                the moment one box is set the list becomes their own. */}
+            <div className="space-y-2 border-t pt-3">
+              <div className="flex items-center justify-between">
+                <Label>Feature access</Label>
+                {editForm.permissions.length > 0 && (
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    onClick={() => setEditForm(f => ({ ...f, permissions: [] }))}
+                  >
+                    Reset to {editForm.role} defaults
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {editForm.permissions.length === 0
+                  ? `Following the ${editForm.role} defaults — tick anything to set this user's own access.`
+                  : `${editForm.permissions.length} of ${FEATURES.length} features enabled for this user.`}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {FEATURES.map(f => {
+                  const effective = editForm.permissions.length > 0
+                    ? editForm.permissions.includes(f.key)
+                    : (ROLE_DEFAULTS[editForm.role] || []).includes(f.key)
+                  return (
+                    <label key={f.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-input accent-primary"
+                        checked={effective}
+                        onChange={e => setEditForm(prev => {
+                          // First tick converts the role defaults into an explicit list
+                          const base = prev.permissions.length > 0
+                            ? prev.permissions
+                            : [...(ROLE_DEFAULTS[prev.role] || [])]
+                          const next = e.target.checked
+                            ? Array.from(new Set([...base, f.key]))
+                            : base.filter(p => p !== f.key)
+                          return { ...prev, permissions: next }
+                        })}
+                      />
+                      {f.label}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
             <div className="space-y-2 border-t pt-3">
               <div className="flex items-center gap-2">
                 <input

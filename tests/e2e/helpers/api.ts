@@ -40,8 +40,10 @@ const booking = (
 
 /* Room 1 is occupied today, Room 2 is free today, Room 3 is under maintenance —
    which is what the calendar availability spec asserts against. */
+/* b1 is the only fixture carrying identity, so it is also the only one the
+   Hotel Eye view should keep. */
 export const BOOKINGS = [
-  booking('b1', 'Fully Paid Guest',  'p1', 'Room 1', 'DIRECT', 'CHECKED_IN', 10000, 0),
+  { ...booking('b1', 'Fully Paid Guest', 'p1', 'Room 1', 'DIRECT', 'CHECKED_IN', 10000, 0), guestCnic: '35202-1234567-1' },
   booking('b2', 'Half Paid Guest',   'p2', 'Room 2', 'AIRBNB', 'CONFIRMED',   4000, 5),
   /* Lifecycle status is deliberately CONFIRMED, not PENDING: the payment badge
      and the lifecycle selector would both read "Pending", making an assertion
@@ -96,7 +98,14 @@ export async function stubApi(
     if (path === '/api/bookings') {
       // mirrors the server-side paymentStatus filter so the filter round-trip is exercised
       const want = url.searchParams.get('paymentStatus')
-      const data = want ? rows.filter((b) => paymentStatusOf(b) === want) : rows
+      let data = want ? rows.filter((b) => paymentStatusOf(b) === want) : rows
+
+      /* Same mirror for ?view=hoteleye: membership is "has a card on file", not
+         a filing status, so an unfiled guest with a CNIC still belongs here. */
+      if (url.searchParams.get('view') === 'hoteleye') {
+        data = data.filter((b) => (b as { guestCnic?: string; passportNumber?: string }).guestCnic
+          || (b as { passportNumber?: string }).passportNumber)
+      }
       return json({ data, total: data.length, page: 1, limit: 15, totalPages: 1 })
     }
 

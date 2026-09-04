@@ -9,39 +9,56 @@ import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, CalendarDays, BookOpen, Building2, Banknote,
   Receipt, Users, BarChart3, Settings, LogOut, Home, Search, Bell,
-  Moon, Sun, ChevronDown, X, ArrowUpRight,
+  Moon, Sun, ChevronDown, X, ArrowUpRight, ShieldCheck, UserSquare2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 
-// Sections that earn a permanent slot; the rest live in the "More" menu
+// Sections that earn a permanent slot; the rest live in the "More" menu.
+// An entry with `items` renders as a dropdown instead of a link.
 const primaryNav = [
-  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/calendar', label: 'Calendar',  icon: CalendarDays },
-  { href: '/dashboard/bookings', label: 'Bookings',  icon: BookOpen },
-  { href: '/dashboard/reports',  label: 'Reports',   icon: BarChart3 },
+  { href: '/dashboard',          label: 'Dashboard', icon: LayoutDashboard, exact: true, feature: 'dashboard' },
+  { href: '/dashboard/calendar', label: 'Calendar',  icon: CalendarDays, feature: 'calendar' },
+  {
+    href: '/dashboard/bookings',
+    label: 'Bookings',
+    icon: BookOpen,
+    feature: 'bookings',
+    items: [
+      { href: '/dashboard/bookings?view=hoteleye', label: 'Hotel Eye Bookings', icon: ShieldCheck },
+      { href: '/dashboard/bookings?view=all',      label: 'All',                icon: BookOpen },
+    ],
+  },
+  { href: '/dashboard/reports',  label: 'Reports',   icon: BarChart3, feature: 'reports' },
 ]
 
 const moreNav = [
   {
     label: 'Finance',
     items: [
-      { href: '/dashboard/financials', label: 'Income',   icon: Banknote },
-      { href: '/dashboard/expenses',   label: 'Expenses', icon: Receipt },
-      { href: '/dashboard/payouts',    label: 'Payouts',  icon: Users },
+      { href: '/dashboard/financials', label: 'Income',   icon: Banknote, feature: 'income' },
+      { href: '/dashboard/expenses',   label: 'Expenses', icon: Receipt, feature: 'expenses' },
+      { href: '/dashboard/payouts',    label: 'Payouts',  icon: Users, feature: 'payouts' },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { href: '/dashboard/properties', label: 'Properties', icon: Building2 },
-      { href: '/dashboard/settings',   label: 'Settings',   icon: Settings },
+      { href: '/dashboard/guests',     label: 'Guests',     icon: UserSquare2, feature: 'guests' },
+      { href: '/dashboard/properties', label: 'Properties', icon: Building2, feature: 'properties' },
+      { href: '/dashboard/settings',   label: 'Settings',   icon: Settings, feature: 'settings' },
     ],
   },
 ]
 
+// The palette lists the two booking views separately — searching "hotel eye"
+// should land on that view, not on a parent that cannot be opened.
 const ALL_LINKS = [
-  ...primaryNav.map(i => ({ ...i, category: 'Navigation' })),
+  ...primaryNav.flatMap(i =>
+    'items' in i && i.items
+      ? i.items.map(s => ({ ...s, feature: i.feature, category: 'Navigation' }))
+      : [{ ...i, category: 'Navigation' }]
+  ),
   ...moreNav.flatMap(g => g.items.map(i => ({ ...i, category: g.label }))),
 ]
 
@@ -58,12 +75,14 @@ export function TopNav() {
   const { user, logout } = useAuth()
 
   const [moreOpen, setMoreOpen] = useState(false)
+  const [bookingsOpen, setBookingsOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   const moreRef = useRef<HTMLDivElement>(null)
+  const bookingsRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -77,17 +96,29 @@ export function TopNav() {
   const recentBookings = notifData?.data?.recentBookings?.slice(0, 3) || []
 
   function isActive(href: string, exact = false) {
-    if (exact) return pathname === href
-    return pathname === href || pathname.startsWith(href + '/')
+    const path = href.split('?')[0]
+    if (exact) return pathname === path
+    return pathname === path || pathname.startsWith(path + '/')
   }
 
-  const moreIsActive = moreNav.some(g => g.items.some(i => isActive(i.href)))
+  /* Until /api/auth/me answers we show everything rather than flash an empty
+     bar. Nothing is protected by this — every route checks for itself. */
+  const allowed: string[] | undefined = user?.permissions
+  const has = (feature?: string) => !feature || !allowed || allowed.includes(feature)
+
+  const visiblePrimary = primaryNav.filter(i => has(i.feature))
+  const visibleMore = moreNav
+    .map(g => ({ ...g, items: g.items.filter(i => has(i.feature)) }))
+    .filter(g => g.items.length > 0)
+
+  const moreIsActive = visibleMore.some(g => g.items.some(i => isActive(i.href)))
 
   // Close any open menu on an outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       const t = e.target as Node
       if (moreRef.current && !moreRef.current.contains(t)) setMoreOpen(false)
+      if (bookingsRef.current && !bookingsRef.current.contains(t)) setBookingsOpen(false)
       if (userRef.current && !userRef.current.contains(t)) setUserOpen(false)
       if (notifRef.current && !notifRef.current.contains(t)) setNotifOpen(false)
     }
@@ -98,7 +129,7 @@ export function TopNav() {
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true) }
-      if (e.key === 'Escape') { setSearchOpen(false); setMoreOpen(false); setUserOpen(false); setNotifOpen(false) }
+      if (e.key === 'Escape') { setSearchOpen(false); setMoreOpen(false); setBookingsOpen(false); setUserOpen(false); setNotifOpen(false) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -107,11 +138,12 @@ export function TopNav() {
   useEffect(() => { if (searchOpen) searchInputRef.current?.focus() }, [searchOpen])
 
   // Close menus when the route changes
-  useEffect(() => { setMoreOpen(false); setUserOpen(false); setNotifOpen(false) }, [pathname])
+  useEffect(() => { setMoreOpen(false); setBookingsOpen(false); setUserOpen(false); setNotifOpen(false) }, [pathname])
 
+  const searchable = ALL_LINKS.filter(l => has((l as { feature?: string }).feature))
   const filtered = query
-    ? ALL_LINKS.filter(l => l.label.toLowerCase().includes(query.toLowerCase()))
-    : ALL_LINKS
+    ? searchable.filter(l => l.label.toLowerCase().includes(query.toLowerCase()))
+    : searchable
 
   function go(href: string) {
     setSearchOpen(false); setQuery('')
@@ -141,9 +173,62 @@ export function TopNav() {
 
         {/* Primary nav */}
         <nav className="mx-auto hidden items-center gap-0.5 lg:flex">
-          {primaryNav.map(item => {
+          {visiblePrimary.map(item => {
             const Icon = item.icon
             const active = isActive(item.href, item.exact)
+            const pill = active && (
+              <motion.span
+                layoutId="nav-active-pill"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                className="absolute inset-0 rounded-full bg-gradient-brand shadow-lg shadow-primary/25"
+              />
+            )
+
+            if ('items' in item && item.items) {
+              return (
+                <div className="relative" key={item.href} ref={bookingsRef}>
+                  <button
+                    onClick={() => setBookingsOpen(o => !o)}
+                    aria-expanded={bookingsOpen}
+                    className={cn(
+                      'relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors',
+                      active ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {pill}
+                    <Icon className="relative h-4 w-4" />
+                    <span className="relative">{item.label}</span>
+                    <ChevronDown className={cn('relative h-3.5 w-3.5 transition-transform', bookingsOpen && 'rotate-180')} />
+                  </button>
+                  <AnimatePresence>
+                    {bookingsOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                        className="glass-panel depth-2 absolute left-1/2 top-full mt-2 w-56 -translate-x-1/2 overflow-hidden p-1.5"
+                      >
+                        {item.items.map(sub => {
+                          const SubIcon = sub.icon
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-foreground/80 transition-colors hover:bg-white/5 hover:text-foreground"
+                            >
+                              <SubIcon className="h-4 w-4 shrink-0" />
+                              {sub.label}
+                            </Link>
+                          )
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )
+            }
+
             return (
               <Link
                 key={item.href}
@@ -153,13 +238,7 @@ export function TopNav() {
                   active ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                {active && (
-                  <motion.span
-                    layoutId="nav-active-pill"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                    className="absolute inset-0 rounded-full bg-gradient-brand shadow-lg shadow-primary/25"
-                  />
-                )}
+                {pill}
                 <Icon className="relative h-4 w-4" />
                 <span className="relative">{item.label}</span>
               </Link>
@@ -188,7 +267,7 @@ export function TopNav() {
                   transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                   className="glass-panel depth-2 absolute left-1/2 top-full mt-2 w-56 -translate-x-1/2 overflow-hidden p-1.5"
                 >
-                  {moreNav.map(group => (
+                  {visibleMore.map(group => (
                     <div key={group.label} className="mb-1 last:mb-0">
                       <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
                         {group.label}

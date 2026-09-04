@@ -78,6 +78,71 @@ test.describe('Hotel Eye — filing deadline', () => {
       .toHaveAttribute('title', /Portal rejected the CNIC format/)
   })
 
+  /**
+   * Re-filing a stay that is already on the portal creates a second watch entry
+   * for one guest, which the operator then has to go and undo. The guard lives
+   * in the click handler rather than the API because the primary path hands the
+   * job straight to the local tool on :5000 and never reaches the server.
+   */
+  test.describe('re-filing a guest already on the portal', () => {
+    /* Keep the test off the real portal and off any tool that happens to be
+       running on this machine. Registered after stubApi, so these win. */
+    const isolate = async (context: import('@playwright/test').BrowserContext) => {
+      await context.route('**hoteleye.punjab.gov.pk/**', (r) => r.abort())
+      await context.route('http://localhost:5000/**', (r) => r.abort())
+    }
+
+    const pushButton = (page: import('@playwright/test').Page, guest: string) =>
+      page.locator('.group').filter({ hasText: guest }).first()
+        .getByRole('button', { name: 'Push to Hotel Eye' })
+
+    test('asks first, and files nothing when the desk declines', async ({ context, page }) => {
+      await isolate(context)
+      const filings: unknown[] = []
+      await context.route('**/api/hotel-eye/fill', async (route) => {
+        filings.push(route.request().postDataJSON())
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+      })
+
+      let prompt = ''
+      // Playwright dismisses dialogs by default; capture the text, still decline
+      page.on('dialog', (d) => { prompt = d.message(); d.dismiss() })
+
+      await page.goto('/dashboard/bookings')
+      await waitForData(page, 'Filed Guest')
+      await pushButton(page, 'Filed Guest').click()
+
+      await expect.poll(() => prompt).toContain('was filed on Hotel Eye')
+      expect(prompt).toMatch(/File again anyway\?/)
+      // declining must not queue a second entry
+      await page.waitForTimeout(500)
+      expect(filings).toHaveLength(0)
+    })
+
+    test('does not interrupt a guest who has never been filed', async ({ context, page }) => {
+      await isolate(context)
+      const filings: Record<string, unknown>[] = []
+      await context.route('**/api/hotel-eye/fill', async (route) => {
+        filings.push(route.request().postDataJSON())
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+      })
+
+      let dialogs = 0
+      page.on('dialog', (d) => { dialogs++; d.dismiss() })
+
+      await page.goto('/dashboard/bookings')
+      await waitForData(page, 'Overdue Guest')
+      await pushButton(page, 'Overdue Guest').click()
+
+      // the tool on :5000 is unreachable here, so it falls through to the queue
+      await expect.poll(() => filings.length, { timeout: 15_000 }).toBe(1)
+      expect(dialogs).toBe(0)
+      expect(filings[0].bookingId).toBe('h1')
+      // an ordinary filing is never a forced re-file
+      expect(filings[0].force).toBe(false)
+    })
+  })
+
   test('shows the day compliance banner and filters from it', async ({ page }) => {
     await page.goto('/dashboard/bookings')
     await waitForData(page, 'Overdue Guest')

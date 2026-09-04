@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissionGuard'
 import { apiResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req)
+    await requirePermission(req, 'income')
     const { searchParams } = new URL(req.url)
     const page       = parseInt(searchParams.get('page')  || '1')
     const limit      = parseInt(searchParams.get('limit') || '20')

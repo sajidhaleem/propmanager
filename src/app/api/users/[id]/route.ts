@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { z } from 'zod'
 import { emailField } from '@/lib/validations'
+import { ALL_FEATURES } from '@/lib/permissions'
 
 const adminUpdateSchema = z.object({
   name:     z.string().min(2).optional(),
@@ -12,6 +13,8 @@ const adminUpdateSchema = z.object({
   role:     z.enum(['ADMIN', 'MANAGER', 'STAFF']).optional(),
   isActive: z.boolean().optional(),
   password: z.string().min(8).optional(),
+  // Empty array means "back to this role's defaults" — see lib/permissions.ts
+  permissions: z.array(z.enum(ALL_FEATURES as [string, ...string[]])).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -31,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: { id: true, name: true, email: true, role: true, isActive: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, permissions: true },
     })
     return apiResponse(user)
   } catch (error: any) {

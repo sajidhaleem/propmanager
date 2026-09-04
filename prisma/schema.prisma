@@ -20,6 +20,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   auditLogs AuditLog[]
+  // Per-user feature access. Empty means "use the defaults for this role"
+  // (see src/lib/permissions.ts) — so existing users keep working untouched.
+  permissions String[] @default([])
 
   @@index([email])
 }
@@ -55,9 +58,13 @@ enum PropertyStatus {
 
 model Booking {
   id           String        @id @default(cuid())
+  // Identity now lives on Guest. These stay as the display/fallback copy so
+  // every existing booking, list and chart keeps working before the backfill.
   guestName    String
   guestEmail   String?
   guestPhone   String?
+  guestId      String?
+  guest        Guest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
   checkIn      DateTime
   checkOut     DateTime
   nights       Int
@@ -123,6 +130,38 @@ model Booking {
   @@index([checkIn, checkOut])
   @@index([status])
   @@index([platform])
+  @@index([guestId])
+}
+
+// A person, kept once and reused across stays. Scanning a repeat guest's card
+// every visit was the reason the same identity got retyped (and mistyped).
+model Guest {
+  id             String    @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+
+  // Pakistani CNIC. Unique so one person cannot end up with two profiles —
+  // Postgres allows many NULLs, so passport-only guests do not collide.
+  cnic           String?   @unique
+  fatherName     String?
+  gender         String?
+  address        String?
+  province       String?
+  district       String?
+
+  passportNumber String?   @unique
+  nationality    String?
+  passportExpiry String?
+
+  notes          String?
+  bookings       Booking[]
+  // Scanned CNIC / passport images, kept with the person
+  documents      Document[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([name])
 }
 
 enum Platform {
@@ -282,8 +321,12 @@ model Setting {
 
 model Document {
   id        String   @id @default(cuid())
-  bookingId String
-  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  // A document hangs off a booking (a stay's paperwork) or off a guest (their
+  // scanned card, which belongs to the person rather than to one visit).
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guestId   String?
+  guest     Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
   name      String
   mimeType  String
   size      Int
@@ -291,4 +334,5 @@ model Document {
   createdAt DateTime @default(now())
 
   @@index([bookingId])
+  @@index([guestId])
 }

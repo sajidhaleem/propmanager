@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissionGuard'
 import { propertySchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req)
+    await requirePermission(req, 'properties')
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const search = searchParams.get('search')

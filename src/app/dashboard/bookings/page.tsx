@@ -19,8 +19,8 @@ import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking, type ScannedImage } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
-import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
-import { PassportScanner, type PassportData } from '@/components/ui/PassportScanner'
+import { GuestPicker } from '@/components/ui/GuestPicker'
+import type { Guest } from '@/lib/guests'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { getFilingStatus, FILING_STATE_META } from '@/lib/hotelEye'
 import { useSearchParams } from 'next/navigation'
@@ -44,6 +44,8 @@ const EMPTY_FORM = {
   status: 'CONFIRMED', propertyId: '', notes: '', platformOther: '',
   miscCharges: '', miscDescription: '', reminderAt: '', reminderNote: '',
   paidAmount: '',
+  // Link to the saved guest profile, when the booking was made from one
+  guestId: '',
   // Hotel Eye / Guest identity
   guestCnic: '', guestFatherName: '', guestGender: '', guestAddress: '',
   passportNumber: '', nationality: '', passportExpiry: '',
@@ -126,6 +128,7 @@ function BookingsInner() {
 
   // Auto-open booking modal when arriving from the calendar day view with ?checkIn=
   const searchParams = useSearchParams()
+  const view = searchParams.get('view') === 'hoteleye' ? 'hoteleye' : 'all'
   useEffect(() => {
     const checkIn = searchParams.get('checkIn')
     if (!checkIn) return
@@ -145,9 +148,13 @@ function BookingsInner() {
     setPendingScans([])
     setSectionOpen({ misc: false, reminder: false, hotelEye: false, reference: false })
     setModalOpen(true)
-    // Remove the query param from the URL without reloading
-    window.history.replaceState({}, '', '/dashboard/bookings')
+    // Drop ?checkIn= without reloading, but keep the view the user is looking at
+    const keep = searchParams.get('view')
+    window.history.replaceState({}, '', `/dashboard/bookings${keep ? `?view=${keep}` : ''}`)
   }, [searchParams])
+
+  // Page 3 of "all" is rarely page 3 of the narrower Hotel Eye list
+  useEffect(() => { setPage(1) }, [view])
 
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
@@ -162,6 +169,8 @@ function BookingsInner() {
   if (platformFilter !== 'all') params.platform = platformFilter.startsWith('OTHER:') ? 'OTHER' : platformFilter
   if (hotelEyeFilter !== 'all') params.hotelEyeStatus = hotelEyeFilter
   if (paymentFilter !== 'all') params.paymentStatus = paymentFilter
+  // ?view=hoteleye narrows to stays with a card on file; ?view=all is everything
+  if (view === 'hoteleye') params.view = 'hoteleye'
 
   const { data, isLoading } = useQuery({ queryKey: ['bookings', params], queryFn: () => fetchBookings(params) })
   const { data: propertiesData } = useQuery({ queryKey: ['properties'], queryFn: fetchProperties })
@@ -350,31 +359,44 @@ function BookingsInner() {
     amountMutation.mutate({ id, paidAmount: val })
   }
 
-  function applyScannedCnic(data: CnicData, scan?: ScannedImage) {
+  /* Copies the profile onto the booking rather than only linking it. The
+     Hotel Eye payload and every existing list read the booking's own columns,
+     and a filed entry must keep showing what was filed even if the profile is
+     edited or deleted afterwards. */
+  function applyGuest(g: Guest) {
     setForm(f => ({
       ...f,
-      guestName:      data.name        || f.guestName,
-      guestFatherName: data.father_name || f.guestFatherName,
-      guestCnic:      data.cnic        || f.guestCnic,
-      guestGender:    data.gender      || f.guestGender,
-      guestAddress:   data.address     || f.guestAddress,
+      guestId:         g.id,
+      guestName:       g.name            || f.guestName,
+      guestEmail:      g.email           || f.guestEmail,
+      guestPhone:      g.phone           || f.guestPhone,
+      guestCnic:       g.cnic            || f.guestCnic,
+      guestFatherName: g.fatherName      || f.guestFatherName,
+      guestGender:     g.gender          || f.guestGender,
+      guestAddress:    g.address         || f.guestAddress,
+      guestProvince:   g.province        || f.guestProvince,
+      guestDistrict:   g.district        || f.guestDistrict,
+      passportNumber:  g.passportNumber  || f.passportNumber,
+      nationality:     g.nationality     || f.nationality,
+      passportExpiry:  g.passportExpiry  || f.passportExpiry,
     }))
-    if (scan) attachScan(scan)
-  }
-
-  function applyScannedPassport(data: PassportData, scan?: ScannedImage) {
-    setForm(f => ({
-      ...f,
-      guestName:      data.name             || f.guestName,
-      passportNumber: data.passport_number  || f.passportNumber,
-      nationality:    data.nationality      || f.nationality,
-      guestGender:    data.gender           || f.guestGender,
-      passportExpiry: data.expiry_date      || f.passportExpiry,
-    }))
-    if (scan) attachScan(scan)
+    toast.success(`${g.name} linked to this booking`)
   }
 
   async function pushToHotelEye(b: Booking) {
+    /* A stay that is already on the portal must not be filed twice — a duplicate
+       watch entry for one guest is a correction the operator has to go and undo.
+       Confirm before doing anything: the guard has to cover the direct-tool path
+       too, and that one never reaches the server. Blocking here keeps the click
+       gesture, so the window.open below still isn't treated as a popup. */
+    const filed = getFilingStatus(b)
+    let refiling = false
+    if (filed.state === 'FILED') {
+      const when = b.hotelEyeFiledAt ? formatDate(b.hotelEyeFiledAt, 'MMM d, h:mm a') : 'already'
+      if (!confirm(`This guest was filed on Hotel Eye (${when}). File again anyway?`)) return
+      refiling = true
+    }
+
     // Open the portal immediately (must be synchronous with the click for popup blockers)
     window.open('https://hoteleye.punjab.gov.pk/hotel/addwatchentries', '_blank', 'noopener')
 
@@ -435,13 +457,20 @@ function BookingsInner() {
         const res = await fetch('/api/hotel-eye/fill', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          // The server refuses to re-queue a filed booking unless told to
+          body: JSON.stringify({ ...payload, force: refiling }),
         })
         if (!res.ok) throw new Error()
-        toast('Hotel Eye tool is offline on this PC — info window queued, it will open once the tool is running (start it with run.bat).', {
-          icon: '⏳',
-          duration: 7000,
-        })
+        const out = await res.json()
+        // Nothing was queued, so don't promise an info window that won't open
+        if (out.alreadyFiled) {
+          toast('Already filed on Hotel Eye — nothing queued.', { icon: 'ℹ️', duration: 5000 })
+        } else {
+          toast('Hotel Eye tool is offline on this PC — info window queued, it will open once the tool is running (start it with run.bat).', {
+            icon: '⏳',
+            duration: 7000,
+          })
+        }
       } catch {
         // Queueing also failed — the portal tab is still open as the primary flow
       }
@@ -469,6 +498,8 @@ function BookingsInner() {
       notes: custom.rest, platformOther: custom.label,
       miscCharges: String((b as any).miscCharges || ''), miscDescription: (b as any).miscDescription || '',
       reminderAt: '', reminderNote: '', paidAmount: '',
+      // a repeat stay by the same person keeps the profile link
+      guestId: (b as any).guestId || '',
       guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
       guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
       passportNumber: (b as any).passportNumber || '', nationality: (b as any).nationality || '',
@@ -509,6 +540,7 @@ function BookingsInner() {
       reminderAt: toLocalInput((b as any).reminderAt || ''),
       reminderNote: (b as any).reminderNote || '',
       paidAmount: String(b.paidAmount ?? 0),
+      guestId: (b as any).guestId || '',
       guestCnic: (b as any).guestCnic || '', guestFatherName: (b as any).guestFatherName || '',
       guestGender: (b as any).guestGender || '', guestAddress: (b as any).guestAddress || '',
       passportNumber: (b as any).passportNumber || '', nationality: (b as any).nationality || '',
@@ -627,7 +659,14 @@ function BookingsInner() {
 
   return (
     <div className="space-y-6">
-      <PageHero title="Bookings" description={`${total} total booking${total === 1 ? '' : 's'}`}>
+      <PageHero
+        title={view === 'hoteleye' ? 'Hotel Eye Bookings' : 'All Bookings'}
+        description={
+          view === 'hoteleye'
+            ? `${total} stay${total === 1 ? '' : 's'} with a card on file`
+            : `${total} total booking${total === 1 ? '' : 's'}`
+        }
+      >
         <Button variant="outline" size="sm" className={HERO_CONTROL} onClick={exportToExcel}><Download className="h-4 w-4" />Export page</Button>
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />New Booking</Button>
       </PageHero>
@@ -1041,11 +1080,14 @@ function BookingsInner() {
           {/* Scrollable form */}
           <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 md:border-r">
 
-            {/* CNIC / Passport Scanners — set apart as quick-fill utilities, not form fields */}
-            <div className="rounded-xl border border-dashed bg-muted/30 p-4 space-y-4">
-              <CnicScanner onExtracted={applyScannedCnic} />
-              <PassportScanner onExtracted={applyScannedPassport} />
-            </div>
+            {/* Guest profile picker. Scanning moved to the guest profile, so a
+                repeat guest is read from their card once and reused here. */}
+            <GuestPicker
+              value={form.guestId}
+              guestName={form.guestName}
+              onPick={applyGuest}
+              onClear={() => setForm(f => ({ ...f, guestId: '' }))}
+            />
 
             {/* ── Guest Details ─────────────────────── */}
             <div className="space-y-3.5">
@@ -1562,7 +1604,8 @@ function BookingsInner() {
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button
               onClick={() => {
-                const payload = { ...form }
+                // '' is not a guest id — send null so unlinking clears the FK
+                const payload = { ...form, guestId: form.guestId || null } as typeof form & { guestId: string | null }
                 const label = form.platformOther.trim()
                 if (form.platform === 'OTHER' && label) {
                   /* Always bracketed, even with no notes — an unbracketed label

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { getSessionFromRequest, signToken } from '@/lib/auth'
+import { permissionsFor } from '@/lib/permissions'
 import { apiError, apiResponse } from '@/lib/utils'
 import { z } from 'zod'
 import { emailField } from '@/lib/validations'
@@ -9,7 +10,22 @@ import { emailField } from '@/lib/validations'
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
   if (!session) return apiError('Unauthorized', 401)
-  return apiResponse(session)
+
+  /* Resolved feature access travels with the session so the nav can hide what a
+     user cannot open. Read from the row, not the JWT — a permission changed in
+     Settings then applies on the next page load rather than in seven days when
+     the token expires. The API routes check this again themselves; hiding a
+     link is a courtesy, not the control. */
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { role: true, permissions: true },
+  })
+
+  return apiResponse({
+    ...session,
+    role: user?.role ?? session.role,
+    permissions: permissionsFor(user?.role ?? session.role, user?.permissions),
+  })
 }
 
 const selfUpdateSchema = z.object({

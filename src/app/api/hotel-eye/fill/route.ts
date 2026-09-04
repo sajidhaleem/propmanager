@@ -9,11 +9,32 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     await requireAuth(req)
-    const payload = await req.json()
+    /* `force` is a control flag for this route, not guest data — keep it out of
+       the payload handed to the filing worker. */
+    const { force, ...payload } = await req.json()
 
     // Deduplicate: if same CNIC already has a pending/processing job, reuse it
     const cnic      = (payload as any).cnic      as string | undefined
     const bookingId = (payload as any).bookingId as string | undefined
+
+    /* Already on the portal: queueing again produces a second watch entry for
+       one stay. The pending/processing check below cannot catch this — by the
+       time a filing succeeds its job is 'done' and stops matching. A repeat
+       guest's *next* stay is a different booking and still files normally.
+       `force` is the deliberate refile, e.g. the portal lost the entry. */
+    if (bookingId && !force) {
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: { hotelEyeStatus: true, hotelEyeFiledAt: true },
+      })
+      if (booking && (booking.hotelEyeStatus === 'ENTERED' || booking.hotelEyeFiledAt)) {
+        return NextResponse.json({
+          success: true,
+          alreadyFiled: true,
+          filedAt: booking.hotelEyeFiledAt,
+        })
+      }
+    }
 
     if (cnic) {
       const existing = await prisma.hotelEyeJob.findFirst({

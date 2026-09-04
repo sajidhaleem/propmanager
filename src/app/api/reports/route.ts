@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissionGuard'
 import { apiError, apiResponse, handleApiError, getMonthlyExpenseTotal } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req)
+    await requirePermission(req, 'reports')
     const { searchParams } = new URL(req.url)
     const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
     const type = searchParams.get('type') || 'monthly'
