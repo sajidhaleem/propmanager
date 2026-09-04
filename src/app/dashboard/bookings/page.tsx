@@ -674,7 +674,7 @@ function BookingsInner() {
         title={<ViewSwitch view={view} />}
         description={
           view === 'hoteleye'
-            ? `${total} stay${total === 1 ? '' : 's'} with a card on file`
+            ? `${total} stay${total === 1 ? '' : 's'} filed on the portal`
             : `${total} total booking${total === 1 ? '' : 's'}`
         }
       >
@@ -684,9 +684,13 @@ function BookingsInner() {
 
       {/* Hotel Eye compliance — today's filing position at a glance */}
       {compliance && (compliance.arrivalsToday > 0 || compliance.overdue > 0 || compliance.failed > 0) && (
-        <button
-          type="button"
-          onClick={() => { setHotelEyeFilter(compliance.overdue > 0 ? 'OVERDUE' : compliance.failed > 0 ? 'FAILED' : 'NOT_ENTERED'); setPage(1) }}
+        /* Always a link into the All view: what needs filing is by definition
+           not in the Hotel Eye view, so filtering in place would land the desk
+           on an empty list at exactly the moment it matters. */
+        <Link
+          href={`/dashboard/bookings?view=all&filter=${
+            compliance.overdue > 0 ? 'OVERDUE' : compliance.failed > 0 ? 'FAILED' : 'NOT_ENTERED'
+          }`}
           className={cn(
             'flex w-full flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border px-4 py-3 text-left text-sm transition-colors',
             compliance.overdue > 0 || compliance.failed > 0
@@ -707,7 +711,7 @@ function BookingsInner() {
             <span className="font-semibold text-rose-500">{compliance.failed} failed</span>
           )}
           {compliance.clear && <span className="font-semibold text-green-600">All arrivals filed</span>}
-        </button>
+        </Link>
       )}
 
       {/* Filters */}
@@ -743,17 +747,21 @@ function BookingsInner() {
             <SelectItem value="PENDING">Pending</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={hotelEyeFilter} onValueChange={(v) => { setHotelEyeFilter(v); setPage(1) }}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Hotel Eye" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Hotel Eye</SelectItem>
-            <SelectItem value="OVERDUE">Overdue (24h+)</SelectItem>
-            <SelectItem value="FAILED">Filing failed</SelectItem>
-            <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
-            <SelectItem value="QUEUED">Filing…</SelectItem>
-            <SelectItem value="ENTERED">Filed</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Every row in the Hotel Eye view is already Filed, so a filing-status
+            filter there could only ever narrow to nothing. */}
+        {view === 'all' && (
+          <Select value={hotelEyeFilter} onValueChange={(v) => { setHotelEyeFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Hotel Eye" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Hotel Eye</SelectItem>
+              <SelectItem value="OVERDUE">Overdue (24h+)</SelectItem>
+              <SelectItem value="FAILED">Filing failed</SelectItem>
+              <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
+              <SelectItem value="QUEUED">Filing…</SelectItem>
+              <SelectItem value="ENTERED">Filed</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Sort controls */}
@@ -1094,22 +1102,22 @@ function BookingsInner() {
           {/* Scrollable form */}
           <div className="overflow-y-auto flex-1 min-h-0 px-6 py-6 space-y-7 md:border-r">
 
-            {/* Guest profile picker. Scanning moved to the guest profile, so a
-                repeat guest is read from their card once and reused here. */}
-            <GuestPicker
-              value={form.guestId}
-              guestName={form.guestName}
-              onPick={applyGuest}
-              onClear={() => setForm(f => ({ ...f, guestId: '' }))}
-            />
-
             {/* ── Guest Details ─────────────────────── */}
             <div className="space-y-3.5">
               <p className="text-xs font-semibold uppercase tracking-widest text-foreground/80">Guest Details</p>
               <div className="space-y-3.5">
                 <div className="space-y-1.5">
                   <Label>Guest Name *</Label>
-                  <Input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} placeholder="Full name" />
+                  {/* The name field searches saved profiles as it is typed, so a
+                      returning guest is picked rather than retyped. Scanning
+                      moved to the guest profile — one card read serves them all. */}
+                  <GuestPicker
+                    value={form.guestId}
+                    guestName={form.guestName}
+                    onNameChange={(name) => setForm(f => ({ ...f, guestName: name }))}
+                    onPick={applyGuest}
+                    onClear={() => setForm(f => ({ ...f, guestId: '' }))}
+                  />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
@@ -1680,8 +1688,8 @@ function SumRow({ label, value, cls }: { label: string; value?: string | number;
 }
 
 const VIEWS = [
-  { key: 'hoteleye', label: 'Hotel Eye Bookings', hint: 'Stays with a card on file', icon: ShieldCheck },
-  { key: 'all',      label: 'All Bookings',       hint: 'Every stay on the books',  icon: BookOpen },
+  { key: 'hoteleye', label: 'Hotel Eye Bookings', hint: 'Filed on the portal', icon: ShieldCheck },
+  { key: 'all',      label: 'All Bookings',       hint: 'Every stay, filed or not', icon: BookOpen },
 ] as const
 
 /**

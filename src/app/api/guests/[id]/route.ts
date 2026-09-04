@@ -15,11 +15,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       include: {
         bookings: {
           select: {
-            id: true, checkIn: true, checkOut: true, totalAmount: true, paidAmount: true,
+            id: true, checkIn: true, checkOut: true, nights: true,
+            totalAmount: true, paidAmount: true,
             status: true, hotelEyeStatus: true, hotelEyeFiledAt: true,
             property: { select: { name: true } },
           },
           orderBy: { checkIn: 'desc' },
+        },
+        /* Metadata only — `data` is a base64 blob per scan, and the profile
+           only needs to know which cards exist to ask for one by id. */
+        documents: {
+          select: { id: true, name: true, mimeType: true, size: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
         },
       },
     })

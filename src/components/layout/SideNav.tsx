@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, CalendarDays, BookOpen, Building2, Banknote,
   Receipt, Users, BarChart3, Settings, LogOut, Home, Search,
-  Moon, Sun, ChevronDown, X, ShieldCheck, UserSquare2,
+  Moon, Sun, X, UserSquare2,
   PanelLeftClose, PanelLeftOpen, AlertTriangle, CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,6 @@ type NavItem = {
   icon: typeof Home
   exact?: boolean
   feature?: string
-  items?: { href: string; label: string; icon: typeof Home }[]
 }
 
 /**
@@ -34,16 +33,10 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true, feature: 'dashboard' },
       { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays, feature: 'calendar' },
-      {
-        href: '/dashboard/bookings',
-        label: 'Bookings',
-        icon: BookOpen,
-        feature: 'bookings',
-        items: [
-          { href: '/dashboard/bookings?view=hoteleye', label: 'Hotel Eye', icon: ShieldCheck },
-          { href: '/dashboard/bookings?view=all', label: 'All', icon: BookOpen },
-        ],
-      },
+      /* One link, not a sub-menu: the two views are switched from the page
+         title, and a nav that also switched them was the same choice offered
+         twice in two places. */
+      { href: '/dashboard/bookings', label: 'Bookings', icon: BookOpen, feature: 'bookings' },
       { href: '/dashboard/guests', label: 'Guests', icon: UserSquare2, feature: 'guests' },
       { href: '/dashboard/properties', label: 'Properties', icon: Building2, feature: 'properties' },
     ],
@@ -65,13 +58,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   },
 ]
 
-const ALL_LINKS = NAV.flatMap(g =>
-  g.items.flatMap(i =>
-    i.items
-      ? i.items.map(s => ({ ...s, feature: i.feature, category: g.label }))
-      : [{ href: i.href, label: i.label, icon: i.icon, feature: i.feature, category: g.label }]
-  )
-)
+const ALL_LINKS = NAV.flatMap(g => g.items.map(i => ({ ...i, category: g.label })))
 
 const COLLAPSE_KEY = 'propmanager.sidenav.collapsed'
 
@@ -82,9 +69,6 @@ export function SideNav() {
   const { user, logout } = useAuth()
 
   const [collapsed, setCollapsed] = useState(false)
-  // Collapsed by default — the two views are switchable from the page title,
-  // so the sub-menu is a shortcut rather than the way in
-  const [bookingsOpen, setBookingsOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -213,39 +197,6 @@ export function SideNav() {
               {group.items.map(item => {
                 const Icon = item.icon
                 const active = isActive(item.href, item.exact)
-
-                if (item.items && showLabels) {
-                  return (
-                    <div key={item.href}>
-                      <button
-                        onClick={() => setBookingsOpen(o => !o)}
-                        aria-expanded={bookingsOpen}
-                        className={cn(
-                          'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
-                          active ? 'bg-primary/15 font-medium text-primary' : 'text-foreground/80 hover:bg-white/5 hover:text-foreground'
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        {item.label}
-                        <ChevronDown className={cn('ml-auto h-3.5 w-3.5 transition-transform', bookingsOpen && 'rotate-180')} />
-                      </button>
-                      {bookingsOpen && (
-                        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border/60 pl-2">
-                          {item.items.map(sub => (
-                            <Link
-                              key={sub.href}
-                              href={sub.href}
-                              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] text-foreground/70 transition-colors hover:bg-white/5 hover:text-foreground"
-                            >
-                              <sub.icon className="h-3.5 w-3.5 shrink-0" />
-                              {sub.label}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
 
                 return (
                   <Link
@@ -405,8 +356,10 @@ type Compliance = { arrivalsToday: number; filedToday: number; overdue: number; 
 function ComplianceCard({ compliance, collapsed }: { compliance: Compliance; collapsed: boolean }) {
   const { arrivalsToday, filedToday, overdue, failed } = compliance
   const needsAttention = overdue > 0 || failed > 0
+  /* Exposure lives in the All view: the Hotel Eye view lists what is already on
+     the portal, so an overdue guest is by definition not in it. */
   const href = needsAttention
-    ? '/dashboard/bookings?view=hoteleye&filter=OVERDUE'
+    ? '/dashboard/bookings?view=all&filter=OVERDUE'
     : '/dashboard/bookings?view=hoteleye'
 
   if (collapsed) {

@@ -91,16 +91,18 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    /* The Hotel Eye view: every stay that carries guest identity, whatever its
-       filing state. Membership is "has a card on file", not hotelEyeStatus —
-       filtering on ENTERED would hide exactly the unfiled and overdue guests
-       this view exists to surface. */
+    /* The Hotel Eye view: the register of what is actually on the portal.
+       Membership is the filing itself, so this list is the answer to "what have
+       we filed" and nothing else appears in it.
+
+       It therefore cannot show exposure: anything unfiled, overdue or failed is
+       by definition absent. The compliance card and the day banner both point
+       at the All view for that, and must keep doing so. */
     if (view === 'hoteleye') {
       and.push({
         OR: [
-          { guestId: { not: null } },
-          { guestCnic: { not: null } },
-          { passportNumber: { not: null } },
+          { hotelEyeStatus: 'ENTERED' },
+          { hotelEyeFiledAt: { not: null } },
         ],
       })
     }

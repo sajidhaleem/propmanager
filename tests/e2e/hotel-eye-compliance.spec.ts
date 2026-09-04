@@ -21,8 +21,7 @@ const booking = (
   totalAmount: 10000, netAmount: 10000, paidAmount: 10000,
   platform: 'DIRECT', status: 'CONFIRMED', propertyId: 'p1',
   property: { id: 'p1', name: 'Room 1' }, notes: '',
-  /* A stay that gets filed always has a card on file, which is also what puts
-     it in the default Hotel Eye view these specs navigate to. */
+  // a stay that gets filed always has a card on file
   guestCnic: '35202-1234567-1',
   hotelEyeStatus, miscCharges: 0, ...extra,
 })
@@ -46,7 +45,7 @@ test.describe('Hotel Eye — filing deadline', () => {
     page.locator('.group').filter({ hasText: guest }).first().getByRole('combobox').first()
 
   test('distinguishes overdue, due-soon, filed and failed', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Overdue Guest')
 
     // 30h since check-in and still unfiled — past the 24h window
@@ -65,7 +64,7 @@ test.describe('Hotel Eye — filing deadline', () => {
       bookings: [booking('late', 'Late But Filed', 40, 'ENTERED', { hotelEyeFiledAt: ago(2) })] as never,
     })
 
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Late But Filed')
 
     const c = chip(page, 'Late But Filed')
@@ -74,7 +73,7 @@ test.describe('Hotel Eye — filing deadline', () => {
   })
 
   test('surfaces the failure reason rather than burying it in the job table', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Failed Guest')
 
     await expect(chip(page, 'Failed Guest'))
@@ -111,7 +110,7 @@ test.describe('Hotel Eye — filing deadline', () => {
       // Playwright dismisses dialogs by default; capture the text, still decline
       page.on('dialog', (d) => { prompt = d.message(); d.dismiss() })
 
-      await page.goto('/dashboard/bookings')
+      await page.goto('/dashboard/bookings?view=all')
       await waitForData(page, 'Filed Guest')
       await pushButton(page, 'Filed Guest').click()
 
@@ -133,7 +132,7 @@ test.describe('Hotel Eye — filing deadline', () => {
       let dialogs = 0
       page.on('dialog', (d) => { dialogs++; d.dismiss() })
 
-      await page.goto('/dashboard/bookings')
+      await page.goto('/dashboard/bookings?view=all')
       await waitForData(page, 'Overdue Guest')
       await pushButton(page, 'Overdue Guest').click()
 
@@ -147,15 +146,32 @@ test.describe('Hotel Eye — filing deadline', () => {
   })
 
   test('shows the day compliance banner and filters from it', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Overdue Guest')
 
-    const banner = page.getByRole('button', { name: /Hotel Eye today/i })
+    const banner = page.getByRole('link', { name: /Hotel Eye today/i })
     await expect(banner).toBeVisible()
     await expect(banner).toContainText('overdue past 24h')
 
     await banner.click()
     // clicking through narrows the list to the exposure
     await expect(page.getByRole('combobox').filter({ hasText: /Overdue/ }).first()).toBeVisible()
+  })
+
+  /* The Hotel Eye view lists what is already on the portal, so an overdue guest
+     cannot be in it. The banner has to leave that view, not filter inside it —
+     otherwise the click lands on an empty list at the moment it matters most. */
+  test('the banner leaves the Hotel Eye view to reach the exposure', async ({ page }) => {
+    test.slow() // two full page loads, both compiled on demand by the dev server
+    await page.goto('/dashboard/bookings?view=hoteleye')
+
+    /* Located by role, not by body text: the label is rendered uppercase by CSS,
+       so innerText reads "HOTEL EYE TODAY" and a literal match never lands. */
+    const banner = page.getByRole('link', { name: /Hotel Eye today/i })
+    await expect(banner).toBeVisible({ timeout: 30_000 })
+    await banner.click()
+
+    await page.waitForURL(/view=all&filter=OVERDUE/, { timeout: 60_000 })
+    await waitForData(page, 'Overdue Guest')
   })
 })

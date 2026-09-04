@@ -3,10 +3,12 @@ import { signIn } from './helpers/session'
 import { stubApi, waitForData } from './helpers/api'
 
 /**
- * Bookings splits into two views off one page: the Hotel Eye list (stays with a
- * card on file) and All. The distinction is membership by identity, not by
- * filing status — a view that only showed filed guests would hide the overdue
- * ones, which is the opposite of what a compliance screen is for.
+ * Bookings splits into two views off one page: the Hotel Eye list — the
+ * register of what is actually on the portal — and All.
+ *
+ * Because membership is the filing itself, the Hotel Eye view cannot show
+ * exposure: an overdue guest is by definition absent from it. The day banner
+ * carries that job instead, and these specs pin it to the All view.
  */
 test.describe('Bookings — Hotel Eye and All views', () => {
   test.beforeEach(async ({ context, baseURL }) => {
@@ -14,14 +16,26 @@ test.describe('Bookings — Hotel Eye and All views', () => {
     await stubApi(context)
   })
 
-  test('the Hotel Eye view keeps only stays with a card on file', async ({ page }) => {
+  test('the Hotel Eye view keeps only stays already filed on the portal', async ({ page }) => {
     await page.goto('/dashboard/bookings?view=hoteleye')
     await waitForData(page, 'Fully Paid Guest')
 
     await expect(page.getByRole('heading', { name: 'Hotel Eye Bookings' })).toBeVisible()
-    // the two fixtures with no CNIC or passport are not part of this view
+    // the two unfiled fixtures are not part of this view, CNIC or no CNIC
     await expect(page.getByText('Half Paid Guest')).toHaveCount(0)
     await expect(page.getByText('Unpaid Guest')).toHaveCount(0)
+  })
+
+  /* Filtering by filing status inside a view where everything is filed could
+     only ever narrow to nothing, so the control is not offered there. */
+  test('drops the filing-status filter in the Hotel Eye view', async ({ page }) => {
+    await page.goto('/dashboard/bookings?view=hoteleye')
+    await waitForData(page, 'Fully Paid Guest')
+    await expect(page.getByText('All Hotel Eye')).toHaveCount(0)
+
+    await page.goto('/dashboard/bookings?view=all')
+    await waitForData(page, 'Half Paid Guest')
+    await expect(page.getByText('All Hotel Eye')).toBeVisible()
   })
 
   test('the All view keeps every booking', async ({ page }) => {
@@ -33,8 +47,6 @@ test.describe('Bookings — Hotel Eye and All views', () => {
     await expect(page.getByText('Unpaid Guest')).toBeVisible()
   })
 
-  /* The statutory window is the only deadline on this page, so an operator who
-     opens Bookings with no view chosen must land on the list that carries it. */
   test('opens on the Hotel Eye view when no view is asked for', async ({ page }) => {
     await page.goto('/dashboard/bookings')
     await waitForData(page, 'Fully Paid Guest')
@@ -61,7 +73,7 @@ test.describe('Bookings — Hotel Eye and All views', () => {
 
     await page.getByRole('button', { name: /New Booking/i }).first().click()
 
-    await expect(page.getByPlaceholder(/Find a saved guest/i)).toBeVisible()
+    await expect(page.getByPlaceholder(/Type to search saved guests/i)).toBeVisible()
     // the scanners moved to the guest profile, so their controls must be gone
     await expect(page.getByText(/Scan CNIC/i)).toHaveCount(0)
   })

@@ -17,8 +17,7 @@ import { useUIStore } from '@/store/ui'
 // Primary tabs always visible in the bottom bar
 const primaryTabs = [
   { href: '/dashboard',          label: 'Home',     icon: LayoutDashboard, exact: true },
-  // The tab bar goes to the compliance view; "All" lives in the full menu
-  { href: '/dashboard/bookings?view=hoteleye', label: 'Bookings', icon: BookOpen },
+  { href: '/dashboard/bookings', label: 'Bookings', icon: BookOpen },
   { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/dashboard/reports',  label: 'Reports',  icon: BarChart3 },
 ]
@@ -35,8 +34,8 @@ const navGroups = [
   {
     label: 'Operations',
     items: [
-      { href: '/dashboard/bookings?view=hoteleye', label: 'Hotel Eye Bookings', icon: BookOpen },
-      { href: '/dashboard/bookings?view=all',      label: 'All Bookings',       icon: BookOpen },
+      // One entry: the two views are switched from the page title
+      { href: '/dashboard/bookings', label: 'Bookings', icon: BookOpen },
       { href: '/dashboard/guests',     label: 'Guests',     icon: UserSquare2 },
       { href: '/dashboard/properties', label: 'Properties', icon: Building2 },
     ],

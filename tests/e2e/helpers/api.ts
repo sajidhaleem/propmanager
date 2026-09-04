@@ -40,10 +40,14 @@ const booking = (
 
 /* Room 1 is occupied today, Room 2 is free today, Room 3 is under maintenance —
    which is what the calendar availability spec asserts against. */
-/* b1 is the only fixture carrying identity, so it is also the only one the
-   Hotel Eye view should keep. */
+/* b1 is the only fixture that has actually been filed, so it is also the only
+   one the Hotel Eye view should keep. */
 export const BOOKINGS = [
-  { ...booking('b1', 'Fully Paid Guest', 'p1', 'Room 1', 'DIRECT', 'CHECKED_IN', 10000, 0), guestCnic: '35202-1234567-1' },
+  {
+    ...booking('b1', 'Fully Paid Guest', 'p1', 'Room 1', 'DIRECT', 'CHECKED_IN', 10000, 0),
+    guestCnic: '35202-1234567-1', guestId: 'g1',
+    hotelEyeStatus: 'ENTERED', hotelEyeFiledAt: at(0, 16),
+  },
   booking('b2', 'Half Paid Guest',   'p2', 'Room 2', 'AIRBNB', 'CONFIRMED',   4000, 5),
   /* Lifecycle status is deliberately CONFIRMED, not PENDING: the payment badge
      and the lifecycle selector would both read "Pending", making an assertion
@@ -77,6 +81,33 @@ export const LOSS_MAKING_STATS = {
   upcomingBookings: [],
 }
 
+/* Guest profiles. Hamza carries a full identity and a scanned card; Nadia has
+   a passport and no scan, which is what the profile board's empty states and
+   the filing checklist's missing rows are asserted against. */
+export const GUESTS = [
+  {
+    id: 'g1', name: 'Hamza Naeem', email: 'hamza@example.com', phone: '03071130001',
+    cnic: '35202-1234567-1', fatherName: 'Naeem Ahmed', gender: 'Male',
+    address: 'House 4, Model Town', province: 'Punjab', district: 'Lahore',
+    passportNumber: null, nationality: 'Pakistani', passportExpiry: null, notes: null,
+    _count: { bookings: 2 },
+  },
+  {
+    id: 'g2', name: 'Nadia Visitor', email: null, phone: null,
+    cnic: null, fatherName: null, gender: null, address: null, province: null, district: null,
+    passportNumber: 'AB1234567', nationality: 'British', passportExpiry: '2030-01-01', notes: null,
+    _count: { bookings: 0 },
+  },
+]
+
+const GUEST_DOCS: Record<string, { id: string; name: string; mimeType: string; size: number; createdAt: string }[]> = {
+  g1: [{ id: 'd1', name: 'cnic-front.png', mimeType: 'image/png', size: 68, createdAt: at(-30, 10) }],
+  g2: [],
+}
+
+/** Smallest valid PNG — the profile board only needs something that decodes. */
+const PIXEL_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
 export const paymentStatusOf = (b: { totalAmount: number; paidAmount: number }) =>
   b.paidAmount >= b.totalAmount ? 'PAID' : b.paidAmount > 0 ? 'PARTIAL' : 'PENDING'
 
@@ -95,16 +126,50 @@ export async function stubApi(
 
     if (path.startsWith('/api/bookings') && path.includes('/documents')) return json([])
 
+    // The scanned card itself, served as bytes the way the real route does
+    const docMatch = path.match(/^\/api\/guests\/([^/]+)\/documents\/([^/]+)$/)
+    if (docMatch) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from(PIXEL_PNG, 'base64'),
+      })
+    }
+
+    const guestMatch = path.match(/^\/api\/guests\/([^/]+)$/)
+    if (guestMatch) {
+      const g = GUESTS.find((x) => x.id === guestMatch[1])
+      if (!g) return json(null, 404)
+      return json({
+        ...g,
+        bookings: rows
+          .filter((b) => (b as { guestId?: string }).guestId === g.id)
+          .map((b) => ({ ...b, nights: b.nights ?? 1 })),
+        documents: GUEST_DOCS[g.id] ?? [],
+      })
+    }
+
+    if (path === '/api/guests') {
+      const q = (url.searchParams.get('search') || '').toLowerCase()
+      const data = q
+        ? GUESTS.filter((g) =>
+            [g.name, g.cnic, g.phone, g.passportNumber].some((v) => (v || '').toLowerCase().includes(q)))
+        : GUESTS
+      return json(data)
+    }
+
     if (path === '/api/bookings') {
       // mirrors the server-side paymentStatus filter so the filter round-trip is exercised
       const want = url.searchParams.get('paymentStatus')
       let data = want ? rows.filter((b) => paymentStatusOf(b) === want) : rows
 
-      /* Same mirror for ?view=hoteleye: membership is "has a card on file", not
-         a filing status, so an unfiled guest with a CNIC still belongs here. */
+      /* Same mirror for ?view=hoteleye: the register of what is on the portal,
+         so membership is the filing itself and nothing else. */
       if (url.searchParams.get('view') === 'hoteleye') {
-        data = data.filter((b) => (b as { guestCnic?: string; passportNumber?: string }).guestCnic
-          || (b as { passportNumber?: string }).passportNumber)
+        data = data.filter((b) => {
+          const x = b as { hotelEyeStatus?: string; hotelEyeFiledAt?: string }
+          return x.hotelEyeStatus === 'ENTERED' || !!x.hotelEyeFiledAt
+        })
       }
       return json({ data, total: data.length, page: 1, limit: 15, totalPages: 1 })
     }
