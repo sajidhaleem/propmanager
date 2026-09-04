@@ -24,7 +24,8 @@
     "generate:icons": "node scripts/generate-icons.mjs",
     "type-check": "tsc --noEmit",
     "prepare": "node scripts/generate-icons.mjs",
-    "backfill:guests": "ts-node --project tsconfig.seed.json scripts/backfill-guests.ts"
+    "backfill:guests": "ts-node --project tsconfig.seed.json scripts/backfill-guests.ts",
+    "backfill:scans": "ts-node --project tsconfig.seed.json scripts/backfill-guest-scans.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
