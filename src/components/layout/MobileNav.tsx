@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, BookOpen, CalendarDays, BarChart3,
   Building2, Banknote, Receipt, Users, Settings,
-  MoreHorizontal, X, LogOut, Home,
+  MoreHorizontal, X, LogOut, Home, Sun, Moon, UserSquare2,
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -36,7 +37,7 @@ const navGroups = [
     items: [
       { href: '/dashboard/bookings?view=hoteleye', label: 'Hotel Eye Bookings', icon: BookOpen },
       { href: '/dashboard/bookings?view=all',      label: 'All Bookings',       icon: BookOpen },
-      { href: '/dashboard/guests',     label: 'Guests',     icon: Users },
+      { href: '/dashboard/guests',     label: 'Guests',     icon: UserSquare2 },
       { href: '/dashboard/properties', label: 'Properties', icon: Building2 },
     ],
   },
@@ -72,6 +73,7 @@ export function MobileNav() {
   const pathname = usePathname()
   const [sheetOpen, setSheetOpen] = useState(false)
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const roleBadge = user?.role ? ROLE_BADGE[user.role] : ROLE_BADGE.STAFF
 
   function isActive(href: string, exact = false) {
@@ -161,12 +163,24 @@ export function MobileNav() {
                     PropManager
                   </span>
                 </div>
-                <button
-                  onClick={() => setSheetOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-muted hover:text-sidebar-foreground transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* The theme toggle used to live in the top bar, which the
+                      sidebar replaced — and the sidebar is desktop only. */}
+                  <button
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    aria-label="Toggle theme"
+                    className="relative flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-muted transition-colors hover:text-sidebar-foreground"
+                  >
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+                  </button>
+                  <button
+                    onClick={() => setSheetOpen(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Nav groups — scrollable */}

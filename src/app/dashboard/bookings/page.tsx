@@ -156,6 +156,13 @@ function BookingsInner() {
   // Page 3 of "all" is rarely page 3 of the narrower Hotel Eye list
   useEffect(() => { setPage(1) }, [view])
 
+  /* ?filter=OVERDUE lets the sidebar's compliance card land on the exposure
+     rather than on the list with the filter still to be set by hand. */
+  useEffect(() => {
+    const preset = searchParams.get('filter')
+    if (preset) { setHotelEyeFilter(preset); setPage(1) }
+  }, [searchParams])
+
   function handleSort(field: string) {
     if (field === sortBy) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
     else { setSortBy(field); setSortOrder('asc') }
