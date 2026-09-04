@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         /* Metadata only — `data` is a base64 blob per scan, and the profile
            only needs to know which cards exist to ask for one by id. */
         documents: {
-          select: { id: true, name: true, mimeType: true, size: true, createdAt: true },
+          select: { id: true, kind: true, name: true, mimeType: true, size: true, createdAt: true },
           orderBy: { createdAt: 'desc' },
         },
       },

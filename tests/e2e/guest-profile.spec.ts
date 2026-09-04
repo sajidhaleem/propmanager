@@ -22,7 +22,8 @@ test.describe('Guest profile board', () => {
     await page.goto('/dashboard/guests/g1')
     await waitForData(page, 'Hamza Naeem')
 
-    const card = page.getByRole('img', { name: /Scanned CNIC for Hamza Naeem/i })
+    // named for the card actually shown — "CNIC front", not a guess from the profile
+    const card = page.getByRole('img', { name: /Scanned CNIC front for Hamza Naeem/i })
     await expect(card).toBeVisible()
     // the image is the real bytes from our own API, not a placeholder
     await expect(card).toHaveJSProperty('naturalWidth', 1)
@@ -106,6 +107,31 @@ test.describe('Booking — searchable guest name', () => {
     await expect(nameField).toHaveValue('Hamza Naeem')
     await expect(page.getByRole('button', { name: /Unlink this booking/i })).toBeVisible()
     await expect(page.getByPlaceholder('+92 300 0000000')).toHaveValue('03071130001')
+  })
+
+  /* The two cards are independent. Hamza's CNIC is on file and his passport is
+     not, so the form must show the CNIC image and still offer the passport
+     scanner — asking again for a card already held is the whole complaint. */
+  test('shows a card already on file instead of asking to scan it again', async ({ page }) => {
+    const nameField = await openForm(page)
+    await nameField.fill('Hamza')
+    await page.getByRole('button', { name: /Hamza Naeem/ }).click()
+
+    await expect(page.getByText('CNIC on file')).toBeVisible()
+    await expect(page.getByRole('img', { name: 'CNIC front' })).toBeVisible()
+    await expect(page.getByRole('img', { name: 'CNIC back' })).toBeVisible()
+    // the CNIC scanner is gone; the passport one is still offered
+    await expect(page.getByText(/CNIC Scanner/i)).toHaveCount(0)
+    await expect(page.getByText(/Passport Scanner/i)).toBeVisible()
+  })
+
+  test('offers both scanners for a guest with no card at all', async ({ page }) => {
+    const nameField = await openForm(page)
+    await nameField.fill('Nadia')
+    await page.getByRole('button', { name: /Nadia Visitor/ }).click()
+
+    await expect(page.getByText(/CNIC Scanner/i)).toBeVisible()
+    await expect(page.getByText(/Passport Scanner/i)).toBeVisible()
   })
 
   /* A desk must never be blocked from taking a booking because the profile does

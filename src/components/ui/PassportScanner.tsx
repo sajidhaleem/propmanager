@@ -4,6 +4,7 @@ import { useRef, useState, DragEvent } from 'react'
 import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ScannedImage } from '@/types'
+import { SCAN_LABELS } from '@/lib/scans'
 import toast from 'react-hot-toast'
 
 export interface PassportData {
@@ -41,7 +42,7 @@ export function PassportScanner({ onExtracted, className }: Props) {
       if (!res.ok) throw new Error(json.error || 'Extraction failed')
 
       // The image rides along so it can be filed against the booking
-      onExtracted(json.data ?? json, { file, label: 'Passport' })
+      onExtracted(json.data ?? json, { file, kind: 'PASSPORT', label: SCAN_LABELS.PASSPORT, previewUrl: preview })
       setData(prev => ({ ...prev, state: 'done' }))
       toast.success('Passport scanned — guest fields filled')
     } catch (e: any) {

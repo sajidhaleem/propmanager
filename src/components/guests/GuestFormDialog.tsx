@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CnicScanner, type CnicData } from '@/components/ui/CnicScanner'
-import { PassportScanner, type PassportData } from '@/components/ui/PassportScanner'
+import { type CnicData } from '@/components/ui/CnicScanner'
+import { type PassportData } from '@/components/ui/PassportScanner'
+import { GuestScans } from '@/components/guests/GuestScans'
 import type { ScannedImage } from '@/types'
 import type { Guest } from '@/lib/guests'
 
@@ -65,6 +66,7 @@ export function GuestFormDialog({ open, onOpenChange, guest, onSaved }: Props) {
         for (const scan of pendingScans) {
           const body = new FormData()
           body.append('file', scan.file)
+          body.append('kind', scan.kind)
           await fetch(`/api/guests/${guestId}/documents`, { method: 'POST', body })
             .catch(() => toast.error(`Could not save the ${scan.label} image`))
         }
@@ -74,6 +76,7 @@ export function GuestFormDialog({ open, onOpenChange, guest, onSaved }: Props) {
     onSuccess: (json) => {
       qc.invalidateQueries({ queryKey: ['guests'] })
       qc.invalidateQueries({ queryKey: ['guest'] })
+      qc.invalidateQueries({ queryKey: ['guest-documents'] })
       toast.success(guest ? 'Guest updated' : 'Guest profile created')
       setPendingScans([])
       onOpenChange(false)
@@ -133,10 +136,15 @@ export function GuestFormDialog({ open, onOpenChange, guest, onSaved }: Props) {
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CnicScanner onExtracted={applyCnic} />
-            <PassportScanner onExtracted={applyPassport} />
-          </div>
+          {/* Each card is asked for only while it is missing; what is held is
+              shown as the image instead. */}
+          <GuestScans
+            guestId={guest?.id}
+            pending={pendingScans}
+            onCnic={applyCnic}
+            onPassport={applyPassport}
+            onDropPending={kind => setPendingScans(s => s.filter(x => x.kind !== kind))}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             {field('name', 'Full name', 'Guest name')}

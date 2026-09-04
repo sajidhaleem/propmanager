@@ -67,14 +67,14 @@ test.describe('Bookings — Hotel Eye and All views', () => {
     await expect(page.getByRole('heading', { name: 'All Bookings' })).toBeVisible()
   })
 
-  test('scanning is no longer on the booking form — the guest picker replaces it', async ({ page }) => {
+  test('the guest name searches saved profiles, with the scanners alongside', async ({ page }) => {
     await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Fully Paid Guest')
 
     await page.getByRole('button', { name: /New Booking/i }).first().click()
 
     await expect(page.getByPlaceholder(/Type to search saved guests/i)).toBeVisible()
-    // the scanners moved to the guest profile, so their controls must be gone
-    await expect(page.getByText(/Scan CNIC/i)).toHaveCount(0)
+    // scanning lives in the right-hand identity panel
+    await expect(page.getByText('Identity Documents')).toBeVisible()
   })
 })

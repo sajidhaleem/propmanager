@@ -100,8 +100,13 @@ export const GUESTS = [
   },
 ]
 
-const GUEST_DOCS: Record<string, { id: string; name: string; mimeType: string; size: number; createdAt: string }[]> = {
-  g1: [{ id: 'd1', name: 'cnic-front.png', mimeType: 'image/png', size: 68, createdAt: at(-30, 10) }],
+/* Hamza has a complete CNIC and no passport — the case that proves the two
+   cards are asked for independently. Nadia has neither. */
+const GUEST_DOCS: Record<string, { id: string; kind: string; name: string; mimeType: string; size: number; createdAt: string }[]> = {
+  g1: [
+    { id: 'd1', kind: 'CNIC_FRONT', name: 'cnic-front.png', mimeType: 'image/png', size: 68, createdAt: at(-30, 10) },
+    { id: 'd2', kind: 'CNIC_BACK', name: 'cnic-back.png', mimeType: 'image/png', size: 68, createdAt: at(-30, 10) },
+  ],
   g2: [],
 }
 
@@ -135,6 +140,10 @@ export async function stubApi(
         body: Buffer.from(PIXEL_PNG, 'base64'),
       })
     }
+
+    // The scan list the booking form and the profile both read
+    const docsMatch = path.match(/^\/api\/guests\/([^/]+)\/documents$/)
+    if (docsMatch) return json(GUEST_DOCS[docsMatch[1]] ?? [])
 
     const guestMatch = path.match(/^\/api\/guests\/([^/]+)$/)
     if (guestMatch) {

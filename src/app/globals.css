@@ -213,42 +213,6 @@
   .depth-2 { @apply shadow-lg; }
   .dark .depth-2 { box-shadow: 0 24px 48px -16px hsl(222 60% 2% / 0.65); }
 
-  /* ── Guest profile board ──────────────────────────────────────────────
-     A warm, tiled board for one guest. Scoped to this page so its palette
-     cannot leak into the rest of the app, which stays navy. Tokens rather
-     than literal colours so the dark variant only restates the six values
-     that actually change. */
-  .guest-board {
-    --gb-ink:    30 22% 13%;
-    --gb-muted:  33 12% 42%;
-    --gb-tile:   42 60% 99%;
-    --gb-line:   38 28% 87%;
-    --gb-accent: 47 96% 60%;   /* the yellow that carries the eye */
-    --gb-dark:   30 8% 11%;    /* the one near-black tile */
-    --gb-on-dark: 40 25% 95%;
-    background:
-      radial-gradient(115% 85% at 88% -5%, hsl(48 92% 86%) 0%, transparent 55%),
-      linear-gradient(150deg, hsl(45 58% 97%) 0%, hsl(44 44% 94%) 50%, hsl(40 30% 90%) 100%);
-    color: hsl(var(--gb-ink));
-  }
-  .dark .guest-board {
-    --gb-ink:    40 30% 94%;
-    --gb-muted:  38 10% 62%;
-    --gb-tile:   34 9% 15%;
-    --gb-line:   36 8% 24%;
-    --gb-accent: 47 96% 62%;
-    --gb-dark:   0 0% 7%;
-    --gb-on-dark: 40 25% 95%;
-    background:
-      radial-gradient(115% 85% at 88% -5%, hsl(44 30% 22%) 0%, transparent 55%),
-      linear-gradient(150deg, hsl(36 12% 13%) 0%, hsl(32 10% 9%) 100%);
-  }
-  .gb-tile {
-    background: hsl(var(--gb-tile));
-    border: 1px solid hsl(var(--gb-line));
-    @apply rounded-[20px];
-  }
-
   /* Neon glow accents — sparing use only, on focal/critical elements */
   .glow-cyan {
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px 0 hsl(var(--primary) / 0.35);

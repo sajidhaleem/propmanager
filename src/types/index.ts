@@ -38,6 +38,10 @@ export interface Property {
 export interface ScannedImage {
   file: File | Blob
   label: string
+  /** Which card this is — see src/lib/scans.ts. */
+  kind: import('@/lib/scans').ScanKind
+  /** Blob URL, so a scan taken now can be shown before it has been saved. */
+  previewUrl?: string
 }
 
 export interface Booking {

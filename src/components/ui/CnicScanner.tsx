@@ -4,6 +4,7 @@ import { useRef, useState, DragEvent } from 'react'
 import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ScannedImage } from '@/types'
+import { SCAN_LABELS } from '@/lib/scans'
 import toast from 'react-hot-toast'
 
 export interface CnicData {
@@ -54,7 +55,8 @@ export function CnicScanner({ onExtracted, className }: Props) {
       // Emit result — applyScannedCnic uses `data.field || f.field` so
       // empty strings from this side won't overwrite values from the other side.
       // The image rides along so it can be filed against the booking.
-      onExtracted(json.data ?? json, { file, label: side === 'front' ? 'CNIC front' : 'CNIC back' })
+      const kind = side === 'front' ? 'CNIC_FRONT' : 'CNIC_BACK'
+      onExtracted(json.data ?? json, { file, kind, label: SCAN_LABELS[kind], previewUrl: preview })
       set(prev => ({ ...prev, state: 'done' }))
       toast.success(side === 'front' ? 'Front scanned — name & CNIC filled' : 'Back scanned — address filled')
     } catch (e: any) {

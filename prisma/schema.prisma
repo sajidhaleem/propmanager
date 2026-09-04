@@ -331,6 +331,11 @@ model Document {
   booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   guestId   String?
   guest     Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  // Which card this image is: CNIC_FRONT | CNIC_BACK | PASSPORT, or null for an
+  // ordinary upload. The desk should be asked to scan a CNIC only while there is
+  // no CNIC on file, and that question is separate from the passport one — so
+  // the two have to be told apart rather than counted together.
+  kind      String?
   name      String
   mimeType  String
   size      Int

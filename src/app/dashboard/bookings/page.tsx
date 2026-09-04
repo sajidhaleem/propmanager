@@ -22,6 +22,9 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { Booking, type ScannedImage } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { GuestPicker } from '@/components/ui/GuestPicker'
+import { GuestScans } from '@/components/guests/GuestScans'
+import type { CnicData } from '@/components/ui/CnicScanner'
+import type { PassportData } from '@/components/ui/PassportScanner'
 import type { Guest } from '@/lib/guests'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { getFilingStatus, FILING_STATE_META } from '@/lib/hotelEye'
@@ -268,18 +271,20 @@ function BookingsInner() {
       setModalOpen(false)
       toast.success(editBooking ? 'Booking updated' : 'Booking created')
 
-      /* Scans taken before the booking existed can only be filed now that it
-         has an id. The booking itself is already saved, so a failure here is
-         reported without rolling anything back. */
-      const savedId = result?.data?.id || editBooking?.id
+      /* Scans taken before the guest profile existed can only be filed now.
+         The booking save resolves or creates the profile, so its id comes back
+         on the response. The booking itself is already saved, so a failure here
+         is reported without rolling anything back. */
+      const guestId = result?.data?.guestId || form.guestId
       const scans = pendingScans
-      if (savedId && scans.length > 0) {
+      if (guestId && scans.length > 0) {
         setPendingScans([])
-        const settled = await Promise.allSettled(scans.map(s => uploadScan(savedId, s)))
+        const settled = await Promise.allSettled(scans.map(s => uploadScan(guestId, s)))
         const failed = settled.filter(r => r.status === 'rejected').length
         const saved  = settled.length - failed
-        if (saved > 0)  toast.success(`${saved} scan${saved !== 1 ? 's' : ''} saved to Documents`)
-        if (failed > 0) toast.error(`${failed} scan${failed !== 1 ? 's' : ''} could not be saved to Documents`)
+        queryClient.invalidateQueries({ queryKey: ['guest-documents', guestId] })
+        if (saved > 0)  toast.success(`${saved} scan${saved !== 1 ? 's' : ''} saved to the guest profile`)
+        if (failed > 0) toast.error(`${failed} scan${failed !== 1 ? 's' : ''} could not be saved`)
       }
     },
     onError: (e: Error) => toast.error(e.message),
@@ -586,7 +591,10 @@ function BookingsInner() {
      read fine and still be too big to file. */
   const MAX_DOC_SIZE = 5 * 1024 * 1024
 
-  async function uploadScan(bookingId: string, scan: ScannedImage): Promise<UploadedDoc> {
+  /* Scans are filed against the guest, not the booking. A card belongs to the
+     person, so the next stay finds it already there and the desk is never asked
+     to scan the same guest twice. */
+  async function uploadScan(guestId: string, scan: ScannedImage) {
     const type = scan.file.type || 'image/jpeg'
     const ext  = type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
     // ASCII only — the filename is echoed back in a Content-Disposition header
@@ -594,34 +602,59 @@ function BookingsInner() {
 
     const fd = new FormData()
     fd.append('file', new File([scan.file], name, { type }))
-    const res = await fetch(`/api/bookings/${bookingId}/documents`, { method: 'POST', body: fd })
+    fd.append('kind', scan.kind)
+    const res = await fetch(`/api/guests/${guestId}/documents`, { method: 'POST', body: fd })
     if (!res.ok) {
       const e = await res.json().catch(() => ({}))
-      throw new Error(e.error || 'Could not save scan to Documents')
+      throw new Error(e.error || 'Could not save the scan')
     }
-    const { data } = await res.json()
-    return data
+    return (await res.json()).data
   }
 
-  /* Every scan is filed against the booking so the original image stays
-     available after the extracted text has been edited. */
   async function attachScan(scan: ScannedImage) {
     if (scan.file.size > MAX_DOC_SIZE) {
-      toast('Scan read, but the image is over 5MB so it was not saved to Documents.', { icon: 'ℹ️' })
+      toast('Scan read, but the image is over 5MB so it was not saved.', { icon: 'ℹ️' })
       return
     }
-    if (!editBooking) {
-      // Replace any earlier scan of the same side rather than queueing both
-      setPendingScans(prev => [...prev.filter(p => p.label !== scan.label), scan])
+    // No profile yet — the booking save creates one, and these are filed then
+    if (!form.guestId) {
+      // Replace any earlier scan of the same card rather than queueing both
+      setPendingScans(prev => [...prev.filter(p => p.kind !== scan.kind), scan])
       return
     }
     try {
-      const doc = await uploadScan(editBooking.id, scan)
-      setUploadedDocs(prev => [doc, ...prev])
-      toast.success(`${scan.label} saved to Documents`)
+      await uploadScan(form.guestId, scan)
+      queryClient.invalidateQueries({ queryKey: ['guest-documents', form.guestId] })
+      toast.success(`${scan.label} saved to the guest profile`)
     } catch (err: any) {
-      toast.error(err.message || 'Could not save scan to Documents')
+      toast.error(err.message || 'Could not save the scan')
     }
+  }
+
+  /* Scanning fills the booking's own identity columns too: a filed Hotel Eye
+     entry has to keep showing what was filed, whatever the profile says later. */
+  function applyCnic(d: CnicData, scan?: ScannedImage) {
+    setForm(f => ({
+      ...f,
+      guestName:       d.name        || f.guestName,
+      guestFatherName: d.father_name || f.guestFatherName,
+      guestCnic:       d.cnic        || f.guestCnic,
+      guestGender:     d.gender      || f.guestGender,
+      guestAddress:    d.address     || f.guestAddress,
+    }))
+    if (scan) attachScan(scan)
+  }
+
+  function applyPassport(d: PassportData, scan?: ScannedImage) {
+    setForm(f => ({
+      ...f,
+      guestName:      d.name            || f.guestName,
+      passportNumber: d.passport_number || f.passportNumber,
+      nationality:    d.nationality     || f.nationality,
+      guestGender:    d.gender          || f.guestGender,
+      passportExpiry: d.expiry_date     || f.passportExpiry,
+    }))
+    if (scan) attachScan(scan)
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, bookingId?: string) {
@@ -1518,9 +1551,20 @@ function BookingsInner() {
             </div>
           </div>{/* end scrollable form */}
 
-          {/* ── Right summary panel ───────────────────── */}
-          <div className="w-full md:w-[270px] shrink-0 overflow-y-auto border-t md:border-t-0 md:border-l md:border-border/50 px-4 py-5 space-y-4 text-sm max-h-48 md:max-h-none">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Summary</p>
+          {/* ── Right panel: the guest's cards, then the summary ───────── */}
+          <div className="w-full md:w-[300px] shrink-0 overflow-y-auto border-t md:border-t-0 md:border-l md:border-border/50 px-4 py-5 space-y-4 text-sm md:max-h-none">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Identity Documents</p>
+            {/* Each card is asked for only while it is missing — a guest already
+                scanned shows their image here instead of a scanner. */}
+            <GuestScans
+              guestId={form.guestId}
+              pending={pendingScans}
+              onCnic={applyCnic}
+              onPassport={applyPassport}
+              onDropPending={kind => setPendingScans(prev => prev.filter(p => p.kind !== kind))}
+            />
+
+            <p className="border-t border-border/50 pt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Summary</p>
 
             {/* Nights + totals - always visible */}
             {(() => {

@@ -17,8 +17,9 @@ import {
   type Stay,
 } from '@/lib/guestProfile'
 import type { Guest } from '@/lib/guests'
+import { SCAN_LABELS, type ScanKind } from '@/lib/scans'
 
-type GuestDoc = { id: string; name: string; mimeType: string; size: number; createdAt: string }
+type GuestDoc = { id: string; kind?: string | null; name: string; mimeType: string; size: number; createdAt: string }
 type GuestDetail = Guest & { bookings: Stay[]; documents: GuestDoc[] }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -42,11 +43,11 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
 
   if (isLoading) {
     return (
-      <div className="space-y-4 p-4 lg:p-6">
-        <Skeleton className="h-28 w-full rounded-[20px]" />
+      <div className="space-y-4">
+        <Skeleton className="h-28 w-full rounded-2xl" />
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Skeleton className="h-96 rounded-[20px]" />
-          <Skeleton className="h-96 rounded-[20px]" />
+          <Skeleton className="h-96 rounded-2xl" />
+          <Skeleton className="h-96 rounded-2xl" />
         </div>
       </div>
     )
@@ -84,28 +85,31 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
 
   const shiftMonth = (by: number) => setMonth(m => new Date(m.getFullYear(), m.getMonth() + by, 1))
   const docUrl = doc ? `/api/guests/${guest.id}/documents/${doc.id}?inline=1` : null
-  const documentLabel = guest.cnic ? 'CNIC' : guest.passportNumber ? 'Passport' : 'No document'
+  /* Name the panel after the card actually shown, not after which number the
+     profile happens to hold — a passport scan on a guest who also has a CNIC
+     was reading as "CNIC". */
+  const documentLabel = (doc && SCAN_LABELS[doc.kind as ScanKind])
+    || (guest.cnic ? 'CNIC' : guest.passportNumber ? 'Passport' : 'No document')
 
-  /* A board floating on the app's canvas, as the design it follows is.
-     Deliberately not overflow-hidden: that would make this the sticky card
-     column's scroll box, and the card would stop following the page. */
+  /* Deliberately not overflow-hidden anywhere up this tree: that would make
+     the wrapper the sticky card column's scroll box, and the card would stop
+     following the page. */
   return (
-    <div className="guest-board rounded-[24px] border border-[hsl(var(--gb-line))] p-4 lg:p-6">
-      <div className="mx-auto max-w-[1400px] space-y-4">
-
+    <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {/* ── Header: who this is, and the record at a glance ─────────────── */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Link
               href="/dashboard/guests"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--gb-muted))] hover:text-[hsl(var(--gb-ink))]"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" />All guests
             </Link>
             <h1 className="font-display mt-1 text-[2rem] font-semibold leading-tight tracking-tight">
               {guest.name}
             </h1>
-            <p className="mt-0.5 text-sm text-[hsl(var(--gb-muted))]">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {[guest.cnic && `CNIC ${guest.cnic}`, guest.passportNumber && `Passport ${guest.passportNumber}`, guest.nationality]
                 .filter(Boolean).join('  ·  ') || 'No identity document on file yet'}
             </p>
@@ -118,7 +122,7 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
             <Button
               size="sm"
               onClick={() => setEditOpen(true)}
-              className="rounded-full bg-[hsl(var(--gb-dark))] text-[hsl(var(--gb-on-dark))] hover:bg-[hsl(var(--gb-dark))]/90"
+              className="rounded-full"
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" />Edit profile
             </Button>
@@ -151,15 +155,15 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
 
           {/* ── The scanned card, always in view ────────────────────────── */}
           <aside className="lg:sticky lg:top-6 lg:self-start">
-            <div className="gb-tile overflow-hidden">
+            <div className="glass-panel overflow-hidden">
               {/* Landscape frame with object-contain: a CNIC is a wide card, and
                   object-cover would crop off the number and the name — the two
                   things the desk opens this panel to read. */}
-              <div className="relative aspect-[4/3] bg-[hsl(var(--gb-dark))]">
+              <div className="relative aspect-[4/3] bg-muted">
                 {docUrl ? (
                   doc!.mimeType === 'application/pdf' ? (
                     <object data={docUrl} type="application/pdf" className="h-full w-full">
-                      <p className="p-4 text-sm text-[hsl(var(--gb-muted))]">Preview unavailable.</p>
+                      <p className="p-4 text-sm text-muted-foreground">Preview unavailable.</p>
                     </object>
                   ) : (
                     <a href={docUrl} target="_blank" rel="noreferrer" title="Open the full-size scan" className="block h-full w-full">
@@ -170,9 +174,9 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
                   )
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                    <ScanLine className="h-8 w-8 text-[hsl(var(--gb-muted))]" />
+                    <ScanLine className="h-8 w-8 text-muted-foreground" />
                     <p className="text-sm font-medium">No card scanned yet</p>
-                    <p className="text-xs text-[hsl(var(--gb-muted))]">
+                    <p className="text-xs text-muted-foreground">
                       A filing is evidenced by the card image. Scan it once and every later stay reuses it.
                     </p>
                     <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>Scan now</Button>
@@ -189,7 +193,7 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
                       {[guest.fatherName && `s/o ${guest.fatherName}`, guest.gender].filter(Boolean).join(' · ') || 'Guest'}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-[hsl(var(--gb-accent))] px-2.5 py-1 text-[11px] font-semibold text-[hsl(30_22%_13%)]">
+                  <span className="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
                     {documentLabel}
                   </span>
                 </div>
@@ -207,20 +211,20 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
                           className={cn(
                             'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
                             i === docIndex
-                              ? 'border-transparent bg-[hsl(var(--gb-dark))] text-[hsl(var(--gb-on-dark))]'
-                              : 'border-[hsl(var(--gb-line))] text-[hsl(var(--gb-muted))] hover:text-[hsl(var(--gb-ink))]'
+                              ? 'border-transparent bg-foreground text-background'
+                              : 'border-border text-muted-foreground hover:text-foreground'
                           )}
                         >
-                          Scan {i + 1}
+                          {SCAN_LABELS[d.kind as ScanKind] ?? `Scan ${i + 1}`}
                         </button>
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--gb-muted))]">
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                     <span className="truncate" title={doc!.name}>{formatDate(doc!.createdAt, 'MMM d, yyyy')}</span>
                     <a
                       href={`/api/guests/${guest.id}/documents/${doc!.id}`}
-                      className="inline-flex items-center gap-1 font-medium text-[hsl(var(--gb-ink))] hover:underline"
+                      className="inline-flex items-center gap-1 font-medium text-foreground hover:underline"
                     >
                       <Download className="h-3 w-3" />Download
                     </a>
@@ -243,7 +247,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-right">
       <p className="font-display text-[2rem] font-semibold leading-none tabular-nums">{value}</p>
-      <p className="mt-1 text-[11px] font-medium text-[hsl(var(--gb-muted))]">{label}</p>
+      <p className="mt-1 text-[11px] font-medium text-muted-foreground">{label}</p>
     </div>
   )
 }
@@ -251,13 +255,13 @@ function Stat({ value, label }: { value: number; label: string }) {
 function FilingMixBar({ mix }: { mix: ReturnType<typeof filingMix> }) {
   if (mix.total === 0) {
     return (
-      <p className="text-xs text-[hsl(var(--gb-muted))]">No stays recorded for this guest yet.</p>
+      <p className="text-xs text-muted-foreground">No stays recorded for this guest yet.</p>
     )
   }
   const segments = [
-    { label: 'Filed',     pct: mix.filed,   className: 'bg-[hsl(var(--gb-dark))] text-[hsl(var(--gb-on-dark))]' },
-    { label: 'Filing',    pct: mix.filing,  className: 'bg-[hsl(var(--gb-accent))] text-[hsl(30_22%_13%)]' },
-    { label: 'Not filed', pct: mix.unfiled, className: 'bg-[hsl(var(--gb-line))] text-[hsl(var(--gb-ink))]' },
+    { label: 'Filed',     pct: mix.filed,   className: 'bg-foreground text-background' },
+    { label: 'Filing',    pct: mix.filing,  className: 'bg-primary text-primary-foreground' },
+    { label: 'Not filed', pct: mix.unfiled, className: 'bg-muted text-foreground' },
     { label: 'Overdue',   pct: mix.overdue, className: 'bg-rose-500 text-white' },
   ].filter(s => s.pct > 0)
 
@@ -268,7 +272,7 @@ function FilingMixBar({ mix }: { mix: ReturnType<typeof filingMix> }) {
            track once three or four segments are present. The label rides above
            its own bar so the two can never drift apart. */
         <div key={s.label} style={{ flex: `${Math.max(s.pct, 10)} 1 0%` }} className="min-w-0 space-y-1">
-          <p className="truncate text-[11px] font-medium text-[hsl(var(--gb-muted))]">{s.label}</p>
+          <p className="truncate text-[11px] font-medium text-muted-foreground">{s.label}</p>
           <div className={cn('flex h-7 items-center justify-center rounded-full text-[11px] font-semibold', s.className)}>
             {s.pct}%
           </div>
@@ -285,7 +289,7 @@ function TileHead({ title, href }: { title: string; href?: string }) {
       {href && (
         <Link
           href={href}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--gb-line))] text-[hsl(var(--gb-muted))] transition-colors hover:text-[hsl(var(--gb-ink))]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground"
           aria-label={`Open ${title}`}
         >
           <ExternalLink className="h-3.5 w-3.5" />
@@ -298,13 +302,13 @@ function TileHead({ title, href }: { title: string; href?: string }) {
 function NightsTile({ chart, peak, nights }: { chart: ReturnType<typeof nightsByMonth>; peak: number; nights: number }) {
   const busiest = chart.reduce((best, c) => (c.nights > best.nights ? c : best), chart[0])
   return (
-    <div className="gb-tile space-y-4 p-4">
+    <div className="glass-panel space-y-4 p-4">
       <TileHead title="Nights stayed" />
       <div>
         <p className="font-display text-3xl font-semibold leading-none tabular-nums">
           {nights}<span className="ml-1 text-lg">n</span>
         </p>
-        <p className="mt-1 text-xs text-[hsl(var(--gb-muted))]">Across every stay</p>
+        <p className="mt-1 text-xs text-muted-foreground">Across every stay</p>
       </div>
 
       <div className="relative flex h-24 items-end justify-between gap-1.5">
@@ -317,19 +321,19 @@ function NightsTile({ chart, peak, nights }: { chart: ReturnType<typeof nightsBy
                   style={{ height: `${Math.max((c.nights / peak) * 100, 4)}%` }}
                   className={cn(
                     'w-full rounded-full',
-                    isPeak ? 'bg-[hsl(var(--gb-accent))]' : 'bg-[hsl(var(--gb-dark))]/25'
+                    isPeak ? 'bg-primary' : 'bg-primary/25'
                   )}
                   title={`${c.nights} night${c.nights === 1 ? '' : 's'} in ${MONTHS[c.date.getMonth()]}`}
                 />
               </div>
-              <span className="text-[10px] font-medium text-[hsl(var(--gb-muted))]">
+              <span className="text-[10px] font-medium text-muted-foreground">
                 {MONTHS[c.date.getMonth()][0]}
               </span>
             </div>
           )
         })}
         {busiest.nights > 0 && (
-          <span className="pointer-events-none absolute right-0 top-0 rounded-full bg-[hsl(var(--gb-accent))] px-2 py-0.5 text-[10px] font-semibold text-[hsl(30_22%_13%)]">
+          <span className="pointer-events-none absolute right-0 top-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
             {busiest.nights}n peak
           </span>
         )}
@@ -355,23 +359,23 @@ function FilingWindowTile({ open }: { open: ReturnType<typeof openFiling> }) {
       : `${String(Math.floor(open.status.hoursRemaining)).padStart(2, '0')}:${String(Math.round((open.status.hoursRemaining % 1) * 60)).padStart(2, '0')}`
 
   return (
-    <div className="gb-tile space-y-3 p-4">
+    <div className="glass-panel space-y-3 p-4">
       <TileHead title="Filing window" href={`/dashboard/bookings?view=hoteleye`} />
 
       <div className="flex justify-center py-1">
         <div className="relative h-32 w-32">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-            <circle cx="50" cy="50" r={R} fill="none" strokeWidth="8" className="stroke-[hsl(var(--gb-line))]" />
+            <circle cx="50" cy="50" r={R} fill="none" strokeWidth="8" className="stroke-muted" />
             <circle
               cx="50" cy="50" r={R} fill="none" strokeWidth="8" strokeLinecap="round"
               strokeDasharray={C}
               strokeDashoffset={C * (1 - remaining)}
-              className={cn(overdue ? 'stroke-rose-500' : !open ? 'stroke-emerald-500' : 'stroke-[hsl(var(--gb-accent))]')}
+              className={cn(overdue ? 'stroke-rose-500' : !open ? 'stroke-emerald-500' : 'stroke-primary')}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="font-display text-xl font-semibold tabular-nums">{centre}</span>
-            <span className="text-[10px] text-[hsl(var(--gb-muted))]">
+            <span className="text-[10px] text-muted-foreground">
               {open ? 'left to file' : 'nothing due'}
             </span>
           </div>
@@ -381,7 +385,7 @@ function FilingWindowTile({ open }: { open: ReturnType<typeof openFiling> }) {
       {open ? (
         <Link
           href={`/dashboard/bookings?view=hoteleye&search=${encodeURIComponent(open.stay.property?.name || '')}`}
-          className="flex items-center justify-between gap-2 rounded-full border border-[hsl(var(--gb-line))] px-3 py-2 text-xs font-medium transition-colors hover:bg-[hsl(var(--gb-line))]/40"
+          className="flex items-center justify-between gap-2 rounded-full border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
         >
           <span className="truncate">
             {formatDate(open.stay.checkIn, 'MMM d')} · {open.stay.property?.name || 'Stay'}
@@ -389,7 +393,7 @@ function FilingWindowTile({ open }: { open: ReturnType<typeof openFiling> }) {
           <ChevronRight className="h-3.5 w-3.5 shrink-0" />
         </Link>
       ) : (
-        <p className="flex items-center justify-center gap-1.5 text-xs text-[hsl(var(--gb-muted))]">
+        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />Every stay is on the portal
         </p>
       )}
@@ -399,12 +403,12 @@ function FilingWindowTile({ open }: { open: ReturnType<typeof openFiling> }) {
 
 function CompletenessTile({ comp }: { comp: ReturnType<typeof completeness> }) {
   const bars = [
-    { label: 'Identity', pct: comp.identity, className: 'bg-[hsl(var(--gb-accent))]' },
-    { label: 'Contact',  pct: comp.contact,  className: 'bg-[hsl(var(--gb-dark))]' },
-    { label: 'Travel',   pct: comp.travel,   className: 'bg-[hsl(var(--gb-line))]' },
+    { label: 'Identity', pct: comp.identity, className: 'bg-primary' },
+    { label: 'Contact',  pct: comp.contact,  className: 'bg-foreground' },
+    { label: 'Travel',   pct: comp.travel,   className: 'bg-muted' },
   ]
   return (
-    <div className="gb-tile space-y-4 p-4">
+    <div className="glass-panel space-y-4 p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold">Profile completeness</p>
         <p className="font-display text-lg font-semibold tabular-nums">{comp.overall}%</p>
@@ -413,9 +417,9 @@ function CompletenessTile({ comp }: { comp: ReturnType<typeof completeness> }) {
       <div className="flex items-end gap-2">
         {bars.map(b => (
           <div key={b.label} className="flex-1 space-y-1.5">
-            <p className="text-[11px] font-medium text-[hsl(var(--gb-muted))] tabular-nums">{b.pct}%</p>
+            <p className="text-[11px] font-medium text-muted-foreground tabular-nums">{b.pct}%</p>
             {/* Height rather than scaleY: a scaled bar stretches its corner radius */}
-            <div className="flex h-14 w-full items-end rounded-xl bg-[hsl(var(--gb-line))]/50">
+            <div className="flex h-14 w-full items-end rounded-xl bg-muted">
               <div
                 className={cn('w-full rounded-xl', b.className)}
                 style={{ height: `${Math.max(b.pct, 6)}%` }}
@@ -426,7 +430,7 @@ function CompletenessTile({ comp }: { comp: ReturnType<typeof completeness> }) {
         ))}
       </div>
 
-      <p className="text-xs text-[hsl(var(--gb-muted))]">
+      <p className="text-xs text-muted-foreground">
         {comp.done} of {comp.total} filing fields recorded
       </p>
     </div>
@@ -436,7 +440,7 @@ function CompletenessTile({ comp }: { comp: ReturnType<typeof completeness> }) {
 function ChecklistTile({ items, done, total }: { items: ReturnType<typeof filingChecklist>; done: number; total: number }) {
   const ICONS = [IdCard, ScanLine, Phone, ShieldCheck, MapPin, MapPin, Phone, ScanLine]
   return (
-    <div className="rounded-[20px] bg-[hsl(var(--gb-dark))] p-4 text-[hsl(var(--gb-on-dark))]">
+    <div className="bg-gradient-panel rounded-2xl border border-white/10 p-4 text-white">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold">Filing checklist</p>
         <p className="font-display text-lg font-semibold tabular-nums">{done}/{total}</p>
@@ -457,7 +461,7 @@ function ChecklistTile({ items, done, total }: { items: ReturnType<typeof filing
               <span
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                  item.done ? 'bg-[hsl(var(--gb-accent))] text-[hsl(30_22%_13%)]' : 'border border-white/25'
+                  item.done ? 'bg-primary text-primary-foreground' : 'border border-white/25'
                 )}
                 aria-label={item.done ? `${item.label} recorded` : `${item.label} missing`}
               >
@@ -478,20 +482,20 @@ function StayHistoryTile({
   const next = new Date(month.getFullYear(), month.getMonth() + 1, 1)
 
   return (
-    <div className="gb-tile flex flex-col p-4">
+    <div className="glass-panel flex flex-col p-4">
       <div className="flex items-center justify-between gap-2">
-        <button onClick={() => onShift(-1)} className="text-xs font-medium text-[hsl(var(--gb-muted))] hover:text-[hsl(var(--gb-ink))]">
+        <button onClick={() => onShift(-1)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
           {MONTHS[prev.getMonth()]}
         </button>
         <p className="text-sm font-semibold">{MONTHS[month.getMonth()]} {month.getFullYear()}</p>
-        <button onClick={() => onShift(1)} className="rounded-full border border-[hsl(var(--gb-line))] px-2.5 py-1 text-xs font-medium text-[hsl(var(--gb-muted))] hover:text-[hsl(var(--gb-ink))]">
+        <button onClick={() => onShift(1)} className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">
           {MONTHS[next.getMonth()]}
         </button>
       </div>
 
       <div className="mt-3 flex-1 space-y-2">
         {stays.length === 0 ? (
-          <p className="flex h-full min-h-[9rem] items-center justify-center gap-2 text-xs text-[hsl(var(--gb-muted))]">
+          <p className="flex h-full min-h-[9rem] items-center justify-center gap-2 text-xs text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />No stay this month
           </p>
         ) : (
@@ -501,9 +505,9 @@ function StayHistoryTile({
               <div key={s.id} className="flex items-stretch gap-3">
                 <div className="w-12 shrink-0 pt-1 text-right">
                   <p className="text-[11px] font-semibold tabular-nums">{formatDate(s.checkIn, 'd')}</p>
-                  <p className="text-[10px] text-[hsl(var(--gb-muted))]">{formatDate(s.checkIn, 'EEE')}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatDate(s.checkIn, 'EEE')}</p>
                 </div>
-                <div className="flex-1 rounded-xl bg-[hsl(var(--gb-dark))] px-3 py-2 text-[hsl(var(--gb-on-dark))]">
+                <div className="flex-1 bg-gradient-panel rounded-xl border border-white/10 px-3 py-2 text-white">
                   <p className="truncate text-[13px] font-medium">{s.property?.name || 'Stay'}</p>
                   <p className="flex items-center gap-1.5 text-[11px] text-white/55">
                     {formatDate(s.checkIn, 'h:mm a')} — {formatDate(s.checkOut, 'MMM d')}
@@ -513,7 +517,7 @@ function StayHistoryTile({
                         ? 'bg-emerald-400/20 text-emerald-300'
                         : fs.state === 'OVERDUE' || fs.state === 'FAILED'
                           ? 'bg-rose-400/20 text-rose-300'
-                          : 'bg-[hsl(var(--gb-accent))]/25 text-[hsl(var(--gb-accent))]'
+                          : 'bg-amber-400/20 text-amber-300'
                     )}>
                       {fs.label}
                     </span>
@@ -569,7 +573,7 @@ function DetailAccordions({ guest, docs }: { guest: GuestDetail; docs: GuestDoc[
   const [open, setOpen] = useState<string | null>('identity')
 
   return (
-    <div className="gb-tile divide-y divide-[hsl(var(--gb-line))]">
+    <div className="glass-panel divide-y divide-border">
       {sections.map(s => {
         const isOpen = open === s.key
         const filled = s.rows.filter(([, v]) => v && String(v).trim()).length
@@ -580,17 +584,17 @@ function DetailAccordions({ guest, docs }: { guest: GuestDetail; docs: GuestDoc[
               aria-expanded={isOpen}
               className="flex w-full items-center gap-3 px-4 py-3 text-left"
             >
-              <s.icon className="h-4 w-4 shrink-0 text-[hsl(var(--gb-muted))]" />
+              <s.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="flex-1 text-sm font-medium">{s.label}</span>
-              <span className="text-[11px] tabular-nums text-[hsl(var(--gb-muted))]">{filled}/{s.rows.length}</span>
-              <ChevronDown className={cn('h-4 w-4 shrink-0 text-[hsl(var(--gb-muted))] transition-transform', isOpen && 'rotate-180')} />
+              <span className="text-[11px] tabular-nums text-muted-foreground">{filled}/{s.rows.length}</span>
+              <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
             </button>
             {isOpen && (
               <dl className="space-y-1.5 px-4 pb-3.5">
                 {s.rows.map(([label, value]) => (
                   <div key={label} className="flex items-baseline justify-between gap-4 text-sm">
-                    <dt className="shrink-0 text-[hsl(var(--gb-muted))]">{label}</dt>
-                    <dd className={cn('truncate text-right', !value && 'text-[hsl(var(--gb-muted))]/60')}>
+                    <dt className="shrink-0 text-muted-foreground">{label}</dt>
+                    <dd className={cn('truncate text-right', !value && 'text-muted-foreground/60')}>
                       {value || 'Not recorded'}
                     </dd>
                   </div>
