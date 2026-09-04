@@ -12,6 +12,10 @@ const PUBLIC_PATHS = [
   '/offline.html',
   '/.well-known',
   '/api/hotel-eye/poll',
+  // Read-only ledger feed for Hisaab. Called by a scheduled job, so it cannot
+  // carry the auth-token cookie; it guards itself with a shared secret and
+  // returns 404 when that is missing or wrong.
+  '/api/export/ledger',
 ]
 
 const SECURITY_HEADERS = {
