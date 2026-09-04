@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { SortableTh } from '@/components/ui/sortable-th'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,6 +18,9 @@ import { PassportScanner, type PassportData } from '@/components/ui/PassportScan
 import { formatDate } from '@/lib/utils'
 import type { ScannedImage } from '@/types'
 import type { Guest } from '@/lib/guests'
+
+/** An empty cell reads as missing data, not as a value someone forgot to check. */
+const Dash = () => <span className="text-muted-foreground/50">—</span>
 
 const EMPTY: Omit<Guest, 'id' | '_count'> = {
   name: '', email: '', phone: '', cnic: '', fatherName: '', gender: '', address: '',
@@ -31,6 +35,13 @@ export default function GuestsPage() {
   const [deleting, setDeleting] = useState<Guest | null>(null)
   const [form, setForm] = useState(EMPTY)
   const [pendingScans, setPendingScans] = useState<ScannedImage[]>([])
+  const [sortBy, setSortBy] = useState('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  function handleSort(field: string) {
+    if (field === sortBy) setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))
+    else { setSortBy(field); setSortOrder('asc') }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['guests', search],
@@ -41,6 +52,18 @@ export default function GuestsPage() {
     },
   })
   const guests: Guest[] = data?.data || []
+
+  /* Sorted here rather than server-side: the list is already capped at 200 and
+     search does the narrowing, so a round trip per column click buys nothing. */
+  const sortedGuests = [...guests].sort((a, b) => {
+    const dir = sortOrder === 'asc' ? 1 : -1
+    if (sortBy === 'stays') return ((a._count?.bookings ?? 0) - (b._count?.bookings ?? 0)) * dir
+    const av = (a[sortBy as keyof Guest] as string) || ''
+    const bv = (b[sortBy as keyof Guest] as string) || ''
+    // Blank fields sort last in either direction — an empty CNIC is not "first"
+    if (!av !== !bv) return av ? -1 : 1
+    return av.localeCompare(bv) * dir
+  })
 
   // Stay history, loaded only for the profile that is open
   const { data: detail } = useQuery({
@@ -187,33 +210,66 @@ export default function GuestsPage() {
           description={search ? 'Try a different name or CNIC.' : 'Create a profile and scan the card once — every later stay reuses it.'}
         />
       ) : (
-        <div className="rounded-xl border divide-y">
-          {guests.map(g => (
-            <div key={g.id} className="group flex items-center gap-4 p-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-bold text-primary">
-                {g.name[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{g.name}</p>
-                <p className="truncate text-sm text-muted-foreground">
-                  {[g.cnic, g.passportNumber, g.phone].filter(Boolean).join(' · ') || 'No identity saved yet'}
-                </p>
-              </div>
-              {g.cnic && <Badge variant="outline" className="hidden sm:inline-flex"><IdCard className="mr-1 h-3 w-3" />CNIC</Badge>}
-              {g.passportNumber && <Badge variant="outline" className="hidden sm:inline-flex"><Plane className="mr-1 h-3 w-3" />Passport</Badge>}
-              <Badge variant="outline" className="shrink-0">
-                {g._count?.bookings ?? 0} stay{(g._count?.bookings ?? 0) === 1 ? '' : 's'}
-              </Badge>
-              <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(g)} aria-label={`Edit ${g.name}`}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleting(g)} aria-label={`Delete ${g.name}`}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+        /* The register a desk actually reads: every saved detail on the row.
+           Scrolls sideways in its own container rather than pushing the page. */
+        <div className="rounded-xl border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <SortableTh label="Guest"     field="name"           sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="CNIC"      field="cnic"           sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="Father"    field="fatherName"     sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="Phone"     field="phone"          sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="Passport"  field="passportNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="Address"   field="address"        sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  <SortableTh label="Stays"     field="stays"          sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} align="right" />
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedGuests.map(g => (
+                  <tr key={g.id} className="border-b transition-colors last:border-0 hover:bg-muted/50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                          {g.name[0]?.toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium">{g.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[g.gender, g.nationality].filter(Boolean).join(' · ') || '—'}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums">{g.cnic || <Dash />}</td>
+                    <td className="px-4 py-3">{g.fatherName || <Dash />}</td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums">{g.phone || <Dash />}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {g.passportNumber
+                        ? <span className="inline-flex items-center gap-1.5"><Plane className="h-3.5 w-3.5 text-muted-foreground" />{g.passportNumber}</span>
+                        : <Dash />}
+                    </td>
+                    <td className="max-w-[22ch] truncate px-4 py-3" title={g.address || undefined}>
+                      {g.address || <Dash />}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{g._count?.bookings ?? 0}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(g)} aria-label={`Edit ${g.name}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleting(g)} aria-label={`Delete ${g.name}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

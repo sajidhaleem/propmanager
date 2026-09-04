@@ -29,6 +29,7 @@ const primaryNav = [
       { href: '/dashboard/bookings?view=all',      label: 'All',                icon: BookOpen },
     ],
   },
+  { href: '/dashboard/guests',   label: 'Guests',    icon: UserSquare2, feature: 'guests' },
   { href: '/dashboard/reports',  label: 'Reports',   icon: BarChart3, feature: 'reports' },
 ]
 
@@ -44,7 +45,6 @@ const moreNav = [
   {
     label: 'Operations',
     items: [
-      { href: '/dashboard/guests',     label: 'Guests',     icon: UserSquare2, feature: 'guests' },
       { href: '/dashboard/properties', label: 'Properties', icon: Building2, feature: 'properties' },
       { href: '/dashboard/settings',   label: 'Settings',   icon: Settings, feature: 'settings' },
     ],
