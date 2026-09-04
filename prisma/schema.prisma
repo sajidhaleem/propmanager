@@ -307,6 +307,10 @@ model HotelEyeJob {
   payload   Json
   bookingId String?
   error     String?
+  // How many times a worker has claimed this job. The queue is oldest-first, so
+  // a job that kills the worker every time would otherwise be requeued forever
+  // and block everything behind it.
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
