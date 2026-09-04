@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { requirePermission } from '@/lib/permissionGuard'
+import { resolveGuestId } from '@/lib/guestLink'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { differenceInCalendarDays } from 'date-fns'
@@ -160,9 +161,15 @@ export async function POST(req: NextRequest) {
     })
     if (conflict) return apiError('Property is already booked for these dates', 409)
 
+    /* Every stay belongs to a person. If the desk did not pick one from the
+       guest list, find or create the profile here — otherwise the guest list
+       only ever holds whoever existed when it was last backfilled. */
+    const guestId = data.guestId || await resolveGuestId(data)
+
     const booking = await prisma.booking.create({
       data: {
         ...data,
+        guestId,
         checkIn,
         checkOut,
         nights,

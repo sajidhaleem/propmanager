@@ -16,7 +16,7 @@ test.describe('Booking form — custom platform', () => {
   })
 
   test('accepts a full custom platform name without the field vanishing', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Fully Paid Guest')
 
     await page.getByRole('button', { name: /New Booking/i }).first().click()
@@ -41,7 +41,7 @@ test.describe('Booking form — custom platform', () => {
   })
 
   test('recovers an existing custom label into its own field when editing', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Unpaid Guest')
 
     // b3 is platform OTHER with notes "[Walk-in] cash on arrival"

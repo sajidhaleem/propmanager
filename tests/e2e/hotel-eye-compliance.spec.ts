@@ -21,6 +21,9 @@ const booking = (
   totalAmount: 10000, netAmount: 10000, paidAmount: 10000,
   platform: 'DIRECT', status: 'CONFIRMED', propertyId: 'p1',
   property: { id: 'p1', name: 'Room 1' }, notes: '',
+  /* A stay that gets filed always has a card on file, which is also what puts
+     it in the default Hotel Eye view these specs navigate to. */
+  guestCnic: '35202-1234567-1',
   hotelEyeStatus, miscCharges: 0, ...extra,
 })
 

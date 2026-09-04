@@ -33,6 +33,28 @@ test.describe('Bookings — Hotel Eye and All views', () => {
     await expect(page.getByText('Unpaid Guest')).toBeVisible()
   })
 
+  /* The statutory window is the only deadline on this page, so an operator who
+     opens Bookings with no view chosen must land on the list that carries it. */
+  test('opens on the Hotel Eye view when no view is asked for', async ({ page }) => {
+    await page.goto('/dashboard/bookings')
+    await waitForData(page, 'Fully Paid Guest')
+
+    await expect(page.getByRole('heading', { name: 'Hotel Eye Bookings' })).toBeVisible()
+    await expect(page.getByText('Half Paid Guest')).toHaveCount(0)
+  })
+
+  test('the title switches between the two views', async ({ page }) => {
+    await page.goto('/dashboard/bookings')
+    await waitForData(page, 'Fully Paid Guest')
+
+    await page.getByRole('button', { name: 'Hotel Eye Bookings' }).click()
+    await page.getByRole('menuitem', { name: /All Bookings/ }).click()
+
+    await expect(page).toHaveURL(/view=all/)
+    await waitForData(page, 'Half Paid Guest')
+    await expect(page.getByRole('heading', { name: 'All Bookings' })).toBeVisible()
+  })
+
   test('scanning is no longer on the booking form — the guest picker replaces it', async ({ page }) => {
     await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Fully Paid Guest')

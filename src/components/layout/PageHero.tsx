@@ -31,7 +31,8 @@ export interface HeroMetric {
 }
 
 interface PageHeroProps {
-  title: string
+  /** Text, or a control when the page switches between views (see bookings). */
+  title: React.ReactNode
   description?: React.ReactNode
   /** Big lead number — the section's single most important figure. */
   headline?: { value: string; caption?: string; delta?: number }

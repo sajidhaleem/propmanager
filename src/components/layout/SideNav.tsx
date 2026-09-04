@@ -82,7 +82,9 @@ export function SideNav() {
   const { user, logout } = useAuth()
 
   const [collapsed, setCollapsed] = useState(false)
-  const [bookingsOpen, setBookingsOpen] = useState(true)
+  // Collapsed by default — the two views are switchable from the page title,
+  // so the sub-menu is a shortcut rather than the way in
+  const [bookingsOpen, setBookingsOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')

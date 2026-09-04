@@ -19,7 +19,7 @@ test.describe('Bookings — payment status', () => {
   })
 
   test('badges each booking by what is actually paid', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Fully Paid Guest')
 
     /* Exact text: the card also carries a Hotel Eye control reading
@@ -30,7 +30,7 @@ test.describe('Bookings — payment status', () => {
   })
 
   test('filter narrows the list server-side', async ({ page }) => {
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Fully Paid Guest')
 
     await page.getByRole('combobox').filter({ hasText: /All Payments/ }).first().click()
@@ -56,7 +56,7 @@ test.describe('Bookings — payment status', () => {
       }],
     })
 
-    await page.goto('/dashboard/bookings')
+    await page.goto('/dashboard/bookings?view=all')
     await waitForData(page, 'Comped Guest')
 
     const card = row(page, 'Comped Guest')

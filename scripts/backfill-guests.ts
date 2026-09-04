@@ -8,13 +8,16 @@
  * link. That also makes the script safe to re-run: bookings that already have a
  * guestId are skipped.
  *
- * Guests are grouped by CNIC first, then passport, then by name — a booking with
- * no identity at all gets no profile, because there is nothing to identify.
+ * Guests are grouped by CNIC first, then passport, then by name and number — a
+ * booking with no identity at all gets no profile, because there is nothing to
+ * identify. The matching rule is shared with the booking API (resolveGuestId),
+ * so a re-run cannot disagree with what the app creates day to day.
  *
- * Run once, after the schema reaches the target database:
- *   npx ts-node --project tsconfig.seed.json scripts/backfill-guests.ts
+ * Safe to re-run at any time:
+ *   npm run backfill:guests
  */
 import { PrismaClient } from '@prisma/client'
+import { sameGuest } from '../src/lib/guests'
 
 const prisma = new PrismaClient()
 
@@ -39,26 +42,38 @@ async function backfill() {
     const cnic = clean(b.guestCnic)
     const passport = clean(b.passportNumber)
     const name = clean(b.guestName)
+    const phone = clean(b.guestPhone)
 
     // Nothing to build a profile from
     if (!cnic && !passport && !name) { skipped++; continue }
 
-    /* Match on the identifiers that are actually unique to a person. Name is
-       the last resort and only used when there is no document number at all —
-       two different "Ahmed Khan" rows must not collapse into one person. */
+    /* Match on the identifiers that are actually unique to a person first, then
+       fall back to name + number. Two different "Ahmed Khan" rows with two
+       different numbers stay two people. */
     let guest =
       (cnic     ? await prisma.guest.findUnique({ where: { cnic } }) : null) ??
-      (passport ? await prisma.guest.findUnique({ where: { passportNumber: passport } }) : null) ??
-      (!cnic && !passport && name
-        ? await prisma.guest.findFirst({ where: { name, cnic: null, passportNumber: null } })
-        : null)
+      (passport ? await prisma.guest.findUnique({ where: { passportNumber: passport } }) : null)
 
-    if (!guest) {
+    if (!guest && name) {
+      const candidates = await prisma.guest.findMany({ where: { name: { equals: name, mode: 'insensitive' } } })
+      guest = candidates.find(c => sameGuest({ name: c.name, phone: c.phone }, { name, phone })) ?? null
+    }
+
+    if (guest) {
+      // The stay that finally carries a number completes the profile
+      const fill: Record<string, string> = {}
+      if (!guest.phone && phone) fill.phone = phone
+      if (!guest.cnic && cnic) fill.cnic = cnic
+      if (!guest.passportNumber && passport) fill.passportNumber = passport
+      if (Object.keys(fill).length > 0) {
+        await prisma.guest.update({ where: { id: guest.id }, data: fill }).catch(() => {})
+      }
+    } else {
       guest = await prisma.guest.create({
         data: {
           name:           name || cnic || passport || 'Unnamed guest',
           email:          clean(b.guestEmail),
-          phone:          clean(b.guestPhone),
+          phone,
           cnic,
           fatherName:     clean(b.guestFatherName),
           gender:         clean(b.guestGender),

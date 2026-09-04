@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown, ShieldCheck, BookOpen } from 'lucide-react'
+import Link from 'next/link'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -128,7 +130,9 @@ function BookingsInner() {
 
   // Auto-open booking modal when arriving from the calendar day view with ?checkIn=
   const searchParams = useSearchParams()
-  const view = searchParams.get('view') === 'hoteleye' ? 'hoteleye' : 'all'
+  /* Hotel Eye is the default view: the statutory 24-hour window is the only
+     thing on this page with a deadline, so landing on "All" buries it. */
+  const view = searchParams.get('view') === 'all' ? 'all' : 'hoteleye'
   useEffect(() => {
     const checkIn = searchParams.get('checkIn')
     if (!checkIn) return
@@ -667,7 +671,7 @@ function BookingsInner() {
   return (
     <div className="space-y-6">
       <PageHero
-        title={view === 'hoteleye' ? 'Hotel Eye Bookings' : 'All Bookings'}
+        title={<ViewSwitch view={view} />}
         description={
           view === 'hoteleye'
             ? `${total} stay${total === 1 ? '' : 's'} with a card on file`
@@ -917,8 +921,11 @@ function BookingsInner() {
                           </Badge>
                         </div>
 
-                        {/* Hotel Eye filing — state and remaining 24h window */}
-                        <div className="hidden md:block shrink-0">
+                        {/* Hotel Eye filing — state and remaining 24h window.
+                            Shown at every width: this is the default view and the
+                            only thing on the card with a legal deadline, so hiding
+                            it on a phone hides the one number the desk is judged on. */}
+                        <div className="shrink-0">
                           {(() => {
                             const fs = getFilingStatus(b)
                             const meta = FILING_STATE_META[fs.state]
@@ -1669,6 +1676,49 @@ function SumRow({ label, value, cls }: { label: string; value?: string | number;
       <span className="text-muted-foreground shrink-0">{label}</span>
       <span className={cn('text-right break-words max-w-[140px]', cls)}>{value}</span>
     </div>
+  )
+}
+
+const VIEWS = [
+  { key: 'hoteleye', label: 'Hotel Eye Bookings', hint: 'Stays with a card on file', icon: ShieldCheck },
+  { key: 'all',      label: 'All Bookings',       hint: 'Every stay on the books',  icon: BookOpen },
+] as const
+
+/**
+ * The page title doubles as the view switch. Both views are the same list under
+ * different filters, so the heading is the honest place to change it — the
+ * sidebar sub-menu is the same two links for anyone already looking elsewhere.
+ */
+function ViewSwitch({ view }: { view: 'hoteleye' | 'all' }) {
+  const current = VIEWS.find(v => v.key === view) ?? VIEWS[0]
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {/* No aria-label: it would override the content and leave the enclosing
+            h1 announced as "Switch booking view" instead of the page name. */}
+        <button
+          title="Switch view"
+          className="-ml-2 flex items-center gap-2 rounded-lg px-2 py-0.5 text-left transition-colors hover:bg-white/10"
+        >
+          <span className="font-display text-[1.6rem] font-semibold tracking-tight text-white">{current.label}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-white/60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        {VIEWS.map(v => (
+          <DropdownMenuItem key={v.key} asChild>
+            <Link href={`/dashboard/bookings?view=${v.key}`} className="cursor-pointer gap-2.5 py-2">
+              <v.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{v.label}</span>
+                <span className="block text-[11px] text-muted-foreground">{v.hint}</span>
+              </span>
+              {v.key === view && <Check className="h-4 w-4 shrink-0 text-primary" />}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
