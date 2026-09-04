@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
+import { hotelEyeSecretValid } from '@/lib/hotelEyeAuth'
 
 export const dynamic = 'force-dynamic'
 
-function checkSecret(req: NextRequest) {
-  const token = req.headers.get('x-hotel-eye-secret') || ''
-  const expected = process.env.HOTEL_EYE_SECRET || ''
-  if (!expected || token !== expected) return false
-  return true
-}
-
 // GET — Flask polls this every 10s to pick up the oldest pending job
 export async function GET(req: NextRequest) {
-  if (!checkSecret(req)) return apiError('Forbidden', 403)
+  if (!hotelEyeSecretValid(req.headers.get('x-hotel-eye-secret'))) {
+    return apiError('Forbidden', 403)
+  }
 
   // Atomic claim: SELECT ... FOR UPDATE SKIP LOCKED prevents two pollers grabbing the same job
   const rows = await prisma.$queryRaw<{ id: string; payload: unknown }[]>`

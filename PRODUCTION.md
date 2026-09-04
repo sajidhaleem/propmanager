@@ -133,6 +133,18 @@ NEXT_PUBLIC_APP_NAME="PropManager"
 NODE_ENV="production"
 NEXT_TELEMETRY_DISABLED="1"
 
+# Document scanners. Without it the CNIC, passport and expense scan buttons
+# fail while the rest of the app looks healthy.
+ANTHROPIC_API_KEY="sk-ant-..."
+
+# Shared secret for the Hotel Eye filing worker. It sends this as the
+# x-hotel-eye-secret header when polling /api/hotel-eye/poll for jobs.
+# That route fails CLOSED: unset here, every poll is rejected 403, queued
+# filings are never collected, and guests go unfiled past the 24-hour
+# statutory window with nothing in the UI indicating a problem.
+# Set the identical value on the worker.
+HOTEL_EYE_SECRET="<32+ random chars>"
+
 # ── GitHub Actions (Secrets → Repository secrets) ─────────────────
 # NETLIFY_AUTH_TOKEN   →  Netlify User Settings → Personal access tokens
 # NETLIFY_SITE_ID      →  Site Settings → General → Site ID
