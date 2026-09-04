@@ -23,7 +23,8 @@
     "db:clear": "ts-node --project tsconfig.seed.json scripts/clear-data.ts",
     "generate:icons": "node scripts/generate-icons.mjs",
     "type-check": "tsc --noEmit",
-    "prepare": "node scripts/generate-icons.mjs"
+    "prepare": "node scripts/generate-icons.mjs",
+    "backfill:guests": "ts-node --project tsconfig.seed.json scripts/backfill-guests.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
