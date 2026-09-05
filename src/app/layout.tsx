@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Fraunces } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { PWARegister } from '@/components/PWARegister'
@@ -83,6 +84,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.className} antialiased`}>
         <Providers>{children}</Providers>
         <PWARegister />
+        {/* Catchall: an Idea button that files notes into the personal inbox.
+            The token is write-only (add an item, nothing else) and lives in an env
+            var, so the button is simply absent wherever it isn't configured. */}
+        {process.env.NEXT_PUBLIC_CATCHALL_TOKEN && (
+          <Script
+            src="https://catchall-sajid.netlify.app/note.js"
+            data-token={process.env.NEXT_PUBLIC_CATCHALL_TOKEN}
+            data-source="52a"
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   )
