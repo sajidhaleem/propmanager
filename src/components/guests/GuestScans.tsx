@@ -63,7 +63,9 @@ export function GuestScans({ guestId, pending, onCnic, onPassport, onDropPending
   const havePassport = passportComplete(held)
 
   return (
-    <div className={cn('space-y-3', className)}>
+    /* Divided rather than boxed: each card is its own section on the rail's
+       surface, so nothing is a card inside a card. */
+    <div className={cn('space-y-4 divide-y divide-border/60 [&>*+*]:pt-4', className)}>
       {haveCnic ? (
         <HeldCard
           title="CNIC"
@@ -103,9 +105,9 @@ function HeldCard({
   retakable: boolean
 }) {
   return (
-    <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-        <Icon className="h-4 w-4 text-primary" />
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 text-sm font-medium">
+        <Icon className="h-3.5 w-3.5 text-primary" />
         {title} on file
         <span className="ml-auto flex items-center gap-1 text-[11px] font-medium text-green-600 dark:text-green-400">
           <ScanLine className="h-3 w-3" />Scanned

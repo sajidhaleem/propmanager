@@ -86,18 +86,23 @@ export function CnicScanner({ onExtracted, className }: Props) {
   const bothDone = front.state === 'done' && back.state === 'done'
 
   return (
-    <div className={cn('rounded-xl border bg-muted/30 p-4 space-y-3', className)}>
-      <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-        <ScanLine className="h-4 w-4 text-primary" />
-        CNIC Scanner — upload front &amp; back to auto-fill guest fields
+    /* No card chrome of its own: this sits inside a dialog or a side rail that
+       already provides the surface, and a card inside a card reads as clutter. */
+    <div className={cn('space-y-2.5', className)}>
+      <div className="space-y-0.5">
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <ScanLine className="h-3.5 w-3.5 text-primary" />
+          Scan CNIC
+        </p>
+        <p className="text-xs text-muted-foreground">Fills name, CNIC, father, gender and address.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {/* Front */}
         <input ref={frontRef} type="file" accept="image/*" className="hidden" onChange={e => pickFile(e, 'front')} />
         <DropZone
-          label="Front side"
-          hint="CNIC No · Name · DOB"
+          label="Front"
+          hint="Name, CNIC, DOB"
           data={front}
           dragging={frontDrag}
           onClick={() => front.state !== 'scanning' && frontRef.current?.click()}
@@ -110,7 +115,7 @@ export function CnicScanner({ onExtracted, className }: Props) {
         {/* Back */}
         <input ref={backRef} type="file" accept="image/*" className="hidden" onChange={e => pickFile(e, 'back')} />
         <DropZone
-          label="Back side"
+          label="Back"
           hint="Address"
           data={back}
           dragging={backDrag}
@@ -123,10 +128,10 @@ export function CnicScanner({ onExtracted, className }: Props) {
       </div>
 
       {bothDone && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900/40 px-3 py-2 text-sm text-green-700 dark:text-green-300">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Both sides scanned — all guest fields populated
-        </div>
+        <p className="flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          Both sides read. Check the fields before saving.
+        </p>
       )}
     </div>
   )
@@ -156,7 +161,7 @@ function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, on
     <div
       className={cn(
         'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed',
-        'min-h-[120px] p-3 text-center gap-1.5 select-none transition-colors',
+        'min-h-[96px] p-2.5 text-center gap-1 select-none transition-colors',
         !preview && 'cursor-pointer',
         dragging       && 'border-primary bg-primary/5',
         !dragging && !preview && 'border-border hover:border-primary/50 hover:bg-muted/50',
@@ -204,8 +209,7 @@ function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, on
               : <ImageIcon className="h-5 w-5 text-muted-foreground" />
             }
             <span className="text-xs font-semibold">{label}</span>
-            <span className="text-[10px] text-muted-foreground">{hint}</span>
-            <span className="text-[10px] text-muted-foreground">Drop or click to upload</span>
+            <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>
           </>
         )}
       </div>

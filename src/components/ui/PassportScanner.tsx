@@ -75,17 +75,22 @@ export function PassportScanner({ onExtracted, className }: Props) {
   const error    = state === 'error'
 
   return (
-    <div className={cn('rounded-xl border bg-muted/30 p-4 space-y-3', className)}>
-      <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-        <ScanLine className="h-4 w-4 text-primary" />
-        Passport Scanner — upload the bio/data page to auto-fill guest fields
+    /* No card chrome of its own: this sits inside a dialog or a side rail that
+       already provides the surface, and a card inside a card reads as clutter. */
+    <div className={cn('space-y-2.5', className)}>
+      <div className="space-y-0.5">
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <ScanLine className="h-3.5 w-3.5 text-primary" />
+          Scan passport
+        </p>
+        <p className="text-xs text-muted-foreground">Bio page fills number, nationality and expiry.</p>
       </div>
 
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={pickFile} />
       <div
         className={cn(
           'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed',
-          'min-h-[120px] p-3 text-center gap-1.5 select-none transition-colors',
+          'min-h-[96px] p-2.5 text-center gap-1 select-none transition-colors',
           !preview && 'cursor-pointer',
           dragging       && 'border-primary bg-primary/5',
           !dragging && !preview && 'border-border hover:border-primary/50 hover:bg-muted/50',
@@ -130,9 +135,8 @@ export function PassportScanner({ onExtracted, className }: Props) {
                 ? <Upload className="h-5 w-5 text-primary" />
                 : <ImageIcon className="h-5 w-5 text-muted-foreground" />
               }
-              <span className="text-xs font-semibold">Bio / data page</span>
-              <span className="text-[10px] text-muted-foreground">Passport # · Name · Nationality · Expiry</span>
-              <span className="text-[10px] text-muted-foreground">Drop or click to upload</span>
+              <span className="text-xs font-semibold">Bio page</span>
+              <span className="text-[10px] leading-tight text-muted-foreground">Drop or click to upload</span>
             </>
           )}
         </div>

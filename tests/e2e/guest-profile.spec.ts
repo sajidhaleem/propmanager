@@ -74,6 +74,58 @@ test.describe('Guest profile board', () => {
 })
 
 /**
+ * The edit dialog. It holds thirteen fields and a scanner, which is exactly the
+ * shape that turns into an undifferentiated wall unless the fields are grouped
+ * and the actions stay put.
+ */
+test.describe('Guest edit dialog', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signIn(context, baseURL!)
+    await stubApi(context)
+  })
+
+  const openDialog = async (page: import('@playwright/test').Page) => {
+    await page.goto('/dashboard/guests')
+    await waitForData(page, 'Hamza Naeem')
+    await page.getByRole('button', { name: 'Edit Hamza Naeem' }).click()
+    return page.getByRole('dialog')
+  }
+
+  test('groups the fields instead of listing thirteen in a row', async ({ page }) => {
+    const dialog = await openDialog(page)
+    for (const section of ['Identity', 'Contact', 'Address', 'Travel document', 'Notes']) {
+      await expect(dialog.getByRole('heading', { name: section })).toBeVisible()
+    }
+  })
+
+  /* The old layout put the scanners first and pushed Save off the bottom, so
+     saving meant scrolling past everything to find the button. */
+  test('keeps Save reachable without scrolling', async ({ page }) => {
+    const dialog = await openDialog(page)
+    await expect(dialog.getByRole('button', { name: 'Save changes' })).toBeInViewport()
+  })
+
+  test('scanning sits beside the fields, not on top of them', async ({ page }) => {
+    const dialog = await openDialog(page)
+    await expect(dialog.getByText('Identity documents')).toBeVisible()
+    // the name field is still the first thing in reading order
+    await expect(dialog.getByLabel(/Full name/)).toBeVisible()
+  })
+
+  /* An error reported only as a toast tells you something is wrong but not
+     where, and the toast is gone before you find it. */
+  test('reports a missing name under the field, not as a toast', async ({ page }) => {
+    const dialog = await openDialog(page)
+    await dialog.getByLabel(/Full name/).fill('')
+    await dialog.getByRole('button', { name: 'Save changes' }).click()
+
+    const nameInput = dialog.getByLabel(/Full name/)
+    await expect(nameInput).toHaveAttribute('aria-invalid', 'true')
+    await expect(dialog.getByText(/at least two characters/i)).toBeVisible()
+  })
+})
+
+/**
  * The booking form's guest name is the saved register, searched as it is typed.
  * Picking a profile is what stops one person becoming three spellings.
  */
@@ -121,8 +173,8 @@ test.describe('Booking — searchable guest name', () => {
     await expect(page.getByRole('img', { name: 'CNIC front' })).toBeVisible()
     await expect(page.getByRole('img', { name: 'CNIC back' })).toBeVisible()
     // the CNIC scanner is gone; the passport one is still offered
-    await expect(page.getByText(/CNIC Scanner/i)).toHaveCount(0)
-    await expect(page.getByText(/Passport Scanner/i)).toBeVisible()
+    await expect(page.getByText(/Scan CNIC/i)).toHaveCount(0)
+    await expect(page.getByText(/Scan passport/i)).toBeVisible()
   })
 
   test('offers both scanners for a guest with no card at all', async ({ page }) => {
@@ -130,8 +182,8 @@ test.describe('Booking — searchable guest name', () => {
     await nameField.fill('Nadia')
     await page.getByRole('button', { name: /Nadia Visitor/ }).click()
 
-    await expect(page.getByText(/CNIC Scanner/i)).toBeVisible()
-    await expect(page.getByText(/Passport Scanner/i)).toBeVisible()
+    await expect(page.getByText(/Scan CNIC/i)).toBeVisible()
+    await expect(page.getByText(/Scan passport/i)).toBeVisible()
   })
 
   /* A desk must never be blocked from taking a booking because the profile does
