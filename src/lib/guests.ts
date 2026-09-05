@@ -18,20 +18,28 @@ export type Guest = {
   _count?: { bookings: number }
 }
 
+/* Every field the desk can leave empty is nullish, not merely optional.
+   The API stores a blank as null and hands null back on read, so a schema that
+   accepted only `string | undefined` refused the exact record it had just
+   returned: editing a guest with no email address failed on save, and the union
+   reported it as the bare Zod default, "Invalid input" — a message naming
+   neither the field nor the reason. */
+const optionalText = () => z.string().nullish()
+
 export const guestSchema = z.object({
   name:           z.string().min(2, 'Guest name is required'),
-  email:          z.string().email().or(z.literal('')).optional(),
-  phone:          z.string().optional(),
-  cnic:           z.string().optional(),
-  fatherName:     z.string().optional(),
-  gender:         z.string().optional(),
-  address:        z.string().optional(),
-  province:       z.string().optional(),
-  district:       z.string().optional(),
-  passportNumber: z.string().optional(),
-  nationality:    z.string().optional(),
-  passportExpiry: z.string().optional(),
-  notes:          z.string().optional(),
+  email:          z.string().email('Enter a valid email address').or(z.literal('')).nullish(),
+  phone:          optionalText(),
+  cnic:           optionalText(),
+  fatherName:     optionalText(),
+  gender:         optionalText(),
+  address:        optionalText(),
+  province:       optionalText(),
+  district:       optionalText(),
+  passportNumber: optionalText(),
+  nationality:    optionalText(),
+  passportExpiry: optionalText(),
+  notes:          optionalText(),
 })
 
 /**
