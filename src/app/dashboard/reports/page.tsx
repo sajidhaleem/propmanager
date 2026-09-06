@@ -44,7 +44,7 @@ type Status = 'excellent' | 'strong' | 'good' | 'opportunity' | 'warning' | 'urg
 const STATUS_META: Record<Status, { label: string; bg: string; text: string; ring: string; glow: string }> = {
   excellent:   { label: 'Excellent',    bg: 'bg-green-100 dark:bg-green-900/30',   text: 'text-green-700 dark:text-green-300',  ring: 'ring-green-400',  glow: 'rgba(34,197,94,0.12)' },
   strong:      { label: 'Strong',       bg: 'bg-green-100 dark:bg-green-900/30',   text: 'text-green-700 dark:text-green-300',  ring: 'ring-green-400',  glow: 'rgba(34,197,94,0.12)' },
-  good:        { label: 'Good',         bg: 'bg-blue-100 dark:bg-blue-900/30',     text: 'text-blue-700 dark:text-blue-300',    ring: 'ring-blue-400',   glow: 'rgba(59,130,246,0.12)' },
+  good:        { label: 'Good',         bg: 'bg-sky-100 dark:bg-sky-900/30',       text: 'text-sky-700 dark:text-sky-300',      ring: 'ring-sky-400',    glow: 'rgba(56,189,248,0.12)' },
   opportunity: { label: 'Opportunity',  bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300',ring: 'ring-purple-400', glow: 'rgba(168,85,247,0.12)' },
   warning:     { label: 'Needs Work',   bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300',ring: 'ring-yellow-400', glow: 'rgba(234,179,8,0.12)' },
   urgent:      { label: 'Urgent',       bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-300',      ring: 'ring-red-400',    glow: 'rgba(239,68,68,0.12)' },
@@ -55,7 +55,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; text: string; rin
 const STATUS_ACCENT: Record<Status, { accentBg: string; accentText: string; accentSection: string }> = {
   excellent:   { accentBg: 'bg-green-500',  accentText: 'text-green-700 dark:text-green-300',   accentSection: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/40' },
   strong:      { accentBg: 'bg-emerald-500',accentText: 'text-emerald-700 dark:text-emerald-300',accentSection: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40' },
-  good:        { accentBg: 'bg-blue-500',   accentText: 'text-blue-700 dark:text-blue-300',     accentSection: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/40' },
+  good:        { accentBg: 'bg-sky-500',    accentText: 'text-sky-700 dark:text-sky-300',       accentSection: 'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/40' },
   opportunity: { accentBg: 'bg-purple-500', accentText: 'text-purple-700 dark:text-purple-300', accentSection: 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-900/40' },
   warning:     { accentBg: 'bg-yellow-500', accentText: 'text-yellow-700 dark:text-yellow-300', accentSection: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/40' },
   urgent:      { accentBg: 'bg-red-500',    accentText: 'text-red-700 dark:text-red-300',       accentSection: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40' },

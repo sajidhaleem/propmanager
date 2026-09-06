@@ -9,6 +9,10 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './tests/e2e',
+  /* The capture run writes screenshots and asserts almost nothing, so it stays
+     out of the suite and is invoked by name when a visual change needs review:
+       npx playwright test capture-preview --project=chromium */
+  testIgnore: '**/capture-preview.spec.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

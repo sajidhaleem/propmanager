@@ -78,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="msapplication-TileColor" content="#3b82f6" />
+        <meta name="msapplication-TileColor" content="#D4AF37" />
         <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
       </head>
       <body className={`${inter.className} antialiased`}>

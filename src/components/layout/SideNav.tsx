@@ -219,7 +219,7 @@ export function SideNav() {
         </nav>
 
         {/* Tonight's filing position — the nav says what needs doing, not just where things are */}
-        {compliance && has('bookings') && (
+        {compliance && has('bookings') && pathname !== '/dashboard' && (
           <ComplianceCard compliance={compliance} collapsed={collapsed} />
         )}
 

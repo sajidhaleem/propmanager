@@ -13,7 +13,7 @@ interface MagicCardProps {
 export function MagicCard({
   children,
   className,
-  glowColor = 'rgba(59,130,246,0.10)',
+  glowColor = 'rgba(212,175,55,0.10)',
 }: MagicCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })

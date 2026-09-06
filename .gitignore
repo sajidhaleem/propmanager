@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Screenshot capture output (tests/e2e/capture-preview.spec.ts)
+preview/

@@ -14,6 +14,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
+import { TonightStrip } from '@/components/dashboard/TonightStrip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -212,6 +213,16 @@ export default function DashboardPage() {
     return { month, revenue: rev?.revenue || 0, expenses: exp?.expenses || 0 }
   })
 
+  /* Spend on its own is a number; spend against revenue is a judgement. Guarded
+     because a month with no revenue yet would divide by zero. */
+  const expenseRatio = (stats?.totalRevenue || 0) > 0
+    ? `${Math.round(((stats?.totalExpenses || 0) / (stats?.totalRevenue || 1)) * 100)}% of revenue`
+    : 'No revenue yet this month'
+
+  const revenuePerProperty = (stats?.totalProperties || 0) > 0
+    ? `${format(Math.round((stats?.totalRevenue || 0) / (stats?.totalProperties || 1)))} per room`
+    : 'No rooms yet'
+
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'
 
@@ -227,7 +238,10 @@ export default function DashboardPage() {
           caption: 'Revenue this month · vs last month',
         }}
         metrics={[
-          { label: 'Net income',   value: format((stats?.totalRevenue||0)-(stats?.totalExpenses||0)), tone: 'positive' },
+          /* Tone follows the sign. This was pinned to positive, so a month that lost
+             money announced the loss in the colour reserved for good news. */
+          { label: 'Net income',   value: format((stats?.totalRevenue||0)-(stats?.totalExpenses||0)),
+            tone: ((stats?.totalRevenue||0)-(stats?.totalExpenses||0)) < 0 ? 'negative' : 'positive' },
           { label: 'Occupancy',    value: `${stats?.occupancyRate||0}%`, hint: `${stats?.bookedNights||0} nights booked` },
           { label: 'Active stays', value: stats?.activeBookings ?? 0, hint: `${stats?.pendingBookings||0} pending` },
           { label: 'Outstanding',  value: format(stats?.outstandingAmount||0), tone: 'warning', hint: 'Unpaid balance' },
@@ -242,29 +256,35 @@ export default function DashboardPage() {
         </Button>
       </PageHero>
 
+      {/* The deadline, before the figures. Nothing else on this page has one. */}
+      {!isLoading && <TonightStrip />}
+
       {/* Quick links — figures the hero doesn't already carry */}
       {!isLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Link href="/dashboard/bookings" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Total Bookings"    value={stats?.totalBookings||0}         icon={<BookOpen className="h-5 w-5" />}   color="blue"   index={0} />
+            <StatsCard title="Total Bookings"    value={stats?.totalBookings||0}         subtitle={`${stats?.activeBookings||0} active · ${stats?.pendingBookings||0} pending`} icon={<BookOpen className="h-5 w-5" />}   color="blue"   index={0} />
           </Link>
           <Link href="/dashboard/properties" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Active Properties" value={stats?.totalProperties||0}       icon={<Building2 className="h-5 w-5" />}  color="violet" index={1} />
+            <StatsCard title="Active Properties" value={stats?.totalProperties||0}       subtitle={revenuePerProperty} icon={<Building2 className="h-5 w-5" />}  color="violet" index={1} />
           </Link>
           <Link href="/dashboard/expenses" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} icon={<CreditCard className="h-5 w-5" />} color="red"    index={2} />
+            <StatsCard title="Monthly Expenses"  value={format(stats?.totalExpenses||0)} subtitle={expenseRatio} icon={<CreditCard className="h-5 w-5" />} color="red"    index={2} />
           </Link>
           <Link href="/dashboard/calendar" className="block hover:opacity-90 transition-opacity">
-            <StatsCard title="Nights Booked"     value={stats?.bookedNights||0} subtitle="This month" icon={<CalendarCheck className="h-5 w-5" />} color="cyan"   index={3} />
+            <StatsCard title="Nights Booked"     value={stats?.bookedNights||0} subtitle={`${stats?.occupancyRate||0}% occupancy`} icon={<CalendarCheck className="h-5 w-5" />} color="cyan"   index={3} />
           </Link>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      {/* items-stretch and h-full: the two cards used to size to their own
+          contents and disagree, leaving a ragged step along the bottom of the
+          row that read as dead space rather than as rhythm. */}
+      <div className="grid items-stretch gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 [&>*]:h-full">
           <RevenueChart data={chartData} />
         </div>
-        <div>
+        <div className="[&>*]:h-full">
           {bookingsByPlatform.length > 0
             ? <PlatformChart data={bookingsByPlatform} />
             : <Card className="flex items-center justify-center h-full min-h-[280px]"><p className="text-sm text-muted-foreground">No platform data yet</p></Card>}

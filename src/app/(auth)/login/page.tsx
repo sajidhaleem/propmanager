@@ -90,7 +90,7 @@ function LoginForm() {
         />
 
         {/* Spotlight from aceternity */}
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#3b82f6" />
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#D4AF37" />
 
         {/* ambient glow blobs */}
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[130px] pointer-events-none" />
