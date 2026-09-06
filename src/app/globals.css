@@ -6,103 +6,146 @@
    PREMIUM DESIGN TOKENS — Linear / Stripe / Vercel inspired
    ============================================================ */
 
+/* ── Midnight & Gold ─────────────────────────────────────────────────────────
+   The identity is a dark one: #0B0F19 ground, #161F30 surfaces, #F3F4F6 text,
+   #D4AF37 accent. Light mode is an ivory counterpart of the same palette so the
+   theme toggle keeps working; the product's character lives in dark.
+
+   Gold, not the amber alternative, because amber is already spoken for in this
+   app: it means "filing due soon" on the compliance banner and "outstanding" on
+   a balance. A brand accent sharing a colour with a deadline warning would make
+   the Save button and the thing you are being warned about indistinguishable.
+
+   Elevation is luminance. Surfaces rise toward the light in a fixed ladder,
+   which is what makes the spatial depth read as depth rather than as decoration:
+     canvas 4%  →  frame 7%  →  surface 14%  →  raised 17%  →  overlay 20%
+   ──────────────────────────────────────────────────────────────────────────── */
+
 @layer base {
   :root {
-    /* — Background (cool neutral — same family as the spatial dark theme) */
-    --background: 220 20% 97%;
-    --foreground: 222 30% 9%;
+    /* Ivory ground, same gold */
+    --background: 40 28% 97%;
+    --foreground: 223 39% 10%;
 
-    /* — Surface */
     --card: 0 0% 100%;
-    --card-foreground: 222 30% 9%;
+    --card-foreground: 223 39% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 30% 9%;
+    --popover-foreground: 223 39% 10%;
 
-    /* — Brand (electric blue) */
-    --app-canvas: 220 24% 92%;
-    --primary: 217 91% 55%;
-    --primary-foreground: 0 0% 100%;
+    --app-canvas: 40 20% 91%;
+    /* Deeper than #D4AF37: the brief's gold on white is 1.9:1, unreadable as
+       text or as a button ground. This is the same hue carrying real contrast. */
+    --primary: 42 72% 34%;
+    --primary-foreground: 40 40% 98%;
+    /* The literal brief gold, for large decorative marks only, never body text */
+    --gold: 46 65% 52%;
 
-    /* — Neutral */
-    --secondary: 220 18% 93%;
-    --secondary-foreground: 222 16% 28%;
-    --muted: 220 18% 93%;
-    --muted-foreground: 222 10% 38%;
-    --accent: 250 30% 92%;
-    --accent-foreground: 222 20% 15%;
+    --secondary: 40 16% 93%;
+    --secondary-foreground: 223 20% 28%;
+    --muted: 40 16% 93%;
+    --muted-foreground: 223 10% 38%;
+    --accent: 42 40% 92%;
+    --accent-foreground: 223 30% 15%;
 
-    /* — Status */
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --success: 168 70% 34%;
-    --warning: 38 92% 50%;
-    --violet: 258 90% 66%;
+    --success: 168 70% 30%;
+    --warning: 38 92% 42%;
+    --violet: 258 60% 52%;
 
-    /* — Structure */
-    --border: 220 14% 87%;
-    --input: 220 14% 87%;
-    --ring: 217 91% 55%;
+    --border: 40 14% 86%;
+    --input: 40 14% 84%;
+    --ring: 42 72% 40%;
     --radius: 0.875rem;
 
-    /* — Sidebar (deep navy — matches dark theme ground) */
-    --sidebar-background: 226 40% 8%;
-    --sidebar-foreground: 210 30% 97%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 223 28% 16%;
-    --sidebar-accent-foreground: 210 30% 97%;
-    --sidebar-border: 222 24% 20%;
-    --sidebar-ring: 217 91% 60%;
-    --sidebar-muted: 216 14% 62%;
+    --sidebar-background: 223 39% 7%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 46 65% 52%;
+    --sidebar-primary-foreground: 223 39% 7%;
+    --sidebar-accent: 219 30% 18%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 219 24% 22%;
+    --sidebar-ring: 46 65% 52%;
+    --sidebar-muted: 220 12% 66%;
 
-    /* — Shadows */
+    /* Elevation ladder, referenced by the surface utilities */
+    --elev-1: 0 0% 100%;
+    --elev-2: 40 30% 99%;
+    --elev-3: 0 0% 100%;
+    /* The edge that catches light. Dark mode makes this a real highlight. */
+    --edge: 40 14% 80%;
+    --edge-strength: 0.9;
+
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* ── Functional motion ──────────────────────────────────────────────
+       Two curves and three durations, so every transition in the app is
+       one of a handful of deliberate choices. Nothing over 260ms: past
+       that a UI stops feeling responsive and starts feeling slow. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+    --dur-fast: 120ms;
+    --dur: 180ms;
+    --dur-slow: 260ms;
   }
 
   .dark {
-    /* Deep navy ground — the app frame floats on --app-canvas, panels sit on --card */
-    --app-canvas: 224 28% 22%;
-    --background: 226 38% 9%;
-    --foreground: 210 30% 97%;
+    /* #0B0F19 */
+    --background: 223 39% 7%;
+    --foreground: 220 14% 96%;
 
-    --card: 224 34% 13%;
-    --card-foreground: 210 30% 97%;
-    --popover: 224 36% 12%;
-    --popover-foreground: 210 30% 97%;
+    /* #161F30 */
+    --card: 219 37% 14%;
+    --card-foreground: 220 14% 96%;
+    --popover: 219 35% 16%;
+    --popover-foreground: 220 14% 96%;
 
-    /* Electric blue */
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    /* Deeper than the frame, so the app reads as floating above the ground */
+    --app-canvas: 224 44% 4%;
 
-    --secondary: 223 28% 18%;
-    --secondary-foreground: 213 20% 76%;
-    --muted: 223 28% 18%;
-    --muted-foreground: 216 16% 70%;
-    --accent: 223 28% 18%;
-    --accent-foreground: 210 30% 97%;
+    /* #D4AF37. The foreground on it is near-black, not white: white on this
+       gold is 2.1:1 and fails WCAG outright, which is the single easiest way
+       to ruin a gold accent. Near-black on it is 8.7:1. */
+    --primary: 46 65% 52%;
+    --primary-foreground: 223 39% 7%;
+    --gold: 46 65% 52%;
+
+    --secondary: 219 30% 18%;
+    --secondary-foreground: 220 12% 78%;
+    --muted: 219 30% 18%;
+    --muted-foreground: 220 14% 70%;
+    --accent: 219 30% 20%;
+    --accent-foreground: 220 14% 96%;
 
     --destructive: 0 74% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 66% 47%;
-    --violet: 258 90% 72%;
+    --warning: 38 92% 50%;
+    --violet: 258 70% 70%;
 
-    --border: 222 24% 22%;
-    --input: 222 24% 20%;
-    --ring: 217 91% 60%;
+    --border: 219 24% 22%;
+    --input: 219 24% 24%;
+    --ring: 46 65% 52%;
 
-    --sidebar-background: 226 40% 8%;
-    --sidebar-foreground: 210 30% 97%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 223 28% 16%;
-    --sidebar-accent-foreground: 210 30% 97%;
-    --sidebar-border: 222 24% 20%;
-    --sidebar-ring: 217 91% 60%;
-    --sidebar-muted: 216 14% 62%;
+    --sidebar-background: 223 42% 5%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 46 65% 52%;
+    --sidebar-primary-foreground: 223 39% 7%;
+    --sidebar-accent: 219 30% 18%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 219 24% 20%;
+    --sidebar-ring: 46 65% 52%;
+    --sidebar-muted: 220 12% 66%;
+
+    --elev-1: 219 37% 14%;
+    --elev-2: 219 34% 17%;
+    --elev-3: 219 32% 20%;
+    --edge: 0 0% 100%;
+    --edge-strength: 0.08;
   }
 }
 
@@ -159,80 +202,153 @@
     -webkit-backdrop-filter: blur(12px) saturate(180%);
   }
 
-  /* Spatial glass panel — floating, semi-transparent, thin glow edge.
-     Light mode falls back to a plain elevated card (frosted glass over a
-     white ground reads as "dirty", not premium). */
+  /* ── Surfaces ───────────────────────────────────────────────────────────
+     Glass costs a compositor layer and a per-frame blur, so it is spent only
+     where something is genuinely behind the surface: overlays, the sticky
+     rail, the hero. A blurred card sitting on a flat page is paying that cost
+     to blur a solid colour. Resting cards are opaque and carry their depth in
+     the edge and the shadow instead. */
+
+  /* elev-1: resting surface. No blur. */
+  .surface {
+    background: hsl(var(--elev-1));
+    border: 1px solid hsl(var(--border));
+    box-shadow:
+      inset 0 1px 0 0 hsl(var(--edge) / calc(var(--edge-strength) * 0.6)),
+      0 1px 2px 0 hsl(223 50% 2% / 0.06);
+    @apply rounded-2xl;
+  }
+
+  /* elev-3: overlays. Real glass, because real content sits behind them. */
   .glass-panel {
     @apply rounded-2xl border bg-card shadow-sm;
   }
   .dark .glass-panel {
-    /* Opaque enough that menus/dialogs layered over content stay legible */
-    background: hsl(var(--card) / 0.92);
-    border-color: hsl(0 0% 100% / 0.08);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    /* Opaque enough that a dialog over a dense table stays legible. Below
+       about 0.82 the text behind starts competing with the text in front. */
+    background: hsl(var(--elev-3) / 0.86);
+    border-color: hsl(var(--edge) / calc(var(--edge-strength) * 1.4));
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
     box-shadow:
-      0 1px 0 0 hsl(0 0% 100% / 0.06) inset,
-      0 20px 40px -16px hsl(222 60% 2% / 0.55),
-      0 2px 8px -2px hsl(222 60% 2% / 0.4);
+      inset 0 1px 0 0 hsl(var(--edge) / calc(var(--edge-strength) * 1.6)),
+      0 24px 56px -20px hsl(223 60% 1% / 0.72),
+      0 2px 10px -2px hsl(223 60% 1% / 0.5);
   }
 
-  /* The whole app sits in a rounded frame floating on a lighter canvas */
-  .app-canvas { background: hsl(var(--app-canvas)); }
+  /* The whole app sits in a rounded frame floating above a deeper canvas */
+  .app-canvas {
+    background:
+      radial-gradient(130% 90% at 78% -10%, hsl(var(--gold) / 0.10) 0%, transparent 58%),
+      hsl(var(--app-canvas));
+  }
   .app-frame {
     background: hsl(var(--background));
     @apply rounded-none lg:rounded-[28px] lg:border;
   }
   .dark .app-frame {
-    border-color: hsl(0 0% 100% / 0.07);
-    box-shadow: 0 40px 80px -24px hsl(226 50% 3% / 0.7);
+    border-color: hsl(var(--edge) / calc(var(--edge-strength) * 1.1));
+    box-shadow:
+      inset 0 1px 0 0 hsl(var(--edge) / calc(var(--edge-strength) * 0.8)),
+      0 48px 96px -32px hsl(223 60% 1% / 0.8);
   }
 
-  /* Floating pill nav bar */
+  /* elev-2: raised. Glass, because the page scrolls underneath it. */
   .nav-pill {
     @apply rounded-full border;
   }
   .dark .nav-pill {
-    background: hsl(var(--card) / 0.75);
-    border-color: hsl(0 0% 100% / 0.07);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    background: hsl(var(--elev-2) / 0.72);
+    border-color: hsl(var(--edge) / var(--edge-strength));
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
   }
 
-  /* Electric-blue gradient — hero panels and primary CTAs */
+  /* Gold, for the mark and for primary calls to action */
   .bg-gradient-brand {
-    background: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(221 83% 53%) 55%, hsl(226 71% 44%) 100%);
+    background: linear-gradient(135deg, hsl(46 78% 62%) 0%, hsl(46 65% 52%) 52%, hsl(40 62% 40%) 100%);
   }
+  /* Midnight, for hero panels. Warmed toward the gold at the light source so
+     the two read as one palette rather than a dark box with a yellow button. */
   .bg-gradient-panel {
-    background: linear-gradient(150deg, hsl(220 60% 26%) 0%, hsl(224 48% 17%) 48%, hsl(226 40% 13%) 100%);
+    background:
+      radial-gradient(120% 100% at 88% -20%, hsl(46 40% 26% / 0.55) 0%, transparent 60%),
+      linear-gradient(150deg, hsl(219 40% 18%) 0%, hsl(221 40% 11%) 55%, hsl(223 39% 7%) 100%);
   }
 
   /* Depth layering — use on panels that should visibly float above the one below */
   .depth-1 { @apply shadow-md; }
-  .dark .depth-1 { box-shadow: 0 12px 28px -12px hsl(222 60% 2% / 0.6); }
+  .dark .depth-1 { box-shadow: 0 14px 32px -14px hsl(223 60% 1% / 0.66); }
   .depth-2 { @apply shadow-lg; }
-  .dark .depth-2 { box-shadow: 0 24px 48px -16px hsl(222 60% 2% / 0.65); }
+  .dark .depth-2 { box-shadow: 0 28px 56px -18px hsl(223 60% 1% / 0.72); }
+
+  /* Grain. Glass without it reads as plastic: a perfectly smooth translucent
+     surface has no analogue in the physical world. Applied to the frame only,
+     so it costs one element rather than one per card. */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 
   /* Neon glow accents — sparing use only, on focal/critical elements */
-  .glow-cyan {
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px 0 hsl(var(--primary) / 0.35);
+  .glow-gold {
+    box-shadow: 0 0 0 1px hsl(var(--gold) / 0.45), 0 0 28px -4px hsl(var(--gold) / 0.38);
   }
   .glow-violet {
     box-shadow: 0 0 0 1px hsl(var(--violet) / 0.4), 0 0 24px 0 hsl(var(--violet) / 0.32);
   }
-  .text-glow-cyan { text-shadow: 0 0 16px hsl(var(--primary) / 0.5); }
+  .text-glow-gold { text-shadow: 0 0 18px hsl(var(--gold) / 0.5); }
 
-  /* Card hover — lift only on devices that actually hover */
+  /* ── Functional motion ─────────────────────────────────────────────────
+     Motion here answers a question the user is already asking: did that
+     register, where did this come from, what changed. Transform and opacity
+     only, so every one of these runs on the compositor. */
+
+  /* Did that register. Every pressable thing, one rule. */
+  .press {
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .press:active { transform: scale(0.97); }
+
+  /* This is reachable. Lift only where a pointer can actually hover. */
   .card-hover {
-    @apply transition-[transform,box-shadow] duration-200;
+    transition:
+      transform var(--dur) var(--ease-out),
+      box-shadow var(--dur) var(--ease-out),
+      border-color var(--dur) var(--ease-out);
   }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      @apply shadow-md -translate-y-0.5;
+      transform: translateY(-2px);
+      border-color: hsl(var(--gold) / 0.28);
+      box-shadow: 0 10px 24px -10px hsl(223 60% 1% / 0.4);
     }
     .dark .card-hover:hover {
-      box-shadow: 0 24px 48px -16px hsl(222 60% 2% / 0.65);
+      box-shadow:
+        inset 0 1px 0 0 hsl(var(--edge) / calc(var(--edge-strength) * 1.6)),
+        0 24px 48px -16px hsl(223 60% 1% / 0.7);
     }
+  }
+
+  /* You are here. A gold rule against the rail, not a glow behind the label. */
+  .rail-active {
+    position: relative;
+    color: hsl(var(--sidebar-primary));
+    background: hsl(var(--gold) / 0.10);
+  }
+  .rail-active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%;
+    height: 60%; width: 2px;
+    border-radius: 2px;
+    background: hsl(var(--gold));
+    transform: translateY(-50%);
   }
 
   /* Focus ring */
@@ -244,9 +360,9 @@
   .bg-gradient-premium {
     background: linear-gradient(
       135deg,
-      hsl(222 32% 8%) 0%,
-      hsl(222 28% 5%) 50%,
-      hsl(258 30% 9%) 100%
+      hsl(221 40% 10%) 0%,
+      hsl(223 39% 7%) 50%,
+      hsl(224 44% 4%) 100%
     );
   }
 
@@ -255,7 +371,7 @@
     background: linear-gradient(
       90deg,
       hsl(var(--muted)) 25%,
-      hsl(var(--accent)) 50%,
+      hsl(var(--gold) / 0.14) 50%,
       hsl(var(--muted)) 75%
     );
     background-size: 200% 100%;
@@ -265,7 +381,7 @@
   /* Status indicators */
   .dot-online { @apply h-2 w-2 rounded-full bg-green-500 ring-2 ring-green-500/20; }
   .dot-offline { @apply h-2 w-2 rounded-full bg-gray-400; }
-  .dot-busy { @apply h-2 w-2 rounded-full bg-yellow-500 ring-2 ring-yellow-500/20; }
+  .dot-busy { @apply h-2 w-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20; }
 
   /* Mobile safe content area */
   .content-safe {
@@ -425,15 +541,8 @@
 
 @layer components {
   .stat-card {
-    @apply relative overflow-hidden rounded-xl border bg-card p-6
-           shadow-sm transition-shadow duration-200 hover:shadow-md;
+    @apply surface card-hover relative overflow-hidden p-6;
   }
-
-  .stat-card-blue   { @apply border-blue-100 dark:border-blue-900/40; }
-  .stat-card-green  { @apply border-green-100 dark:border-green-900/40; }
-  .stat-card-yellow { @apply border-yellow-100 dark:border-yellow-900/40; }
-  .stat-card-red    { @apply border-red-100 dark:border-red-900/40; }
-  .stat-card-purple { @apply border-purple-100 dark:border-purple-900/40; }
 }
 
 /* ============================================================
@@ -442,11 +551,7 @@
 
 @layer components {
   .nav-active {
-    background: hsl(var(--sidebar-primary) / 0.14);
-    @apply text-sidebar-primary font-medium;
-  }
-  .dark .nav-active {
-    box-shadow: inset 0 0 0 1px hsl(var(--sidebar-primary) / 0.25), 0 0 20px -4px hsl(var(--sidebar-primary) / 0.4);
+    @apply rail-active font-medium;
   }
 }
 
@@ -490,7 +595,12 @@
     transform: none !important;
   }
 
-  .card-hover:hover {
+  .card-hover:hover,
+  .press:active {
     transform: none;
+  }
+
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
   }
 }

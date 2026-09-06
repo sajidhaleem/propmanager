@@ -119,10 +119,12 @@ export default function PropertiesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((p, i) => {
             const COLORS = [
-              { bar: 'from-blue-400 to-blue-600',     glow: 'rgba(59,130,246,0.12)',  icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
-              { bar: 'from-violet-400 to-violet-600', glow: 'rgba(139,108,232,0.12)', icon: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
-              { bar: 'from-cyan-400 to-cyan-600',     glow: 'rgba(34,211,238,0.12)',  icon: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
-              { bar: 'from-indigo-400 to-indigo-600', glow: 'rgba(99,102,241,0.12)',  icon: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
+              /* A rotation, so adjacent property cards stay distinguishable.
+                 Gold leads; the rest step away from it rather than competing. */
+              { bar: 'from-[hsl(46_78%_62%)] to-[hsl(40_62%_40%)]', glow: 'rgba(212,175,55,0.14)', icon: 'bg-primary/15 text-primary' },
+              { bar: 'from-sky-300 to-sky-600',         glow: 'rgba(56,189,248,0.12)',  icon: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
+              { bar: 'from-emerald-300 to-emerald-600', glow: 'rgba(16,185,129,0.12)',  icon: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+              { bar: 'from-slate-300 to-slate-500',     glow: 'rgba(148,163,184,0.12)', icon: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
             ]
             const c = COLORS[i % COLORS.length]
             return (

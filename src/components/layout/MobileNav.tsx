@@ -156,7 +156,7 @@ export function MobileNav() {
               <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-sidebar-border shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary shadow-md">
-                    <Home className="h-4 w-4 text-white" />
+                    <Home className="h-4 w-4 text-sidebar-primary-foreground" />
                   </div>
                   <span className="text-[15px] font-semibold tracking-tight text-sidebar-foreground">
                     PropManager
@@ -221,7 +221,7 @@ export function MobileNav() {
               {/* User footer */}
               <div className="border-t border-sidebar-border px-4 py-3 shrink-0 safe-bottom">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sidebar-primary to-blue-400 text-white text-sm font-bold shadow-sm">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-primary-foreground text-sm font-bold shadow-sm">
                     {user?.name?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="flex-1 min-w-0">

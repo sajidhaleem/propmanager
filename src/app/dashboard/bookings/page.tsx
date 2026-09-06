@@ -1084,7 +1084,7 @@ function BookingsInner() {
                           <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-muted-foreground hover:text-primary" title="Duplicate" aria-label="Duplicate" onClick={() => openCopy(b)}>
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-blue-500 hover:text-blue-600" title="Push to Hotel Eye" aria-label="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-primary hover:text-primary/80" title="Push to Hotel Eye" aria-label="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
                             <Send className="h-3.5 w-3.5" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-destructive hover:text-destructive" title="Delete" aria-label="Delete"

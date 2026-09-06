@@ -433,7 +433,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold shrink-0">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-bold shrink-0">
                   {(profileForm.name || user?.name || '?')[0].toUpperCase()}
                 </div>
                 <div>

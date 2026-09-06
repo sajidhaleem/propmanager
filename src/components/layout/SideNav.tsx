@@ -159,7 +159,7 @@ export function SideNav() {
         <div className={cn('flex h-14 items-center gap-2 px-3', collapsed && 'justify-center px-0')}>
           <Link href="/dashboard" className="flex items-center gap-2 rounded-full py-1 hover:opacity-90">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-brand shadow-lg shadow-primary/25">
-              <Home className="h-4 w-4 text-white" />
+              <Home className="h-4 w-4 text-primary-foreground" />
             </span>
             {showLabels && <span className="text-sm font-semibold tracking-tight">PropManager</span>}
           </Link>
@@ -204,9 +204,9 @@ export function SideNav() {
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     className={cn(
-                      'flex items-center gap-2.5 rounded-lg py-2 text-sm transition-colors',
+                      'press flex items-center gap-2.5 rounded-lg py-2 text-sm transition-colors',
                       collapsed ? 'justify-center px-0' : 'px-2.5',
-                      active ? 'bg-primary/15 font-medium text-primary' : 'text-foreground/80 hover:bg-white/5 hover:text-foreground'
+                      active ? 'rail-active font-medium' : 'text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground'
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -233,7 +233,7 @@ export function SideNav() {
                 collapsed && 'justify-center'
               )}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-xs font-bold text-white">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-xs font-bold text-primary-foreground">
                 {user?.name?.[0]?.toUpperCase() || 'U'}
               </span>
               {showLabels && (

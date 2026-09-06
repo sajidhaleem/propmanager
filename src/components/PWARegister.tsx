@@ -19,7 +19,7 @@ export function PWARegister() {
                   <span className="flex items-center gap-3 text-sm">
                     Update available!
                     <button
-                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium"
+                      className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium"
                       onClick={() => {
                         newWorker.postMessage({ type: 'SKIP_WAITING' })
                         window.location.reload()

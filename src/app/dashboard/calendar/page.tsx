@@ -529,7 +529,7 @@ function MonthGrid({
                 'transition-[transform,box-shadow,border-color,background-color] duration-200',
                 'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isSelected
-                  ? 'border-primary/50 bg-primary/10 dark:glow-cyan'
+                  ? 'border-primary/50 bg-primary/10 dark:glow-gold'
                   : 'border-border/60 bg-card/40 hover:border-primary/30 hover:bg-card/70',
               )}
             >

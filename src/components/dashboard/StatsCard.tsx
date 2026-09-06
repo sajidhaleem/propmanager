@@ -6,18 +6,23 @@ import { cn } from '@/lib/utils'
 import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
 
+/* Four tiles that used to be four unrelated hues. On a midnight ground that
+   read as a paint chart, so the set is now one accent plus three tints that
+   stay distinguishable without competing with it: gold leads, and the others
+   step away from it far enough to be told apart at a glance. The names are the
+   call sites' and are left alone. */
 const configs = {
   blue:   {
-    icon:   'bg-blue-500/15 text-blue-600 dark:text-blue-300',
-    bar:    'from-blue-400 via-blue-500 to-blue-600',
-    glow:   'rgba(59,130,246,0.18)',
-    border: 'border-blue-100 dark:border-blue-400/20',
+    icon:   'bg-primary/15 text-primary',
+    bar:    'from-[hsl(46_78%_62%)] via-[hsl(46_65%_52%)] to-[hsl(40_62%_40%)]',
+    glow:   'rgba(212,175,55,0.18)',
+    border: 'border-primary/20',
   },
   violet: {
-    icon:   'bg-violet-500/15 text-violet-600 dark:text-violet-300',
-    bar:    'from-violet-400 via-violet-500 to-violet-600',
-    glow:   'rgba(139,92,246,0.16)',
-    border: 'border-violet-100 dark:border-violet-400/20',
+    icon:   'bg-sky-500/15 text-sky-600 dark:text-sky-300',
+    bar:    'from-sky-300 via-sky-400 to-sky-600',
+    glow:   'rgba(56,189,248,0.14)',
+    border: 'border-sky-200 dark:border-sky-400/20',
   },
   /* Reserved for spend — the one place a warm hue is semantic, not decorative */
   red:    {
@@ -27,10 +32,10 @@ const configs = {
     border: 'border-rose-100 dark:border-rose-400/20',
   },
   cyan:   {
-    icon:   'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
-    bar:    'from-cyan-400 via-cyan-500 to-cyan-600',
-    glow:   'rgba(34,211,238,0.16)',
-    border: 'border-cyan-100 dark:border-cyan-400/20',
+    icon:   'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+    bar:    'from-emerald-300 via-emerald-400 to-emerald-600',
+    glow:   'rgba(16,185,129,0.14)',
+    border: 'border-emerald-200 dark:border-emerald-400/20',
   },
 }
 

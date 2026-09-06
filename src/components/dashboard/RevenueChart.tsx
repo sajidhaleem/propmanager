@@ -33,9 +33,9 @@ const CustomTooltip = ({ active, payload, label, formatMoney }: any) => {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />Revenue
+            <span className="h-2 w-2 rounded-full bg-primary inline-block" />Revenue
           </span>
-          <span className="font-semibold text-blue-600 dark:text-blue-400">{formatMoney(revenue)}</span>
+          <span className="font-semibold text-primary">{formatMoney(revenue)}</span>
         </div>
         {expenses > 0 && (
           <div className="flex items-center justify-between gap-4">
@@ -70,8 +70,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
       label: 'Total Revenue',
       value: formatMoney(totalRevenue),
       icon: DollarSign,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg:    'bg-blue-500/10',
+      color: 'text-primary',
+      bg:    'bg-primary/10',
     },
     {
       label: 'Total Expenses',
