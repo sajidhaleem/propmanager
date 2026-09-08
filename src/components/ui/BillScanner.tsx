@@ -3,6 +3,7 @@
 import { useRef, useState, DragEvent } from 'react'
 import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CameraCapture } from '@/components/ui/CameraCapture'
 import toast from 'react-hot-toast'
 
 export interface ScannedBill {
@@ -98,7 +99,7 @@ export function BillScanner({ onExtracted, className }: Props) {
     <div className={cn('rounded-xl border bg-muted/30 p-4 space-y-3', className)}>
       <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
         <ScanLine className="h-4 w-4 text-primary" />
-        Scan Bill — upload a photo to auto-fill vendor, amount, date &amp; category
+        Scan Bill — photograph or upload it to auto-fill vendor, amount, date &amp; category
       </div>
 
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={pickFile} />
@@ -147,6 +148,7 @@ export function BillScanner({ onExtracted, className }: Props) {
               {dragging ? <Upload className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
               <span className="text-xs font-semibold">Bill / Receipt photo</span>
               <span className="text-[10px] text-muted-foreground">Drop or click to upload</span>
+              <CameraCapture onCapture={scan} label="Photograph bill" className="mt-1" />
             </>
           )}
         </div>

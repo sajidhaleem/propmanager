@@ -5,6 +5,7 @@ import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-re
 import { cn } from '@/lib/utils'
 import type { ScannedImage } from '@/types'
 import { SCAN_LABELS } from '@/lib/scans'
+import { CameraCapture } from '@/components/ui/CameraCapture'
 import toast from 'react-hot-toast'
 
 export interface PassportData {
@@ -137,6 +138,7 @@ export function PassportScanner({ onExtracted, className }: Props) {
               }
               <span className="text-xs font-semibold">Bio page</span>
               <span className="text-[10px] leading-tight text-muted-foreground">Drop or click to upload</span>
+              <CameraCapture onCapture={f => scan(f, URL.createObjectURL(f))} label="Photo" className="mt-1" />
             </>
           )}
         </div>

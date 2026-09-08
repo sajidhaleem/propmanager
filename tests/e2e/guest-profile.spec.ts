@@ -186,6 +186,24 @@ test.describe('Booking — searchable guest name', () => {
     await expect(page.getByText(/Scan passport/i)).toBeVisible()
   })
 
+  /* Photographing a card is the phone's job and only the phone's: on a desktop
+     `capture` is ignored, so the button would open the same file picker the
+     drop zone already opens and would only be one more thing to read. */
+  test('offers the camera on a touch device and not on a desktop', async ({ page, isMobile }) => {
+    const nameField = await openForm(page)
+    await nameField.fill('Nadia')
+    await page.getByRole('button', { name: /Nadia Visitor/ }).click()
+
+    const cameras = page.getByRole('button', { name: /^Photo$/ })
+    if (isMobile) {
+      // CNIC front, CNIC back, passport bio page
+      await expect(cameras).toHaveCount(3)
+      await expect(cameras.first()).toBeVisible()
+    } else {
+      await expect(cameras).toHaveCount(0)
+    }
+  })
+
   /* A desk must never be blocked from taking a booking because the profile does
      not exist yet — an unmatched name is accepted exactly as typed. */
   test('accepts a name that matches no saved guest', async ({ page }) => {

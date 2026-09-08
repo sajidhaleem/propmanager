@@ -5,6 +5,7 @@ import { ScanLine, Upload, X, Loader2, CheckCircle2, ImageIcon } from 'lucide-re
 import { cn } from '@/lib/utils'
 import type { ScannedImage } from '@/types'
 import { SCAN_LABELS } from '@/lib/scans'
+import { CameraCapture } from '@/components/ui/CameraCapture'
 import toast from 'react-hot-toast'
 
 export interface CnicData {
@@ -94,7 +95,7 @@ export function CnicScanner({ onExtracted, className }: Props) {
           <ScanLine className="h-3.5 w-3.5 text-primary" />
           Scan CNIC
         </p>
-        <p className="text-xs text-muted-foreground">Fills name, CNIC, father, gender and address.</p>
+        <p className="text-xs text-muted-foreground">Photograph or upload both sides. Fills name, CNIC, father, gender and address.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -110,6 +111,7 @@ export function CnicScanner({ onExtracted, className }: Props) {
           onDragOver={e => { e.preventDefault(); setFrontDrag(true) }}
           onDragLeave={() => setFrontDrag(false)}
           onReset={() => setFront(EMPTY)}
+          onCapture={f => scan(f, 'front', URL.createObjectURL(f))}
         />
 
         {/* Back */}
@@ -124,6 +126,7 @@ export function CnicScanner({ onExtracted, className }: Props) {
           onDragOver={e => { e.preventDefault(); setBackDrag(true) }}
           onDragLeave={() => setBackDrag(false)}
           onReset={() => setBack(EMPTY)}
+          onCapture={f => scan(f, 'back', URL.createObjectURL(f))}
         />
       </div>
 
@@ -149,9 +152,10 @@ interface DropZoneProps {
   onDragOver: (e: DragEvent<HTMLDivElement>) => void
   onDragLeave: () => void
   onReset: () => void
+  onCapture: (file: File) => void
 }
 
-function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, onDragLeave, onReset }: DropZoneProps) {
+function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, onDragLeave, onReset, onCapture }: DropZoneProps) {
   const { state, preview } = data
   const scanning = state === 'scanning'
   const done     = state === 'done'
@@ -210,6 +214,7 @@ function DropZone({ label, hint, data, dragging, onClick, onDrop, onDragOver, on
             }
             <span className="text-xs font-semibold">{label}</span>
             <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>
+            <CameraCapture onCapture={onCapture} label="Photo" className="mt-1" />
           </>
         )}
       </div>
