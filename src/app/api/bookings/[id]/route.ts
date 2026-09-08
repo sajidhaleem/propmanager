@@ -1,8 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissionGuard'
+import { NOT_APPLICABLE } from '@/lib/hotelEye'
 import { bookingBaseSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
+import { resolveGuestId } from '@/lib/guestLink'
 import { differenceInCalendarDays } from 'date-fns'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +35,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!result.success) return apiError(result.error.errors[0].message)
 
     const data = result.data
+
+    /* N/A is the one filing status that removes a stay from the compliance
+       figures instead of advancing it, so it is granted per user rather than
+       assumed from a role. Hiding the menu item is a courtesy; this is the
+       control. */
+    if (data.hotelEyeStatus === NOT_APPLICABLE) {
+      await requirePermission(req, 'hoteleye_na')
+    }
+
     let extraFields: any = {}
 
     if (
@@ -72,9 +84,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       extraFields = { checkIn, checkOut, nights, totalAmount, netAmount }
     }
 
+    /* Editing a stay has to reach the profile too. Scanning a card on an
+       existing booking is the common case, and until now the extracted details
+       landed on the booking and went no further: no profile was created for a
+       guest who had none, and a linked profile never learned what the scan
+       read. Only identity edits trigger it, so changing a rate or a date does
+       not go looking for a guest. */
+    const touchesIdentity = ['guestName', 'guestEmail', 'guestPhone', 'guestCnic',
+      'guestFatherName', 'guestGender', 'guestAddress', 'guestProvince', 'guestDistrict',
+      'passportNumber', 'nationality', 'passportExpiry']
+      .some(k => k in data)
+
+    let guestId = data.guestId
+    if (touchesIdentity && !guestId) {
+      const current = await prisma.booking.findUnique({ where: { id } })
+      if (!current) return apiError('Booking not found', 404)
+      // Merge the patch over what is stored: a partial edit still describes one person
+      guestId = await resolveGuestId({ ...current, ...data })
+    }
+
     const booking = await prisma.booking.update({
       where: { id },
-      data: { ...data, ...extraFields },
+      data: { ...data, ...extraFields, ...(guestId ? { guestId } : {}) },
       include: { property: { select: { id: true, name: true } } },
     })
 

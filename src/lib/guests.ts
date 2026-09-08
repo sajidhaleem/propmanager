@@ -43,6 +43,31 @@ export const guestSchema = z.object({
 })
 
 /**
+ * What a stay can teach a profile: the fields it holds that the profile does not.
+ *
+ * Only blanks are filled, in one direction. Two rules make that the right call:
+ * a later stay that omits a field must never wipe what an earlier one recorded,
+ * and the profile is the edited copy, so a value someone corrected by hand
+ * outranks whatever a scan read off a photograph afterwards.
+ *
+ * Whitespace counts as blank on both sides. A profile holding " " is missing
+ * the field, and an incoming " " teaches nothing.
+ */
+export function fillBlanks<T extends Record<string, unknown>>(
+  existing: T,
+  incoming: Partial<Record<keyof T, string | null | undefined>>,
+): Partial<Record<keyof T, string>> {
+  const out: Partial<Record<keyof T, string>> = {}
+  const filled = (v: unknown) => typeof v === 'string' && v.trim().length > 0
+
+  for (const key of Object.keys(incoming) as (keyof T)[]) {
+    const value = incoming[key]
+    if (filled(value) && !filled(existing[key])) out[key] = (value as string).trim()
+  }
+  return out
+}
+
+/**
  * The same number is typed as 0307 113 0001, +92 307 1130001 and 03071130001.
  * Compare the national digits only, or one person ends up with three profiles.
  */

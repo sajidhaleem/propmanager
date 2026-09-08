@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { sameGuest } from '@/lib/guests'
+import { sameGuest, fillBlanks } from '@/lib/guests'
 
 /** Server-only: touches the database, so keep it out of guests.ts (client imports that). */
 
@@ -54,14 +54,29 @@ export async function resolveGuestId(b: BookingIdentity): Promise<string | null>
   }
 
   if (guest) {
-    /* Fill in what the profile is missing without overwriting anything: the
-       stay that finally carries a phone number or a CNIC should complete the
-       profile, but a later blank field must not wipe it. */
-    const fill: Record<string, string> = {}
-    if (!guest.phone && phone) fill.phone = phone
-    if (!guest.cnic && cnic) fill.cnic = cnic
-    if (!guest.passportNumber && passport) fill.passportNumber = passport
-    if (!guest.email && clean(b.guestEmail)) fill.email = clean(b.guestEmail)!
+    /* Fill in everything the profile is missing, not just the document numbers.
+       A card scanned on a booking reads the father's name, gender and address
+       too, and those were reaching the booking's own columns and stopping
+       there — so a profile could stay half empty while the stay beside it held
+       the whole card.
+
+       Only blanks are filled. A later stay that happens to omit a field must
+       never wipe what an earlier one recorded, and the guest profile is the
+       edited copy: what someone corrected by hand outranks what a scan read. */
+    const fill = fillBlanks(guest, {
+      phone,
+      email:          b.guestEmail,
+      cnic,
+      fatherName:     b.guestFatherName,
+      gender:         b.guestGender,
+      address:        b.guestAddress,
+      province:       b.guestProvince,
+      district:       b.guestDistrict,
+      passportNumber: passport,
+      nationality:    b.nationality,
+      passportExpiry: b.passportExpiry,
+    })
+
     if (Object.keys(fill).length > 0) {
       // A racing write can claim the unique cnic/passport first; the link still stands
       await prisma.guest.update({ where: { id: guest.id }, data: fill }).catch(() => {})
