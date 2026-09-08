@@ -35,8 +35,11 @@ export const bookingBaseSchema = z.object({
   notes: z.string().optional(),
   reminderAt: z.string().nullable().optional(),
   reminderNote: z.string().nullable().optional(),
-  // QUEUED and FAILED are written by the filing worker, not chosen at the desk
-  hotelEyeStatus: z.enum(['NOT_ENTERED', 'QUEUED', 'ENTERED', 'FAILED']).optional(),
+  /* QUEUED and FAILED are written by the filing worker, not chosen at the desk.
+     NOT_APPLICABLE is chosen at the desk, but only with the hoteleye_na
+     permission — the route checks that, the schema only says it is a legal
+     value. */
+  hotelEyeStatus: z.enum(['NOT_ENTERED', 'QUEUED', 'ENTERED', 'FAILED', 'NOT_APPLICABLE']).optional(),
   // Saved guest profile this stay belongs to, when one was picked
   guestId: z.string().nullable().optional(),
   // Hotel Eye / Guest identity

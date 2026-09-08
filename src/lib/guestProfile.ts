@@ -5,7 +5,7 @@
  * difference between "this guest can be filed" and a desk finding out at the
  * portal that the father's name was never recorded.
  */
-import { getFilingStatus, type FilingState } from '@/lib/hotelEye'
+import { getFilingStatus, isUnfiled, requiresFiling, type FilingState } from '@/lib/hotelEye'
 import type { Guest } from '@/lib/guests'
 
 export interface Stay {
@@ -101,9 +101,14 @@ export function filingMix(stays: Stay[], now: Date = new Date()) {
         : state === 'OVERDUE' || state === 'FAILED' ? 'overdue'
           : 'unfiled'
 
-  for (const s of stays) counts[bucketOf(getFilingStatus(s, now).state)]++
+  /* A stay marked N/A owes the portal nothing, so it is left out of the mix
+     rather than counted as a fifth colour — the bar answers "of the stays that
+     had to be filed, how many were", and a denominator that included them would
+     understate a guest's filing record. */
+  const filable = stays.filter(requiresFiling)
+  for (const s of filable) counts[bucketOf(getFilingStatus(s, now).state)]++
 
-  const total = stays.length
+  const total = filable.length
   const share = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100))
   return {
     counts,
@@ -122,7 +127,7 @@ export function filingMix(stays: Stay[], now: Date = new Date()) {
  */
 export function openFiling(stays: Stay[], now: Date = new Date()) {
   const open = stays
-    .filter(s => getFilingStatus(s, now).state !== 'FILED')
+    .filter(s => isUnfiled(getFilingStatus(s, now).state))
     .sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime())
   if (open.length === 0) return null
   const stay = open[0]

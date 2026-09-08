@@ -31,8 +31,9 @@ async function reapAbandonedJobs() {
   const givenUp = abandoned.filter(j => j.bookingId && j.attempts >= MAX_ATTEMPTS)
   if (givenUp.length > 0) {
     await prisma.booking.updateMany({
-      // never overwrite a filing that actually landed
-      where: { id: { in: givenUp.map(j => j.bookingId!) }, hotelEyeStatus: { not: 'ENTERED' } },
+      /* Never overwrite a filing that actually landed — nor a stay someone has
+         since marked N/A, which would drag it back into the failed count. */
+      where: { id: { in: givenUp.map(j => j.bookingId!) }, hotelEyeStatus: { notIn: ['ENTERED', 'NOT_APPLICABLE'] } },
       data: { hotelEyeStatus: 'FAILED', hotelEyeError: GAVE_UP_REASON },
     }).catch(() => {/* the job outcome is recorded either way */})
   }

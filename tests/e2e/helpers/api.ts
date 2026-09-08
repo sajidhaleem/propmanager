@@ -20,10 +20,22 @@ const at = (offsetDays: number, hour: number) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour).toISOString()
 }
 
+/* Shaped like the real row, not just the fields one spec happens to read:
+   amenities and images are non-nullable arrays in the schema, and the
+   properties page indexes into them without a guard — a fixture missing them
+   crashed the page into its error boundary. 'AVAILABLE' was never a
+   PropertyStatus either; the calendar reads everything but MAINTENANCE as
+   free, so ACTIVE is what the API would actually have sent. */
+const property = (id: string, name: string, baseRate: number, status = 'ACTIVE') => ({
+  id, name, baseRate, status,
+  description: null, type: 'room', capacity: 2,
+  amenities: [] as string[], images: [] as string[],
+})
+
 export const PROPERTIES = [
-  { id: 'p1', name: 'Room 1', baseRate: 5000, status: 'AVAILABLE' },
-  { id: 'p2', name: 'Room 2', baseRate: 6000, status: 'AVAILABLE' },
-  { id: 'p3', name: 'Room 3', baseRate: 7000, status: 'MAINTENANCE' },
+  property('p1', 'Room 1', 5000),
+  property('p2', 'Room 2', 6000),
+  property('p3', 'Room 3', 7000, 'MAINTENANCE'),
 ]
 
 const booking = (
@@ -118,7 +130,7 @@ export const paymentStatusOf = (b: { totalAmount: number; paidAmount: number }) 
 
 export async function stubApi(
   context: BrowserContext,
-  overrides: { stats?: unknown; bookings?: typeof BOOKINGS } = {}
+  overrides: { stats?: unknown; bookings?: typeof BOOKINGS; permissions?: string[] } = {}
 ) {
   const rows = overrides.bookings ?? BOOKINGS
   const stats = overrides.stats ?? LOSS_MAKING_STATS
@@ -128,6 +140,17 @@ export async function stubApi(
     const path = url.pathname
     const json = (data: unknown, status = 200) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ success: true, data }) })
+
+    /* The session the client sees. `permissions` is left undefined unless a spec
+       asks for it, which is how the app reads "still loading" — so a control
+       gated on a permission stays hidden by default, as it does in production
+       until /api/auth/me answers. */
+    if (path === '/api/auth/me') {
+      return json({
+        userId: 'e2e-user', email: 'e2e@test.local', name: 'E2E User', role: 'ADMIN',
+        permissions: overrides.permissions,
+      })
+    }
 
     if (path.startsWith('/api/bookings') && path.includes('/documents')) return json([])
 
@@ -171,6 +194,10 @@ export async function stubApi(
       // mirrors the server-side paymentStatus filter so the filter round-trip is exercised
       const want = url.searchParams.get('paymentStatus')
       let data = want ? rows.filter((b) => paymentStatusOf(b) === want) : rows
+
+      // and for ?status=, the lifecycle filter, which the server also applies
+      const status = url.searchParams.get('status')
+      if (status) data = data.filter((b) => b.status === status)
 
       /* Same mirror for ?view=hoteleye: the register of what is on the portal,
          so membership is the filing itself and nothing else. */

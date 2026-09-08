@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiResponse, handleApiError } from '@/lib/utils'
-import { FILING_WINDOW_HOURS } from '@/lib/hotelEye'
+import { FILING_WINDOW_HOURS, NOT_APPLICABLE } from '@/lib/hotelEye'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,9 +24,14 @@ export async function GET(req: NextRequest) {
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
     const overdueCutoff = new Date(now.getTime() - FILING_WINDOW_HOURS * 60 * 60 * 1000)
 
+    /* A stay marked N/A owes the portal no entry, so it is out of every figure
+       here — not in the day's denominator and never overdue. Same shape as the
+       cancelled/no-show exclusion already applied alongside it. */
+    const filable = { hotelEyeStatus: { not: NOT_APPLICABLE } }
+
     const [arrivalsToday, filedToday, overdue, failed] = await Promise.all([
       prisma.booking.count({
-        where: { checkIn: { gte: dayStart, lt: dayEnd }, status: { notIn: ['CANCELLED', 'NO_SHOW'] } },
+        where: { checkIn: { gte: dayStart, lt: dayEnd }, status: { notIn: ['CANCELLED', 'NO_SHOW'] }, ...filable },
       }),
       prisma.booking.count({
         where: {
@@ -41,7 +46,7 @@ export async function GET(req: NextRequest) {
         where: {
           checkIn: { lt: overdueCutoff },
           status: { notIn: ['CANCELLED', 'NO_SHOW'] },
-          hotelEyeStatus: { not: 'ENTERED' },
+          hotelEyeStatus: { notIn: ['ENTERED', NOT_APPLICABLE] },
         },
       }),
       prisma.booking.count({

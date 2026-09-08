@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
        already on the portal — a re-send must never undo a recorded filing. */
     if (bookingId) {
       await prisma.booking.updateMany({
-        where: { id: bookingId, hotelEyeStatus: { in: ['NOT_ENTERED', 'FAILED'] } },
+        /* NOT_APPLICABLE is included: filing a stay someone marked N/A is a
+           deliberate reversal, and leaving it on N/A while a job files it would
+           keep it out of the compliance figures it has just re-entered. */
+        where: { id: bookingId, hotelEyeStatus: { in: ['NOT_ENTERED', 'FAILED', 'NOT_APPLICABLE'] } },
         data: { hotelEyeStatus: 'QUEUED', hotelEyeError: null },
       }).catch(() => {/* non-fatal: the job is queued either way */})
     }

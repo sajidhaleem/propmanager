@@ -21,6 +21,11 @@ export const FEATURES = [
   { key: 'reports',    label: 'Reports' },
   { key: 'users',      label: 'User management' },
   { key: 'settings',   label: 'System settings' },
+  /* Not a page. Marking a stay N/A takes it out of the filing record entirely —
+     off the compliance count, never overdue — so it is the one filing action
+     that can hide legal exposure rather than record it, and it is handed out
+     per user rather than assumed from a role. */
+  { key: 'hoteleye_na', label: 'Mark a stay N/A for Hotel Eye' },
 ] as const
 
 export type Feature = (typeof FEATURES)[number]['key']

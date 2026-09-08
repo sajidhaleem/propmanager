@@ -1,6 +1,7 @@
 import {
   filingDeadline, getFilingStatus, formatSpan, dailyComplianceSummary,
-  FILING_WINDOW_HOURS, DUE_SOON_HOURS,
+  isUnfiled, requiresFiling,
+  FILING_WINDOW_HOURS, DUE_SOON_HOURS, NOT_APPLICABLE,
 } from '@/lib/hotelEye'
 
 const HOUR = 60 * 60 * 1000
@@ -62,6 +63,42 @@ describe('getFilingStatus', () => {
     expect(getFilingStatus({ ...unfiled, hotelEyeStatus: 'QUEUED' }, at(CHECK_IN, 30)).state).toBe('OVERDUE')
     expect(getFilingStatus({ ...unfiled, hotelEyeStatus: 'QUEUED' }, at(CHECK_IN, 2)).state).toBe('QUEUED')
   })
+
+  /* N/A is the whole point of the status: a stay that owes the portal nothing
+     must never age into exposure it does not have. */
+  it('keeps an N/A stay out of the clock entirely', () => {
+    const na = { checkIn: CHECK_IN, hotelEyeStatus: NOT_APPLICABLE }
+    expect(getFilingStatus(na, at(CHECK_IN, 1)).state).toBe('NOT_APPLICABLE')
+    expect(getFilingStatus(na, at(CHECK_IN, 500)).state).toBe('NOT_APPLICABLE')
+    expect(getFilingStatus(na, at(CHECK_IN, 500)).label).toBe('N/A')
+  })
+
+  /* A filing that actually happened is a fact about the portal. Marking the
+     stay N/A afterwards is an opinion about whether it was needed, and must
+     not erase the record of the entry. */
+  it('lets a real filing outrank a later N/A', () => {
+    const s = getFilingStatus(
+      { checkIn: CHECK_IN, hotelEyeStatus: NOT_APPLICABLE, hotelEyeFiledAt: at(CHECK_IN, 2) },
+      at(CHECK_IN, 50),
+    )
+    expect(s.state).toBe('FILED')
+  })
+})
+
+describe('isUnfiled / requiresFiling', () => {
+  it('does not count N/A as work outstanding', () => {
+    expect(isUnfiled('NOT_APPLICABLE')).toBe(false)
+    expect(isUnfiled('FILED')).toBe(false)
+    expect(isUnfiled('OVERDUE')).toBe(true)
+    expect(isUnfiled('PENDING')).toBe(true)
+  })
+
+  it('excludes only N/A from the filable set', () => {
+    expect(requiresFiling({ hotelEyeStatus: NOT_APPLICABLE })).toBe(false)
+    expect(requiresFiling({ hotelEyeStatus: 'NOT_ENTERED' })).toBe(true)
+    // an unset status is an ordinary stay that still owes a filing
+    expect(requiresFiling({})).toBe(true)
+  })
 })
 
 describe('formatSpan', () => {
@@ -110,5 +147,22 @@ describe('dailyComplianceSummary', () => {
 
   it('is not clear when there were no arrivals — there is nothing to prove', () => {
     expect(dailyComplianceSummary([], day).clear).toBe(false)
+  })
+
+  /* The denominator matters as much as the count: an N/A arrival left in it
+     would hold the day short of clear forever, since it can never be filed. */
+  it('leaves N/A arrivals out of the day entirely', () => {
+    const s = dailyComplianceSummary([
+      { checkIn: sameDay(9),  hotelEyeStatus: 'ENTERED' },
+      { checkIn: sameDay(14), hotelEyeStatus: NOT_APPLICABLE },
+    ], day)
+    expect(s).toMatchObject({ total: 1, filed: 1, overdue: 0, clear: true })
+  })
+
+  it('does not let an old N/A stay count as overdue', () => {
+    const s = dailyComplianceSummary([
+      { checkIn: sameDay(1), hotelEyeStatus: NOT_APPLICABLE },
+    ], day)
+    expect(s).toMatchObject({ total: 0, overdue: 0, clear: false })
   })
 })

@@ -19,6 +19,7 @@ import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
 import { formatDate, getStatusColor, getPlatformColor, cn, getPaymentStatus, PAYMENT_STATUS_META } from '@/lib/utils'
 import { isToday, isTomorrow, isYesterday, parseISO, format as fnsFormat } from 'date-fns'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useAuth } from '@/hooks/useAuth'
 import { Booking, type ScannedImage } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { GuestPicker } from '@/components/ui/GuestPicker'
@@ -27,7 +28,7 @@ import type { CnicData } from '@/components/ui/CnicScanner'
 import type { PassportData } from '@/components/ui/PassportScanner'
 import type { Guest } from '@/lib/guests'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
-import { getFilingStatus, FILING_STATE_META } from '@/lib/hotelEye'
+import { getFilingStatus, FILING_STATE_META, NOT_APPLICABLE } from '@/lib/hotelEye'
 import { useSearchParams } from 'next/navigation'
 
 async function fetchBookings(params: Record<string, string>) {
@@ -109,6 +110,11 @@ const VIEWABLE_TYPES = new Set([
 function BookingsInner() {
   const queryClient = useQueryClient()
   const { format, currencyInfo } = useCurrency()
+  /* Marking a stay N/A is granted per user in Settings. Default closed while
+     /api/auth/me is still answering, so the option does not flash in for
+     someone who is not allowed it — the API refuses it either way. */
+  const { user } = useAuth()
+  const canMarkNA = user?.permissions?.includes('hoteleye_na') ?? false
   const shouldReduceMotion = useReducedMotion()
   const [page, setPage] = useState(1)
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
@@ -412,6 +418,10 @@ function BookingsInner() {
       if (!confirm(`This guest was filed on Hotel Eye (${when}). File again anyway?`)) return
       refiling = true
     }
+    /* Someone decided this stay needed no filing. Sending it anyway is a
+       reversal of that, not a routine push, so it is asked about too. */
+    if (filed.state === 'NOT_APPLICABLE'
+      && !confirm('This stay is marked N/A for Hotel Eye. File it anyway?')) return
 
     // Open the portal immediately (must be synchronous with the click for popup blockers)
     window.open('https://hoteleye.punjab.gov.pk/hotel/addwatchentries', '_blank', 'noopener')
@@ -792,6 +802,10 @@ function BookingsInner() {
               <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
               <SelectItem value="QUEUED">Filing…</SelectItem>
               <SelectItem value="ENTERED">Filed</SelectItem>
+              {/* Findable by everyone: N/A stays are excluded from the compliance
+                  figures, so being able to see which ones they are is the check
+                  on the permission, not something to hide behind it. */}
+              <SelectItem value={NOT_APPLICABLE}>N/A</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -980,7 +994,11 @@ function BookingsInner() {
                                   : `Must be filed by ${formatDate(fs.deadline, 'MMM d, h:mm a')}`
                             return (
                               <Select
-                                value={b.hotelEyeStatus === 'ENTERED' ? 'ENTERED' : 'NOT_ENTERED'}
+                                value={
+                                  b.hotelEyeStatus === 'ENTERED' || b.hotelEyeStatus === NOT_APPLICABLE
+                                    ? b.hotelEyeStatus
+                                    : 'NOT_ENTERED'
+                                }
                                 onValueChange={(s) => hotelEyeStatusMutation.mutate({ id: b.id, hotelEyeStatus: s })}
                               >
                                 <SelectTrigger
@@ -992,6 +1010,12 @@ function BookingsInner() {
                                 <SelectContent>
                                   <SelectItem value="NOT_ENTERED">Not filed</SelectItem>
                                   <SelectItem value="ENTERED">Filed</SelectItem>
+                                  {/* Offered only to users an admin has granted it, but
+                                      always offered on a stay already marked N/A, so
+                                      whoever is looking at it can still put it back. */}
+                                  {(canMarkNA || b.hotelEyeStatus === NOT_APPLICABLE) && (
+                                    <SelectItem value={NOT_APPLICABLE}>N/A — no filing needed</SelectItem>
+                                  )}
                                 </SelectContent>
                               </Select>
                             )

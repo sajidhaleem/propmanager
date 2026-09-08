@@ -21,6 +21,10 @@ export type FilingState =
   | 'DUE_SOON'   // unfiled with little of the window left
   | 'QUEUED'     // handed to the filing worker, not yet confirmed
   | 'PENDING'    // unfiled, comfortably inside the window
+  | 'NOT_APPLICABLE' // the stay does not require a filing at all
+
+/** N/A is not "unfiled" — the 24h clock never starts, so it can never be overdue. */
+export const NOT_APPLICABLE = 'NOT_APPLICABLE'
 
 export interface FilingStatus {
   state: FilingState
@@ -58,6 +62,12 @@ export function getFilingStatus(
   if (status === 'ENTERED' || booking.hotelEyeFiledAt) {
     return { ...base, state: 'FILED', label: 'Filed' }
   }
+  /* Checked before the clock, so an N/A stay never ages into overdue. Checked
+     after FILED, because a filing that actually happened is a fact about the
+     portal that outranks a later opinion about whether it was needed. */
+  if (status === NOT_APPLICABLE) {
+    return { ...base, state: 'NOT_APPLICABLE', label: 'N/A' }
+  }
   if (status === 'FAILED') {
     return { ...base, state: 'FAILED', label: 'Failed' }
   }
@@ -86,7 +96,12 @@ export function formatSpan(hours: number): string {
 export const NEEDS_ATTENTION: FilingState[] = ['OVERDUE', 'FAILED', 'DUE_SOON']
 
 export function isUnfiled(state: FilingState): boolean {
-  return state !== 'FILED'
+  return state !== 'FILED' && state !== 'NOT_APPLICABLE'
+}
+
+/** Stays that owe the portal an entry — the denominator of every filing figure. */
+export function requiresFiling(booking: { hotelEyeStatus?: string | null }): boolean {
+  return booking.hotelEyeStatus !== NOT_APPLICABLE
 }
 
 /**
@@ -104,7 +119,8 @@ export function dailyComplianceSummary(
       && x.getDate() === day.getDate()
   }
 
-  const arrivals = bookings.filter((b) => sameDay(b.checkIn))
+  // N/A stays are out of scope, so they are not part of the day's denominator
+  const arrivals = bookings.filter((b) => sameDay(b.checkIn) && requiresFiling(b))
   const filed = arrivals.filter((b) => getFilingStatus(b, day).state === 'FILED')
   const overdue = arrivals.filter((b) => getFilingStatus(b, day).state === 'OVERDUE')
 
@@ -119,6 +135,9 @@ export function dailyComplianceSummary(
 
 export const FILING_STATE_META: Record<FilingState, { label: string; className: string }> = {
   FILED:    { label: 'Filed',    className: 'text-green-600 border-green-600/40 bg-green-500/10' },
+  /* Quieter than "Not filed": nothing is outstanding, so it must not read as a
+     job the desk still has to do. */
+  NOT_APPLICABLE: { label: 'N/A', className: 'text-muted-foreground/70 border-border/60 bg-transparent' },
   QUEUED:   { label: 'Filing',   className: 'text-blue-500 border-blue-500/40 bg-blue-500/10' },
   PENDING:  { label: 'Not filed',className: 'text-muted-foreground border-border bg-muted/40' },
   DUE_SOON: { label: 'Due soon', className: 'text-amber-500 border-amber-500/40 bg-amber-500/10' },

@@ -6,7 +6,7 @@ import { resolveGuestId } from '@/lib/guestLink'
 import { bookingSchema } from '@/lib/validations'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 import { differenceInCalendarDays } from 'date-fns'
-import { FILING_WINDOW_HOURS } from '@/lib/hotelEye'
+import { FILING_WINDOW_HOURS, NOT_APPLICABLE } from '@/lib/hotelEye'
 
 export async function GET(req: NextRequest) {
   try {
@@ -86,7 +86,9 @@ export async function GET(req: NextRequest) {
        fighting over where.checkIn. */
     if (hotelEyeStatus === 'OVERDUE') {
       and.push(
-        { hotelEyeStatus: { not: 'ENTERED' } },
+        // N/A is excluded here, not just cosmetically: it is the one status that
+        // must never age into exposure it does not have.
+        { hotelEyeStatus: { notIn: ['ENTERED', NOT_APPLICABLE] } },
         { checkIn: { lt: new Date(Date.now() - FILING_WINDOW_HOURS * 60 * 60 * 1000) } },
       )
     }
@@ -140,6 +142,11 @@ export async function POST(req: NextRequest) {
     if (!result.success) return apiError(result.error.errors[0].message)
 
     const data = result.data
+    // Same gate as PATCH: a stay cannot be created outside the filing record either
+    if (data.hotelEyeStatus === NOT_APPLICABLE) {
+      await requirePermission(req, 'hoteleye_na')
+    }
+
     const checkIn = new Date(data.checkIn)
     const checkOut = new Date(data.checkOut)
 
