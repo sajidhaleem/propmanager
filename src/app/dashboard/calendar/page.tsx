@@ -21,6 +21,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHero, HERO_CONTROL } from '@/components/layout/PageHero'
+import { GuestPicker } from '@/components/ui/GuestPicker'
+import { GuestRiskNotice } from '@/components/guests/GuestRiskNotice'
+import { guestIdentityFields, type Guest } from '@/lib/guests'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Booking, Property } from '@/types'
 import Link from 'next/link'
@@ -825,9 +828,14 @@ function QuickBookingDialog({
   const queryClient = useQueryClient()
   const router = useRouter()
   const [form, setForm] = useState(initial)
+  /* The picked profile, kept whole rather than flattened into the form. This
+     dialog shows none of these fields, but a stay taken here should not be
+     poorer than one taken on the full form — a Hotel Eye filing needs the
+     CNIC, and the profile already has it. */
+  const [guest, setGuest] = useState<Guest | null>(null)
 
   // Re-seed the form each time the dialog opens with a new slot
-  useEffect(() => { if (open) setForm(initial) }, [open, initial])
+  useEffect(() => { if (open) { setForm(initial); setGuest(null) } }, [open, initial])
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -835,6 +843,8 @@ function QuickBookingDialog({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // identity first, so a name edited after the pick still wins
+          ...(guest ? { ...guestIdentityFields(guest), guestId: guest.id } : {}),
           guestName:  form.guestName,
           propertyId: form.propertyId,
           checkIn:    new Date(form.checkIn).toISOString(),
@@ -881,10 +891,26 @@ function QuickBookingDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="qb-guest">Guest Name *</Label>
-            <Input id="qb-guest" autoFocus value={form.guestName}
-              onChange={e => setForm({ ...form, guestName: e.target.value })}
-              placeholder="e.g. Ahmed Khan" />
+            {/* No htmlFor: the picker names its own input, so pointing at an
+                id it does not render would leave the label dangling */}
+            <Label>Guest Name *</Label>
+            <GuestPicker
+              autoFocus
+              value={guest?.id}
+              guestName={form.guestName}
+              onNameChange={name => {
+                setForm(f => ({ ...f, guestName: name }))
+                // typing over a linked name is how the desk unlinks by hand
+                if (guest && name !== guest.name) setGuest(null)
+              }}
+              onPick={g => {
+                setGuest(g)
+                setForm(f => ({ ...f, guestName: g.name }))
+                toast.success(`${g.name} linked to this booking`)
+              }}
+              onClear={() => setGuest(null)}
+            />
+            <GuestRiskNotice guest={guest} guestId={guest?.id} className="mt-2" />
           </div>
           {/* min-w-0 on each cell: grid items default to min-width:auto, so a
               native control wider than its column pushes the grid out instead

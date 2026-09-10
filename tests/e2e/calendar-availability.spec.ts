@@ -55,4 +55,49 @@ test.describe('Calendar — room availability', () => {
     expect(layout.clipped).toBe(0)
     expect(layout.dialogOverflows).toBe(false)
   })
+
+  /* Same register as the full booking form. A returning guest booked from the
+     calendar must reach the same profile, or the quick path quietly becomes the
+     one that makes duplicates. */
+  test('the quick dialog searches saved guests by name', async ({ page }) => {
+    await page.goto('/dashboard/calendar')
+    await waitForData(page, 'Room Available')
+
+    await page.getByRole('button', { name: /^New Booking$/i }).click()
+    const nameField = page.getByRole('combobox', { name: 'Guest name' })
+    await nameField.fill('Hamza')
+
+    await expect(page.getByRole('button', { name: /Hamza Naeem/ })).toBeVisible()
+    // the identity is shown, so the right Hamza can be told from another
+    await expect(page.getByText('35202-1234567-1')).toBeVisible()
+  })
+
+  test('a picked guest is linked, and their identity rides along', async ({ page }) => {
+    await page.goto('/dashboard/calendar')
+    await waitForData(page, 'Room Available')
+
+    await page.getByRole('button', { name: /^New Booking$/i }).click()
+    const nameField = page.getByRole('combobox', { name: 'Guest name' })
+    await nameField.fill('Hamza')
+    await page.getByRole('button', { name: /Hamza Naeem/ }).click()
+
+    await expect(nameField).toHaveValue('Hamza Naeem')
+    await expect(page.getByRole('button', { name: /Unlink this booking/i })).toBeVisible()
+
+    /* The dialog shows no CNIC field, but the booking must still carry one:
+       a stay taken here is filed on the portal like any other. */
+    const post = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().endsWith('/api/bookings'),
+    )
+    await page.getByRole('combobox').filter({ hasText: 'Pick a room' }).click()
+    await page.getByRole('option', { name: 'Room 2' }).click()
+    await page.getByRole('button', { name: /Create Booking/i }).click()
+
+    expect((await post).postDataJSON()).toMatchObject({
+      guestId: 'g1',
+      guestName: 'Hamza Naeem',
+      guestCnic: '35202-1234567-1',
+      guestPhone: '03071130001',
+    })
+  })
 })

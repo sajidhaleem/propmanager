@@ -23,10 +23,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { Booking, type ScannedImage } from '@/types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { GuestPicker } from '@/components/ui/GuestPicker'
+import { GuestRiskNotice } from '@/components/guests/GuestRiskNotice'
 import { GuestScans } from '@/components/guests/GuestScans'
 import type { CnicData } from '@/components/ui/CnicScanner'
 import type { PassportData } from '@/components/ui/PassportScanner'
-import type { Guest } from '@/lib/guests'
+import { guestIdentityFields, type Guest } from '@/lib/guests'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { getFilingStatus, FILING_STATE_META, NOT_APPLICABLE } from '@/lib/hotelEye'
 import { useSearchParams } from 'next/navigation'
@@ -115,6 +116,7 @@ function BookingsInner() {
      someone who is not allowed it — the API refuses it either way. */
   const { user } = useAuth()
   const canMarkNA = user?.permissions?.includes('hoteleye_na') ?? false
+
   const shouldReduceMotion = useReducedMotion()
   const [page, setPage] = useState(1)
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([])
@@ -130,6 +132,20 @@ function BookingsInner() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editBooking, setEditBooking] = useState<Booking | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+
+  /* The linked guest's profile, for the do-not-book notice. Read from the
+     profile rather than carried over from the pick, so reopening an existing
+     booking shows the flag too — and shows it as it stands now, not as it
+     stood when the stay was taken. */
+  const { data: linkedGuest } = useQuery<Guest | null>({
+    queryKey: ['guest', form.guestId],
+    queryFn: async () => {
+      const res = await fetch(`/api/guests/${form.guestId}`)
+      if (!res.ok) return null
+      return (await res.json()).data
+    },
+    enabled: !!form.guestId,
+  })
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
   const [editingAmountValue, setEditingAmountValue] = useState('')
   const [sortBy,    setSortBy]    = useState('checkIn')
@@ -386,22 +402,9 @@ function BookingsInner() {
      and a filed entry must keep showing what was filed even if the profile is
      edited or deleted afterwards. */
   function applyGuest(g: Guest) {
-    setForm(f => ({
-      ...f,
-      guestId:         g.id,
-      guestName:       g.name            || f.guestName,
-      guestEmail:      g.email           || f.guestEmail,
-      guestPhone:      g.phone           || f.guestPhone,
-      guestCnic:       g.cnic            || f.guestCnic,
-      guestFatherName: g.fatherName      || f.guestFatherName,
-      guestGender:     g.gender          || f.guestGender,
-      guestAddress:    g.address         || f.guestAddress,
-      guestProvince:   g.province        || f.guestProvince,
-      guestDistrict:   g.district        || f.guestDistrict,
-      passportNumber:  g.passportNumber  || f.passportNumber,
-      nationality:     g.nationality     || f.nationality,
-      passportExpiry:  g.passportExpiry  || f.passportExpiry,
-    }))
+    // guestIdentityFields omits what the profile does not hold, so anything
+    // already typed into a field the profile is missing survives the pick
+    setForm(f => ({ ...f, guestId: g.id, ...guestIdentityFields(g) }))
     toast.success(`${g.name} linked to this booking`)
   }
 
@@ -1175,6 +1178,9 @@ function BookingsInner() {
                     onPick={applyGuest}
                     onClear={() => setForm(f => ({ ...f, guestId: '' }))}
                   />
+                  {/* Read from the profile rather than from the pick, so it also
+                      shows when an existing booking is reopened for editing */}
+                  <GuestRiskNotice guest={linkedGuest} guestId={form.guestId} className="mt-2" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">

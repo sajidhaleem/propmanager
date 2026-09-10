@@ -1,4 +1,40 @@
-import { normalizePhone, normalizeName, sameGuest } from '@/lib/guests'
+import { normalizePhone, normalizeName, sameGuest, guestIdentityFields } from '@/lib/guests'
+
+describe('guestIdentityFields', () => {
+  const HAMZA = {
+    id: 'g1', name: 'Hamza Naeem', phone: '03071130001', cnic: '35202-1234567-1',
+    email: null, fatherName: '  Naeem Ahmed  ', gender: null, address: '   ',
+    passportNumber: null, nationality: null, passportExpiry: null,
+  }
+
+  it('names the booking columns, not the profile ones', () => {
+    expect(guestIdentityFields(HAMZA)).toEqual({
+      guestName: 'Hamza Naeem',
+      guestPhone: '03071130001',
+      guestCnic: '35202-1234567-1',
+      guestFatherName: 'Naeem Ahmed',
+    })
+  })
+
+  /* Spread over a form, an empty value would blank a field the desk had already
+     typed. What the profile does not hold, it does not get an opinion about. */
+  it('omits blank, whitespace and null fields rather than sending empty strings', () => {
+    const out = guestIdentityFields(HAMZA)
+    expect(out).not.toHaveProperty('guestEmail')
+    expect(out).not.toHaveProperty('guestAddress')
+    expect(out).not.toHaveProperty('passportNumber')
+  })
+
+  it('carries the travel document when that is what the profile has', () => {
+    expect(guestIdentityFields({
+      id: 'g2', name: 'Nadia Visitor', passportNumber: 'AB1234567', nationality: 'British',
+    })).toEqual({
+      guestName: 'Nadia Visitor',
+      passportNumber: 'AB1234567',
+      nationality: 'British',
+    })
+  })
+})
 
 describe('normalizePhone', () => {
   // the same number as three people at the desk would type it
