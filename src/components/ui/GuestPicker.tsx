@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { IdCard, X, ArrowUpRight, ChevronDown, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { GuestRiskBadge } from '@/components/guests/GuestRiskBadge'
 import type { Guest } from '@/lib/guests'
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   onNameChange: (name: string) => void
   onPick: (guest: Guest) => void
   onClear: () => void
+  /** For dialogs that open straight onto this field. */
+  autoFocus?: boolean
 }
 
 /**
@@ -30,7 +33,7 @@ interface Props {
  * Scanning deliberately is not here — it lives on the guest profile, so one
  * card read serves every future stay.
  */
-export function GuestPicker({ value, guestName, onNameChange, onPick, onClear }: Props) {
+export function GuestPicker({ value, guestName, onNameChange, onPick, onClear, autoFocus }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const boxRef = useRef<HTMLDivElement>(null)
@@ -77,6 +80,7 @@ export function GuestPicker({ value, guestName, onNameChange, onPick, onClear }:
     <div className="relative" ref={boxRef}>
       <div className="relative">
         <Input
+          autoFocus={autoFocus}
           value={guestName || ''}
           onChange={e => { onNameChange(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
@@ -140,7 +144,12 @@ export function GuestPicker({ value, guestName, onNameChange, onPick, onClear }:
                   {g.name[0]?.toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{g.name}</span>
+                  <span className="flex items-center gap-1.5">
+                    {/* Before the pick, not after: the desk should see it while
+                        still choosing, not once the booking is half typed */}
+                    <span className="truncate text-sm font-medium">{g.name}</span>
+                    <GuestRiskBadge guest={g} />
+                  </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {[g.cnic, g.passportNumber, g.phone].filter(Boolean).join(' · ') || 'No identity saved'}
                   </span>

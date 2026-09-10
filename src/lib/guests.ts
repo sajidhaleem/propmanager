@@ -15,6 +15,15 @@ export type Guest = {
   nationality?: string | null
   passportExpiry?: string | null
   notes?: string | null
+  /* Do-not-book record — read through guestRiskStatus(), never field by field,
+     so an unrecognised level cannot be shown to the desk as a warning nobody
+     can explain. */
+  riskLevel?: string | null
+  riskReason?: string | null
+  riskNote?: string | null
+  riskSetBy?: string | null
+  riskSetAt?: string | Date | null
+  riskReviewAt?: string | Date | null
   _count?: { bookings: number }
 }
 
@@ -63,6 +72,38 @@ export function fillBlanks<T extends Record<string, unknown>>(
   for (const key of Object.keys(incoming) as (keyof T)[]) {
     const value = incoming[key]
     if (filled(value) && !filled(existing[key])) out[key] = (value as string).trim()
+  }
+  return out
+}
+
+/**
+ * A saved profile, in the shape a booking stores it.
+ *
+ * Empty fields are left out rather than written as '', so spreading this over a
+ * form or a request body fills what the profile knows and disturbs nothing
+ * else. Picking a guest anywhere in the app goes through here, so a stay taken
+ * from the calendar carries the same identity as one taken from the full
+ * booking form — which is what a Hotel Eye filing needs.
+ */
+export function guestIdentityFields(g: Guest): Record<string, string> {
+  const fromProfile: Record<string, string | null | undefined> = {
+    guestName:       g.name,
+    guestEmail:      g.email,
+    guestPhone:      g.phone,
+    guestCnic:       g.cnic,
+    guestFatherName: g.fatherName,
+    guestGender:     g.gender,
+    guestAddress:    g.address,
+    guestProvince:   g.province,
+    guestDistrict:   g.district,
+    passportNumber:  g.passportNumber,
+    nationality:     g.nationality,
+    passportExpiry:  g.passportExpiry,
+  }
+
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(fromProfile)) {
+    if (value && value.trim()) out[key] = value.trim()
   }
   return out
 }

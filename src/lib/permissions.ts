@@ -26,6 +26,10 @@ export const FEATURES = [
      that can hide legal exposure rather than record it, and it is handed out
      per user rather than assumed from a role. */
   { key: 'hoteleye_na', label: 'Mark a stay N/A for Hotel Eye' },
+  /* Also not a page. Anyone who can see guests can see a flag — a warning
+     nobody is shown is pointless — but setting or lifting one is a commercial
+     decision about refusing a person a room, so it is handed out by name. */
+  { key: 'guest_risk',  label: 'Flag a guest do-not-book' },
 ] as const
 
 export type Feature = (typeof FEATURES)[number]['key']

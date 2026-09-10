@@ -10,6 +10,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GuestFormDialog } from '@/components/guests/GuestFormDialog'
+import { GuestRiskPanel } from '@/components/guests/GuestRiskPanel'
+import { GuestRiskBadge } from '@/components/guests/GuestRiskBadge'
+import { useAuth } from '@/hooks/useAuth'
 import { cn, formatDate } from '@/lib/utils'
 import { getFilingStatus, FILING_WINDOW_HOURS } from '@/lib/hotelEye'
 import {
@@ -27,6 +30,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 
 export default function GuestProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { user } = useAuth()
+  // Everyone with guests access sees a flag; only the granted may set one
+  const canFlag = user?.permissions?.includes('guest_risk') ?? false
   const [editOpen, setEditOpen] = useState(false)
   const [docIndex, setDocIndex] = useState(0)
   const [month, setMonth] = useState(() => new Date())
@@ -106,8 +112,9 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
             >
               <ArrowLeft className="h-3.5 w-3.5" />All guests
             </Link>
-            <h1 className="font-display mt-1 text-[2rem] font-semibold leading-tight tracking-tight">
+            <h1 className="font-display mt-1 flex flex-wrap items-center gap-2.5 text-[2rem] font-semibold leading-tight tracking-tight">
               {guest.name}
+              <GuestRiskBadge guest={guest} />
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {[guest.cnic && `CNIC ${guest.cnic}`, guest.passportNumber && `Passport ${guest.passportNumber}`, guest.nationality]
@@ -128,6 +135,10 @@ export default function GuestProfilePage({ params }: { params: Promise<{ id: str
             </Button>
           </div>
         </div>
+
+        {/* The booking decision, above the numbers: whoever opens this profile
+            to take a booking needs to see it before anything else. */}
+        <GuestRiskPanel guestId={id} guest={guest} canEdit={canFlag} />
 
         {/* Filing record across every stay */}
         <FilingMixBar mix={mix} />

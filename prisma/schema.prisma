@@ -155,6 +155,18 @@ model Guest {
   passportExpiry String?
 
   notes          String?
+
+  // Do-not-book record. Internal to this property and never part of a Hotel Eye
+  // filing — see src/lib/guestRisk.ts for what this may and may not be used for.
+  // All nullable: a guest with no flag is the normal case.
+  riskLevel      String?
+  riskReason     String?
+  riskNote       String?
+  // Denormalised name, so the record still says who decided after they leave
+  riskSetBy      String?
+  riskSetAt      DateTime?
+  riskReviewAt   DateTime?
+
   bookings       Booking[]
   // Scanned CNIC / passport images, kept with the person
   documents      Document[]

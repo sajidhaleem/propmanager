@@ -110,6 +110,17 @@ export const GUESTS = [
     passportNumber: 'AB1234567', nationality: 'British', passportExpiry: '2030-01-01', notes: null,
     _count: { bookings: 0 },
   },
+  /* Carries a do-not-book flag. Separate from the other two so the specs that
+     assert on an ordinary profile are not reading a warning by accident. */
+  {
+    id: 'g3', name: 'Bilal Flagged', email: null, phone: '03009998877',
+    cnic: '35202-7654321-9', fatherName: null, gender: null, address: null, province: null, district: null,
+    passportNumber: null, nationality: 'Pakistani', passportExpiry: null, notes: null,
+    riskLevel: 'DO_NOT_BOOK', riskReason: 'UNPAID',
+    riskNote: 'Room 3, 14 March: left with Rs 12,000 unpaid',
+    riskSetBy: 'Sajid', riskSetAt: at(-180, 10), riskReviewAt: at(185, 10),
+    _count: { bookings: 1 },
+  },
 ]
 
 /* Hamza has a complete CNIC and no passport — the case that proves the two
