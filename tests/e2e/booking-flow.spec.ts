@@ -71,11 +71,16 @@ test.describe('Main screens', () => {
     await page.goto('/dashboard')
     await waitForData(page, 'Net income')
 
+    /* Generous timeouts, because these are client-side navigations rather than
+       page.goto: under `next dev` the first request for a route compiles it on
+       demand, and the URL does not change until that finishes. Five seconds is
+       not enough for a cold route, and the wait is the dev server's, not the
+       app's. */
     await page.getByRole('link', { name: 'Bookings', exact: true }).click()
-    await expect(page).toHaveURL(/bookings/)
+    await expect(page).toHaveURL(/bookings/, { timeout: 60_000 })
 
     await page.getByRole('link', { name: 'Calendar', exact: true }).click()
-    await expect(page).toHaveURL(/calendar/)
+    await expect(page).toHaveURL(/calendar/, { timeout: 60_000 })
   })
 
   test('shows the bookings table', async ({ page }) => {
