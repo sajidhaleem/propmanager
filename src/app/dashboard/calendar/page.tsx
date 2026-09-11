@@ -139,9 +139,23 @@ function bookingSlotForDay(b: Booking, day: Date): { hour: number; kind: DaySlot
   return { hour: 6, kind: 'stay' }
 }
 
+/**
+ * What is actually happening in the rooms on `day`.
+ *
+ * Cancelled and no-show stays are excluded, the same rule occupancyForDay
+ * applies. Without it the rail listed a cancelled guest as arriving, and —
+ * worse — treated their room as spoken for, so the room lost its "Room
+ * Available" card while the count above it still said the room was free. The
+ * hourly timeline read the same list and showed the stay as a block.
+ *
+ * The month grid deliberately still shows cancelled bookings, greyed red with
+ * a legend entry: that view is the record of what was booked, not a roster of
+ * who is in the building.
+ */
 function bookingsForDay(bookings: Booking[], day: Date): Booking[] {
   const d = new Date(day.getFullYear(), day.getMonth(), day.getDate())
   return bookings.filter(b => {
+    if (!HOLDS_ROOM.has(b.status)) return false
     const ci = parseISO(b.checkIn)
     const co = parseISO(b.checkOut)
     const ciD = new Date(ci.getFullYear(), ci.getMonth(), ci.getDate())

@@ -38,7 +38,7 @@ export const PROPERTIES = [
   property('p3', 'Room 3', 7000, 'MAINTENANCE'),
 ]
 
-const booking = (
+export const booking = (
   id: string, guestName: string, propertyId: string, propertyName: string,
   platform: string, status: string, paidAmount: number, offset: number, notes = ''
 ) => ({

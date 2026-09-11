@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { signIn } from './helpers/session'
-import { stubApi, waitForData } from './helpers/api'
+import { stubApi, waitForData, booking, BOOKINGS } from './helpers/api'
+
+/* Room 2 is free today in the base fixtures. This adds a cancelled stay on it
+   for today, which must change nothing: a cancelled booking releases the room. */
+const WITH_CANCELLED = [
+  ...BOOKINGS,
+  booking('b9', 'Cancelled Guest', 'p2', 'Room 2', 'DIRECT', 'CANCELLED', 0, 0),
+]
 
 test.describe('Calendar — room availability', () => {
   test.beforeEach(async ({ context, baseURL }) => {
@@ -59,6 +66,39 @@ test.describe('Calendar — room availability', () => {
   /* Same register as the full booking form. A returning guest booked from the
      calendar must reach the same profile, or the quick path quietly becomes the
      one that makes duplicates. */
+  /* A cancelled stay releases the room. It has to release it everywhere the
+     desk looks, not only where the occupancy maths happens to filter. */
+  test('a cancelled booking leaves the room free', async ({ context, page, baseURL }) => {
+    await signIn(context, baseURL!)
+    await stubApi(context, { bookings: WITH_CANCELLED })
+
+    await page.goto('/dashboard/calendar')
+    await waitForData(page, 'Room Available')
+
+    const rail = page.getByText('Scheduled', { exact: true }).locator('xpath=ancestor::div[3]')
+    // Room 2 is still offered, not held by the guest whose booking was cancelled
+    await expect(rail).toContainText('Room Available')
+    await expect(rail).toContainText('No booking this day')
+
+    /* No arrival card for a cancelled stay. Scoped to the card rather than the
+       panel's text, because the month grid alongside it deliberately keeps
+       showing cancelled bookings — that view is the record of what was booked,
+       and its own legend lists Cancelled. */
+    await expect(page.getByRole('link', { name: /Cancelled Guest/ })).toHaveCount(0)
+  })
+
+  test('a cancelled booking does not take a room out of the day count', async ({ context, page, baseURL }) => {
+    await signIn(context, baseURL!)
+    await stubApi(context, { bookings: WITH_CANCELLED })
+
+    await page.goto('/dashboard/calendar')
+    await waitForData(page, 'Room Available')
+
+    /* Three rooms, one occupied by a live stay and one under maintenance, so
+       exactly one is free — the cancelled stay must not make it zero. */
+    await expect(page.getByText('1 of 3 free')).toBeVisible()
+  })
+
   test('the quick dialog searches saved guests by name', async ({ page }) => {
     await page.goto('/dashboard/calendar')
     await waitForData(page, 'Room Available')
