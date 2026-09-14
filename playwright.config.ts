@@ -13,6 +13,13 @@ export default defineConfig({
      out of the suite and is invoked by name when a visual change needs review:
        npx playwright test capture-preview --project=chromium */
   testIgnore: '**/capture-preview.spec.ts',
+  /* 30s — the default — is not enough against `next dev`, which compiles a route
+     the first time anything asks for it. Whichever test reaches a cold route
+     first pays several seconds for it, and on the heavier pages more than that.
+     It looked like one flaky test per run, always a different one, always
+     passing in isolation; it was the cap. Note this also makes the 60s waits
+     inside the specs reachable — under a 30s test timeout they never were. */
+  timeout: 90_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
