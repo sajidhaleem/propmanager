@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown, ShieldCheck, BookOpen } from 'lucide-react'
+import { Plus, Search, Download, Edit, Trash2, Upload, FileText, X, Loader2, Copy, Check, Bell, CalendarDays, Send, ScanLine, ChevronDown, ShieldCheck, BookOpen, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import toast from 'react-hot-toast'
@@ -30,6 +30,7 @@ import type { PassportData } from '@/components/ui/PassportScanner'
 import { guestIdentityFields, type Guest } from '@/lib/guests'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { getFilingStatus, FILING_STATE_META, NOT_APPLICABLE } from '@/lib/hotelEye'
+import { waLink, confirmationMessage, paymentReminderMessage } from '@/lib/whatsapp'
 import { useSearchParams } from 'next/navigation'
 
 async function fetchBookings(params: Record<string, string>) {
@@ -110,7 +111,7 @@ const VIEWABLE_TYPES = new Set([
 
 function BookingsInner() {
   const queryClient = useQueryClient()
-  const { format, currencyInfo } = useCurrency()
+  const { format, currency, currencyInfo } = useCurrency()
   /* Marking a stay N/A is granted per user in Settings. Default closed while
      /api/auth/me is still answering, so the option does not flash in for
      someone who is not allowed it — the API refuses it either way. */
@@ -1111,6 +1112,25 @@ function BookingsInner() {
                           <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-muted-foreground hover:text-primary" title="Duplicate" aria-label="Duplicate" onClick={() => openCopy(b)}>
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
+                          {(() => {
+                            /* Opens WhatsApp with the text ready; a person presses send.
+                               No API, so the number stays usable on the phone. */
+                            const owed = b.totalAmount - (b.paidAmount ?? 0)
+                            const href = waLink(
+                              b.guestPhone,
+                              owed > 0 ? paymentReminderMessage(b, currency) : confirmationMessage(b, currency),
+                            )
+                            if (!href) return null
+                            return (
+                              <Button asChild variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-emerald-600 hover:text-emerald-500">
+                                <a href={href} target="_blank" rel="noopener noreferrer"
+                                  title={owed > 0 ? 'WhatsApp payment reminder' : 'WhatsApp booking details'}
+                                  aria-label={owed > 0 ? 'WhatsApp payment reminder' : 'WhatsApp booking details'}>
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                            )
+                          })()}
                           <Button variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-primary hover:text-primary/80" title="Push to Hotel Eye" aria-label="Push to Hotel Eye" onClick={() => pushToHotelEye(b)}>
                             <Send className="h-3.5 w-3.5" />
                           </Button>
