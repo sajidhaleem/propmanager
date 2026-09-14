@@ -151,6 +151,16 @@ test.describe('Booking — searchable guest name', () => {
     await expect(page.getByText('35202-1234567-1')).toBeVisible()
   })
 
+  /* The search that misses is what creates the duplicate. A desk reading the
+     card in front of them types the digits; the profile was saved with dashes.
+     Both must find the same person. */
+  test('finds a saved guest by a CNIC typed without its dashes', async ({ page }) => {
+    const nameField = await openForm(page)
+    await nameField.fill('3520212345671')
+
+    await expect(page.getByRole('button', { name: /Hamza Naeem/ })).toBeVisible()
+  })
+
   test('picking a guest links the booking and fills their details', async ({ page }) => {
     const nameField = await openForm(page)
     await nameField.fill('Hamza')

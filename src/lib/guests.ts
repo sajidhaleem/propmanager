@@ -109,6 +109,78 @@ export function guestIdentityFields(g: Guest): Record<string, string> {
 }
 
 /**
+ * A CNIC in the one form the app stores: 35202-1234567-1.
+ *
+ * The unique index that is supposed to stop one person having two profiles
+ * compares the stored string, so it only works if every desk writes the number
+ * the same way — and they do not. 3520212345671, 35202 1234567 1 and
+ * 35202-1234567-1 are the same national identity card and used to be three
+ * guests. The digits are the identity; the dashes are how the card prints it.
+ *
+ * Anything that is not thirteen digits is left alone rather than reshaped: a
+ * half-typed or foreign number should be stored as given, not silently turned
+ * into something that looks official.
+ */
+export function normalizeCnic(cnic?: string | null): string | null {
+  const raw = cnic?.trim()
+  if (!raw) return null
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length !== 13) return raw
+  return `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12)}`
+}
+
+/**
+ * Passport numbers, upper-cased with separators removed.
+ *
+ * Same problem as the CNIC in a smaller form: "ab 1234567" and "AB1234567" are
+ * one document, and the index cannot see that.
+ */
+export function normalizePassport(passport?: string | null): string | null {
+  const raw = passport?.trim()
+  if (!raw) return null
+  const compact = raw.replace(/[\s-]/g, '').toUpperCase()
+  return compact || null
+}
+
+/**
+ * Canonicalise the two identifiers a guest is matched on, wherever a profile is
+ * written. Applied server-side so every path — the guest form, a booking, a
+ * scanned card — goes through it, rather than trusting each caller.
+ */
+export function normalizeGuestIdentity<T extends { cnic?: unknown; passportNumber?: unknown }>(data: T): T {
+  const out = { ...data }
+  if ('cnic' in data) out.cnic = normalizeCnic(data.cnic as string | null) as T['cnic']
+  if ('passportNumber' in data) {
+    out.passportNumber = normalizePassport(data.passportNumber as string | null) as T['passportNumber']
+  }
+  return out
+}
+
+/**
+ * Every form of a search term worth looking for.
+ *
+ * The desk searches the way the number is printed on the card in their hand,
+ * which is not always the way it was typed the day the profile was made. A
+ * search that misses is what creates the duplicate: nothing comes back, so a
+ * second profile gets made for someone already on file.
+ */
+export function guestSearchVariants(search?: string | null): string[] {
+  const term = search?.trim()
+  if (!term) return []
+
+  const variants = new Set([term])
+  const asCnic = normalizeCnic(term)
+  if (asCnic) variants.add(asCnic)
+  const asPassport = normalizePassport(term)
+  if (asPassport) variants.add(asPassport)
+  // bare digits, so a stored 35202-1234567-1 is found by 3520212345671
+  const digits = term.replace(/\D/g, '')
+  if (digits) variants.add(digits)
+
+  return [...variants]
+}
+
+/**
  * The same number is typed as 0307 113 0001, +92 307 1130001 and 03071130001.
  * Compare the national digits only, or one person ends up with three profiles.
  */

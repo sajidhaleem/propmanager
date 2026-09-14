@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requirePermission } from '@/lib/permissionGuard'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
-import { guestSchema, blankToNull } from '@/lib/guests'
+import { guestSchema, blankToNull, normalizeGuestIdentity } from '@/lib/guests'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +46,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const guest = await prisma.guest.update({
       where: { id },
-      data: blankToNull(parsed.data) as never,
+      // canonical on the way in, so editing a profile cannot introduce a second
+      // spelling of a CNIC that already exists elsewhere
+      data: normalizeGuestIdentity(blankToNull(parsed.data)) as never,
     })
     return apiResponse(guest)
   } catch (error) {

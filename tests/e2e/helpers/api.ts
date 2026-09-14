@@ -1,4 +1,5 @@
 import type { BrowserContext } from '@playwright/test'
+import { guestSearchVariants } from '../../../src/lib/guests'
 
 /**
  * Serves the app's read endpoints from fixtures.
@@ -193,10 +194,16 @@ export async function stubApi(
     }
 
     if (path === '/api/guests') {
-      const q = (url.searchParams.get('search') || '').toLowerCase()
-      const data = q
+      /* Mirrors the route's variant search, so a CNIC typed without its dashes
+         finds the guest here too — the specs are about whether the desk is
+         shown the existing profile, and a fixture that only matched the stored
+         spelling would pass while the real thing failed. */
+      const q = url.searchParams.get('search') || ''
+      const variants = guestSearchVariants(q).map((v) => v.toLowerCase())
+      const data = variants.length
         ? GUESTS.filter((g) =>
-            [g.name, g.cnic, g.phone, g.passportNumber].some((v) => (v || '').toLowerCase().includes(q)))
+            [g.name, g.cnic, g.phone, g.passportNumber].some((v) =>
+              variants.some((term) => (v || '').toLowerCase().includes(term))))
         : GUESTS
       return json(data)
     }
