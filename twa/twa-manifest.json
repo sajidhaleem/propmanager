@@ -1,36 +1,42 @@
 {
   "packageId": "com.propmanager.app",
-  "host": "your-app.netlify.app",
+  "host": "52apropmanager.netlify.app",
   "name": "PropManager",
   "launcherName": "PropManager",
   "display": "standalone",
-  "themeColor": "#3b82f6",
-  "navigationColor": "#0f172a",
-  "navigationColorDark": "#0f172a",
-  "navigationDividerColor": "#1e293b",
-  "navigationDividerColorDark": "#1e293b",
-  "backgroundColor": "#0f172a",
+  "themeColor": "#D4AF37",
+  "navigationColor": "#0B0F19",
+  "navigationColorDark": "#0B0F19",
+  "navigationDividerColor": "#161F30",
+  "navigationDividerColorDark": "#161F30",
+  "backgroundColor": "#0B0F19",
   "enableNotifications": true,
   "startUrl": "/dashboard",
-  "iconUrl": "https://your-app.netlify.app/icons/icon-512x512.png",
-  "maskableIconUrl": "https://your-app.netlify.app/icons/icon-512x512.png",
-  "monochromeIconUrl": "https://your-app.netlify.app/icons/icon-192x192.png",
+  "iconUrl": "https://52apropmanager.netlify.app/icons/icon-512x512.png",
+  "maskableIconUrl": "https://52apropmanager.netlify.app/icons/icon-512x512.png",
+  "monochromeIconUrl": "https://52apropmanager.netlify.app/icons/icon-192x192.png",
   "shortcuts": [
     {
       "name": "New Booking",
       "shortName": "Booking",
       "url": "/dashboard/bookings",
-      "icons": [{ "src": "https://your-app.netlify.app/icons/icon-96x96.png" }]
+      "icons": [{ "src": "https://52apropmanager.netlify.app/icons/icon-96x96.png" }]
+    },
+    {
+      "name": "Calendar",
+      "shortName": "Calendar",
+      "url": "/dashboard/calendar",
+      "icons": [{ "src": "https://52apropmanager.netlify.app/icons/icon-96x96.png" }]
     },
     {
       "name": "Reports",
       "shortName": "Reports",
       "url": "/dashboard/reports",
-      "icons": [{ "src": "https://your-app.netlify.app/icons/icon-96x96.png" }]
+      "icons": [{ "src": "https://52apropmanager.netlify.app/icons/icon-96x96.png" }]
     }
   ],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://your-app.netlify.app/manifest.json",
+  "webManifestUrl": "https://52apropmanager.netlify.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "locationDelegation": { "enabled": false },
@@ -42,15 +48,6 @@
   "isMetaQuest": false,
   "fingerprints": [],
   "useBrowserOnChromeOS": true,
-  "signing": {
-    "keyAlias": "propmanager",
-    "keyFullName": "PropManager App",
-    "keyOrganization": "PropManager",
-    "keyOrganizationalUnit": "Engineering",
-    "keyCountry": "US",
-    "keyPassword": "REPLACE_WITH_KEYSTORE_PASSWORD",
-    "storePassword": "REPLACE_WITH_STORE_PASSWORD"
-  },
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "orientation": "default",
