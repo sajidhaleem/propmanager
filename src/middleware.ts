@@ -16,6 +16,9 @@ const PUBLIC_PATHS = [
   // carry the auth-token cookie; it guards itself with a shared secret and
   // returns 404 when that is missing or wrong.
   '/api/export/ledger',
+  // Simplified room calendar for Sajid's Cockpit. Same arrangement: its own
+  // read-only secret, 404 when it is missing or wrong.
+  '/api/export/calendar',
 ]
 
 const SECURITY_HEADERS = {
