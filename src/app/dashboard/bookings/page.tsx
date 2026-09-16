@@ -232,6 +232,15 @@ function BookingsInner() {
     staleTime: 60_000,
   })
   const platforms: PlatformItem[] = platformsData ?? DEFAULT_PLATFORMS
+  const platformLabel = (b: Booking): string => {
+    if (b.platform === 'OTHER') {
+      const m = (b.notes || '').match(/^\[([^\]]+)\]/)
+      if (m) return m[1]
+      return platforms.find(p => p.custom && p.value === 'OTHER')?.label ?? 'Other'
+    }
+    return platforms.find(p => p.value === b.platform)?.label
+      ?? (b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase())
+  }
 
   const bookings: Booking[] = data?.data?.data || []
   const total = data?.data?.total || 0
@@ -928,21 +937,41 @@ function BookingsInner() {
                         b.status === 'CANCELLED'   ? 'bg-red-400' : 'bg-muted-foreground'
                       )} />
 
-                      <div className="flex items-center gap-3 pl-5 pr-4 py-3 flex-wrap sm:flex-nowrap">
+                      {/* One shared grid, not content-sized boxes. Every row declares the
+                          same column tracks, so a longer name, a bigger amount or a wider
+                          badge changes nothing about where the columns sit — the text
+                          truncates inside its track instead of pushing its neighbours.
+                          Below 1400px there is not room for the tracks, so it falls back
+                          to a wrapping flex row. Column order must match the DOM order;
+                          the platform cell is display:none until 2xl, so it is not a grid
+                          item until then, which is why there are two templates. */}
+                      <div className={cn(
+                        'grid items-center gap-x-3 gap-y-2 pl-5 pr-4 py-3',
+                        'grid-cols-[2.25rem_minmax(0,1fr)] sm:grid-cols-[2.25rem_minmax(0,1fr)_13rem]',
+                        'min-[1400px]:grid-cols-[2.25rem_minmax(0,1fr)_13rem_7.25rem_6rem_7rem_7rem_auto]',
+                        '2xl:grid-cols-[2.25rem_minmax(0,1fr)_13rem_6.5rem_7.25rem_6rem_7rem_7rem_auto]',
+                      )}>
                         {/* Avatar */}
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold ring-2 ring-primary/10">
                           {b.guestName?.[0]?.toUpperCase() ?? '?'}
                         </div>
 
                         {/* Guest + property */}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0">
                           <p className="font-semibold text-sm truncate">{b.guestName}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {b.property?.name}
-                            {b.guestEmail && <> · {b.guestEmail}</>}
-                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+                            <span className="truncate">
+                              {b.property?.name}
+                              {b.guestEmail && <> · {b.guestEmail}</>}
+                            </span>
+                            {/* Platform rides here until the row is wide enough for its own column */}
+                            {/* Capped, or a long custom platform name eats the property name beside it */}
+                            <Badge className={cn('2xl:hidden h-5 px-1.5 text-[10px] shrink-0 max-w-[8rem] block', getPlatformColor(b.platform))} variant="outline">
+                              <span className="block truncate">{platformLabel(b)}</span>
+                            </Badge>
+                          </div>
                           {/* Mobile-only check-in/out with time */}
-                          <div className="flex sm:hidden items-center gap-1.5 mt-2.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                          <div className="flex sm:hidden items-center gap-1.5 mt-2.5 text-xs text-muted-foreground whitespace-nowrap tabular-nums">
                             <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d, h:mm a')}</span>
                             <span>→</span>
                             <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d, h:mm a')}</span>
@@ -950,33 +979,31 @@ function BookingsInner() {
                           </div>
                         </div>
 
-                        {/* Date range */}
-                        <div className="hidden sm:flex flex-col gap-0.5 text-xs whitespace-nowrap shrink-0">
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium text-foreground">{formatDate(b.checkIn, 'MMM d')}</span>
-                            <span className="text-muted-foreground/60">{formatDate(b.checkIn, 'h:mm a')}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium text-foreground">{formatDate(b.checkOut, 'MMM d')}</span>
-                            <span className="text-muted-foreground/60">{formatDate(b.checkOut, 'h:mm a')}</span>
-                            <span className="text-muted-foreground/50 ml-1">· {b.nights}n</span>
-                          </div>
+                        {/* Date range. Every column from here on has a fixed width:
+                            sized by content, one wider badge or a missing button
+                            shifts every column beside it and the rows stop lining up. */}
+                        <div className="hidden sm:grid grid-cols-[1.75rem_3.75rem_4.5rem_1.75rem] items-baseline gap-x-1.5 gap-y-1 shrink-0 whitespace-nowrap tabular-nums">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">In</span>
+                          <span className="text-base font-bold text-foreground leading-tight">{formatDate(b.checkIn, 'MMM d')}</span>
+                          <span className="text-sm font-medium text-foreground/75 text-right leading-tight">{formatDate(b.checkIn, 'h:mm a')}</span>
+                          <span className="row-span-2 self-center text-xs text-muted-foreground text-right">{b.nights}n</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Out</span>
+                          <span className="text-base font-bold text-foreground leading-tight">{formatDate(b.checkOut, 'MMM d')}</span>
+                          <span className="text-sm font-medium text-foreground/75 text-right leading-tight">{formatDate(b.checkOut, 'h:mm a')}</span>
                         </div>
 
+                        {/* The controls. Narrow, they are a second line of the same grid,
+                            right-aligned and fixed-width so they line up row to row.
+                            Wide, `contents` dissolves this wrapper and its children
+                            become cells of the row grid itself — one layout, no
+                            duplicated markup. */}
+                        <div className="col-span-2 sm:col-span-3 flex flex-wrap items-center justify-end gap-2 min-[1400px]:contents">
+
                         {/* Platform */}
-                        <div className="hidden md:block shrink-0">
-                          <Badge className={getPlatformColor(b.platform)} variant="outline">
-                            {(() => {
-                              const notes = b.notes || ''
-                              if (b.platform === 'OTHER') {
-                                const m = notes.match(/^\[([^\]]+)\]/)
-                                if (m) return m[1]
-                                const custom = platforms.find(p => p.custom && p.value === 'OTHER')
-                                return custom?.label ?? 'Other'
-                              }
-                              return platforms.find(p => p.value === b.platform)?.label
-                                ?? (b.platform === 'BOOKING_COM' ? 'Booking.com' : b.platform.charAt(0) + b.platform.slice(1).toLowerCase())
-                            })()}
+                        <div className="hidden 2xl:block w-[6.5rem] shrink-0">
+                          {/* One line always: a wrapping label makes this row taller than its neighbours */}
+                          <Badge className={cn('block max-w-full', getPlatformColor(b.platform))} variant="outline">
+                            <span className="block truncate">{platformLabel(b)}</span>
                           </Badge>
                         </div>
 
@@ -1027,7 +1054,7 @@ function BookingsInner() {
                         </div>
 
                         {/* Payment status — derived from the amounts, not stored */}
-                        <div className="shrink-0">
+                        <div className="w-[6rem] shrink-0">
                           {(() => {
                             const meta = PAYMENT_STATUS_META[getPaymentStatus(b.totalAmount, b.paidAmount)]
                             return (
@@ -1044,7 +1071,7 @@ function BookingsInner() {
                             value={b.status}
                             onValueChange={(s) => statusMutation.mutate({ id: b.id, status: s })}
                           >
-                            <SelectTrigger className={`h-7 w-[128px] text-xs border px-2 ${getStatusColor(b.status)}`}>
+                            <SelectTrigger className={`h-7 w-[7rem] text-xs border px-2 ${getStatusColor(b.status)}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1063,7 +1090,7 @@ function BookingsInner() {
                         </div>
 
                         {/* Amount */}
-                        <div className="shrink-0 min-w-[80px] text-right">
+                        <div className="w-[7rem] shrink-0 text-right tabular-nums min-w-0">
                           {editingAmountId === b.id ? (
                             <div className="flex items-center gap-1">
                               <Input
@@ -1096,7 +1123,7 @@ function BookingsInner() {
                                 {format(b.paidAmount ?? 0)}
                               </button>
                               {(b.totalAmount - (b.paidAmount ?? 0)) > 0 && (
-                                <span className="text-[10px] text-amber-500 font-medium leading-none mt-0.5">
+                                <span className="text-[10px] text-amber-500 font-medium leading-none mt-0.5 tabular-nums truncate max-w-full">
                                   {format(b.totalAmount - (b.paidAmount ?? 0))} owed
                                 </span>
                               )}
@@ -1120,7 +1147,8 @@ function BookingsInner() {
                               b.guestPhone,
                               owed > 0 ? paymentReminderMessage(b, currency) : confirmationMessage(b, currency),
                             )
-                            if (!href) return null
+                            // Hold the slot when there's no number, or the buttons shift row to row.
+                            if (!href) return <span aria-hidden className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" />
                             return (
                               <Button asChild variant="ghost" size="icon" className="h-8 w-8 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-emerald-600 hover:text-emerald-500">
                                 <a href={href} target="_blank" rel="noopener noreferrer"
@@ -1138,6 +1166,7 @@ function BookingsInner() {
                             onClick={() => { if (confirm('Delete this booking?')) deleteMutation.mutate(b.id) }}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
+                        </div>
                         </div>
                       </div>
                     </Card>
