@@ -19,6 +19,9 @@ const PUBLIC_PATHS = [
   // Simplified room calendar for Sajid's Cockpit. Same arrangement: its own
   // read-only secret, 404 when it is missing or wrong.
   '/api/export/calendar',
+  // Hisaab entering, correcting and removing its guesthouse expenses. Same
+  // arrangement, but a separate write secret so the read key cannot change data.
+  '/api/sync/expenses',
 ]
 
 const SECURITY_HEADERS = {

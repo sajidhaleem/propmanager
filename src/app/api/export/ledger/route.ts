@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { timingSafeEqual } from 'node:crypto'
 import { prisma } from '@/lib/db'
+import { ledgerSecretValid } from '@/lib/ledgerSyncAuth'
 import { apiError, apiResponse, handleApiError } from '@/lib/utils'
 
 export const runtime = 'nodejs'
@@ -24,16 +24,8 @@ export const dynamic = 'force-dynamic'
 const MAX_LIMIT = 1000
 
 function authorised(req: NextRequest): boolean {
-  const expected = process.env.LEDGER_SYNC_SECRET
-  // Unset secret means the feature is off. Failing closed matters more here than
-  // convenience: an unset env var must never mean "let everyone in".
-  if (!expected || expected.length < 16) return false
-
-  const given = req.headers.get('x-sync-secret') ?? ''
-  const a = Buffer.from(given)
-  const b = Buffer.from(expected)
-  if (a.length !== b.length) return false
-  return timingSafeEqual(a, b)
+  // Read secret only. The write endpoints under /api/sync take their own.
+  return ledgerSecretValid(req.headers.get('x-sync-secret'), 'LEDGER_SYNC_SECRET')
 }
 
 export async function GET(req: NextRequest) {
