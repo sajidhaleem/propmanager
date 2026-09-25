@@ -16,14 +16,38 @@ Extract only from the front face and return ONLY valid JSON — no markdown, no 
 }
 Use empty string "" for any field that cannot be read clearly.`
 
+/* The back of a CNIC is printed in Urdu — there is no English on it except the
+   identity number. The prompt asking for the address "in English as printed on
+   the card" was therefore asking for text that does not exist, and the model
+   correctly answered with the empty string the next line told it to use. It has
+   to be told to translate. */
+const URDU_ADDRESS_RULES = `The back of a CNIC is printed in URDU script. There is no English address on it.
+Read the Urdu and TRANSLITERATE place names into English (فیصل آباد -> Faisalabad, لاہور -> Lahore).
+Translate the structural words rather than transliterating them: مکان -> House, گلی -> Street, محلہ -> Mohalla, بلاک -> Block, سکیم -> Scheme, ٹاؤن -> Town, کالونی -> Colony, تحصیل -> Tehsil, ضلع -> District.
+The card carries TWO addresses, each with its own Urdu label:
+  موجودہ پتہ = present (current) address
+  مستقل پتہ  = permanent address
+Return them separately. Do not merge them and do not put one in both fields.
+The identity number is printed in Latin digits at the top right — read it from there.
+تحصیل names the tehsil and ضلع names the district; return each on its own as well as inside the address text.
+The province is NOT printed on a CNIC. Never infer or invent it.`
+
 const BACK_PROMPT = `This is the BACK side of a Pakistani CNIC (Computerized National Identity Card).
-Extract only from the back and return ONLY valid JSON — no markdown, no explanation:
+${URDU_ADDRESS_RULES}
+Return ONLY valid JSON — no markdown, no explanation:
 {
-  "address": "full permanent address in English as printed on the card"
+  "cnic": "identity number with dashes, e.g. 12345-1234567-1",
+  "address": "full PERMANENT address (مستقل پتہ), transliterated into English",
+  "present_address": "full PRESENT address (موجودہ پتہ), transliterated into English",
+  "district": "district name only, in English, from ضلع",
+  "tehsil": "tehsil name only, in English, from تحصیل"
 }
-Use empty string "" if the address cannot be read clearly.`
+Use empty string "" for any field that cannot be read clearly.`
 
 const BOTH_PROMPT = `This image may be a Pakistani CNIC (Computerized National Identity Card) — front or back side.
+The FRONT is in English and carries the name, father's name, gender and dates.
+If this is the BACK, these rules apply:
+${URDU_ADDRESS_RULES}
 Extract all readable fields and return ONLY valid JSON — no markdown, no explanation:
 {
   "cnic": "identity number with dashes, e.g. 12345-1234567-1",
@@ -31,7 +55,10 @@ Extract all readable fields and return ONLY valid JSON — no markdown, no expla
   "father_name": "father's name in English",
   "gender": "Male or Female",
   "date_of_birth": "YYYY-MM-DD",
-  "address": "full permanent address in English"
+  "address": "full PERMANENT address (مستقل پتہ), transliterated into English",
+  "present_address": "full PRESENT address (موجودہ پتہ), transliterated into English",
+  "district": "district name only, in English, from ضلع",
+  "tehsil": "tehsil name only, in English, from تحصیل"
 }
 Use empty string "" for any field not visible on this side.`
 
@@ -52,9 +79,21 @@ export async function POST(req: NextRequest) {
 
     const prompt = side === 'front' ? FRONT_PROMPT : side === 'back' ? BACK_PROMPT : BOTH_PROMPT
 
+    /* The front is English and Haiku reads it accurately. The back is Urdu, and
+       Haiku does not hold the two addresses apart on it — checked against a real
+       card, it merged them, read a scheme number as a house number and invented
+       a town name that is not on the card. Wrong text in an address that gets
+       filed to a government portal is worse than an empty field, so the Urdu
+       side is worth the stronger model. */
+    const model = side === 'front' ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-5'
+
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
+      model,
+      /* Two transliterated addresses plus the identity fields, and Sonnet spends
+         some of this budget on a thinking block. At 512 a long permanent address
+         truncated the JSON mid-string, which surfaces as the 422 "could not
+         parse" rather than as a short address. */
+      max_tokens: 2048,
       messages: [
         {
           role: 'user',
@@ -66,7 +105,10 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    const block = response.content[0]
+    /* Find the text block rather than assuming it is first: Sonnet returns a
+       thinking block ahead of it, so indexing content[0] failed every scan with
+       a 422 that looked like an unreadable photo. */
+    const block = response.content.find((b) => b.type === 'text')
     if (!block || block.type !== 'text') return apiError('Could not parse CNIC data from image', 422)
     let text = block.text.trim()
     if (text.startsWith('```')) {

@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    const block = response.content[0]
+    // Not content[0]: a model that thinks first puts a thinking block there
+    const block = response.content.find((b) => b.type === 'text')
     if (!block || block.type !== 'text') return apiError('Could not parse bill data from image', 422)
     let text = block.text.trim()
     if (text.startsWith('```')) {

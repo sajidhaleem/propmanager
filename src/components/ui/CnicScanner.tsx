@@ -14,7 +14,13 @@ export interface CnicData {
   father_name: string
   gender: string
   date_of_birth: string
+  /** The permanent address (مستقل پتہ) — the one Hotel Eye files. */
   address: string
+  /** The present address (موجودہ پتہ). Both are on the card; only ever used as
+   *  a fallback when the permanent one could not be read. */
+  present_address?: string
+  district?: string
+  tehsil?: string
 }
 
 interface Props {
@@ -53,13 +59,26 @@ export function CnicScanner({ onExtracted, className }: Props) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Extraction failed')
 
-      // Emit result — applyScannedCnic uses `data.field || f.field` so
+      // Emit result — the applyCnic handlers use `data.field || f.field` so
       // empty strings from this side won't overwrite values from the other side.
       // The image rides along so it can be filed against the booking.
       const kind = side === 'front' ? 'CNIC_FRONT' : 'CNIC_BACK'
-      onExtracted(json.data ?? json, { file, kind, label: SCAN_LABELS[kind], previewUrl: preview })
+      const data: CnicData = json.data ?? json
+      onExtracted(data, { file, kind, label: SCAN_LABELS[kind], previewUrl: preview })
       set(prev => ({ ...prev, state: 'done' }))
-      toast.success(side === 'front' ? 'Front scanned — name & CNIC filled' : 'Back scanned — address filled')
+
+      /* "Back scanned — address filled" was shown even when every field came
+         back empty, which is how an unreadable back looked identical to a good
+         one. Say what actually landed. */
+      const filled = side === 'front'
+        ? [data.name, data.cnic, data.father_name].some(Boolean)
+        : [data.address, data.present_address, data.district].some(Boolean)
+
+      if (filled) {
+        toast.success(side === 'front' ? 'Front scanned — name & CNIC filled' : 'Back scanned — address filled')
+      } else {
+        toast(`Read the ${side}, but no fields came out of it. Try a sharper photo, or type them in.`, { icon: '⚠️' })
+      }
     } catch (e: any) {
       set(prev => ({ ...prev, state: 'error' }))
       toast.error(e.message || `Could not read CNIC ${side}`)
@@ -118,7 +137,7 @@ export function CnicScanner({ onExtracted, className }: Props) {
         <input ref={backRef} type="file" accept="image/*" className="hidden" onChange={e => pickFile(e, 'back')} />
         <DropZone
           label="Back"
-          hint="Address"
+          hint="Address, district"
           data={back}
           dragging={backDrag}
           onClick={() => back.state !== 'scanning' && backRef.current?.click()}

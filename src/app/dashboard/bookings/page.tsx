@@ -28,6 +28,7 @@ import { GuestScans } from '@/components/guests/GuestScans'
 import type { CnicData } from '@/components/ui/CnicScanner'
 import type { PassportData } from '@/components/ui/PassportScanner'
 import { guestIdentityFields, type Guest } from '@/lib/guests'
+import { districtToProvince } from '@/lib/pakistan'
 import { DEFAULT_PLATFORMS, type PlatformItem } from '@/lib/platforms'
 import { getFilingStatus, FILING_STATE_META, NOT_APPLICABLE } from '@/lib/hotelEye'
 import { waLink, confirmationMessage, paymentReminderMessage } from '@/lib/whatsapp'
@@ -657,13 +658,20 @@ function BookingsInner() {
   /* Scanning fills the booking's own identity columns too: a filed Hotel Eye
      entry has to keep showing what was filed, whatever the profile says later. */
   function applyCnic(d: CnicData, scan?: ScannedImage) {
+    const district = d.district || ''
     setForm(f => ({
       ...f,
       guestName:       d.name        || f.guestName,
       guestFatherName: d.father_name || f.guestFatherName,
       guestCnic:       d.cnic        || f.guestCnic,
       guestGender:     d.gender      || f.guestGender,
-      guestAddress:    d.address     || f.guestAddress,
+      /* The permanent address is the one that gets filed. The present address
+         is only a fallback for a card whose permanent side would not read —
+         it is never written to tempAddress, which in this app means the
+         guesthouse the person is staying in, not an address of theirs. */
+      guestAddress:    d.address     || d.present_address || f.guestAddress,
+      guestDistrict:   district      || f.guestDistrict,
+      guestProvince:   districtToProvince(district) || f.guestProvince,
     }))
     if (scan) attachScan(scan)
   }

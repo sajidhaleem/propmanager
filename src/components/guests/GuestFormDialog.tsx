@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { type CnicData } from '@/components/ui/CnicScanner'
+import { districtToProvince } from '@/lib/pakistan'
 import { type PassportData } from '@/components/ui/PassportScanner'
 import { GuestScans } from '@/components/guests/GuestScans'
 import { cn } from '@/lib/utils'
@@ -95,13 +96,17 @@ export function GuestFormDialog({ open, onOpenChange, guest, onSaved }: Props) {
   })
 
   function applyCnic(d: CnicData, scan?: ScannedImage) {
+    const district = d.district || ''
     setForm(f => ({
       ...f,
       name:       d.name        || f.name,
       fatherName: d.father_name || f.fatherName,
       cnic:       d.cnic        || f.cnic,
       gender:     d.gender      || f.gender,
-      address:    d.address     || f.address,
+      // Permanent address, falling back to the present one only if it would not read
+      address:    d.address     || d.present_address || f.address,
+      district:   district      || f.district,
+      province:   districtToProvince(district) || f.province,
     }))
     if (scan) setPendingScans(s => [...s, scan])
     setNameError(null)
